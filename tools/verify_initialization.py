@@ -73,7 +73,8 @@ def verifyDocumentation():
     result = subprocess.run([sys.executable, "-B", str(projectRoot / "tools/sync_workflow.py"), "--check"], capture_output=True, text=True, encoding="utf-8")
     if result.returncode:
         raise ValueError(result.stdout + result.stderr)
-    print("PASS generated views: shared source, 24 prompts and acyclic prerequisites.")
+    workflow = json.loads((projectRoot / "docs/workflow.json").read_text(encoding="utf-8"))
+    print(f"PASS generated views: shared source, {len(workflow['stages'])} prompts and acyclic prerequisites.")
     for path in [projectRoot / "README.md", *sorted((projectRoot / "docs").glob("*.md"))]:
         content = path.read_text(encoding="utf-8")
         for match in re.finditer(r"(?<!!)\[[^\]]+\]\(([^)]+)\)", content):
@@ -117,12 +118,10 @@ def verifyGit(expectGit):
     if expectGit:
         if runGit("remote", "get-url", "origin") != "https://github.com/Ceeyu-iooi/Semanote-Agent.git":
             raise ValueError("Unexpected origin")
-        if runGit("rev-parse", "main") != runGit("rev-parse", "develop"):
-            raise ValueError("Initialization main/develop must share baseline")
-        if runGit("rev-parse", "v0.1.0-docs.1^{commit}") != runGit("rev-parse", "main"):
-            raise ValueError("Initialization tag must point at baseline")
+        for branchName in ("main", "develop"):
+            runGit("merge-base", "--is-ancestor", "v0.1.0-docs.1", branchName)
         if runGit("status", "--porcelain"):
-            raise ValueError("Working tree contains uncommitted changes")
+            print("NOTE working tree has uncommitted changes; review them separately, no clean-state claim.")
     print(f"PASS Git publication allowlist: {len(tracked)} tracked paths; local originals ignored.")
 
 

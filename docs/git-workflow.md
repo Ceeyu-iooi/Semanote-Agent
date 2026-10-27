@@ -15,14 +15,14 @@
 ```powershell
 git switch develop
 git pull --ff-only origin develop
-git switch -c feature/conceptual-data-design
+git switch -c feature/database-design
 # 只暂存本阶段的明确文件，检查 git diff --cached
 git add docs/database.md
-git commit -m "docs(data): define conceptual text and annotation model"
-git push -u origin feature/conceptual-data-design
+git commit -m "docs(data): define database tables and relationships"
+git push -u origin feature/database-design
 ```
 
-随后创建目标 develop 的 PR，说明变动、验证和未决项，审阅后使用合并提交。此处命令示例不代表已执行 P01，也不代表该文件当前已存在。初始 main、develop 和初始化标签属于 P00；发布流程规则当前以文档约定落实，没有宣称 GitHub 分支保护或必需审批已配置。
+随后创建目标 develop 的 PR，说明变动、验证和未决项，审阅后使用合并提交。此处命令示例不代表已执行 P01，也不代表该文件当前已存在。初始 main、develop 和初始化标签属于已交付基线，不计入五步开发；发布流程规则当前以文档约定落实，没有宣称 GitHub 分支保护或必需审批已配置。
 
 发布时从 develop 建立 release/X.Y.Z，验证通过后 PR 合入 main，在 main 对应合并提交创建不可移动的带说明标签 vX.Y.Z，再将发布分支通过 PR 同步到 develop。紧急修复同理从 main 开始，完成后同步两个长期分支；存在活动 release 时同步其修复。合并完成后可删除已合并的临时远程分支。不得直接强推 main/develop、移动已发布标签或用硬重置丢弃用户改动。
 

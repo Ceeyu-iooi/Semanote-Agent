@@ -10,7 +10,7 @@
 
 1. 阅读 [Agent 工作规范](AGENTS.md) 和 [课程要求映射](docs/requirements.md)。
 2. 查看 [开发流程](docs/workflow.md) 或直接打开 [离线交互流程](docs/workflow.html)。
-3. 在 [完整提示词](docs/prompts.md) 中复制当前阶段；初始化后下一个阶段为 **P01 概念数据设计**。
+3. 在 [五份完整提示词](docs/prompts.md) 中复制当前步骤：**设计数据库 → 写需求文档 → 智能体开发 → 后端开发 → 开发前端**。
 4. 按阶段交付、验证和验收；不要直接执行后续全部提示词。技术决策从 [待决策清单](docs/decisions.md) 读取。
 
 ## 目录
@@ -43,6 +43,6 @@ python tools/sync_workflow.py --check
 python tools/verify_initialization.py
 ```
 
-修改阶段、提示词或状态时只编辑 `docs/workflow.json`，再同步 Markdown 和离线流程。浏览、复制提示词不会标记阶段完成。P00 的 `prepared` 代表初始化产物已准备和核验，仍等待用户阶段验收。
+修改步骤、提示词或状态时只编辑 `docs/workflow.json`，再同步 Markdown 和离线流程。五步实际开发均未开始；浏览、复制提示词不会改变完成状态。初始化基线独立保留，不计入这五个开发步骤。
 
 Git 使用 [GitFlow 与版本规则](docs/git-workflow.md)。正式课程交付遵循 [提交清单](docs/submission-checklist.md)。本仓库尚未选择开源许可证；公开可见不等于已授予开源许可，第三方资料许可不变。
