@@ -94,9 +94,10 @@ def renderViews(workflow, rawSource):
     payload["stages"] = [dict(stage, promptText=composePrompt(workflow, stage)) for stage in workflow["stages"]]
     orderedStages = [stage for phase in workflow["phases"] for stage in payload["stages"] if stage["phaseId"] == phase["id"]]
     header = f"<!-- Generated from workflow.json; SHA-256: {sourceHash}. Do not edit this generated file. -->\n"
-    promptLines = [header, "# 五步开发提示词\n", "设计数据库 → 写需求文档 → 智能体开发 → 后端开发 → 开发前端。每份代码块可独立复制，执行到依赖未决选型的位置再确认，不提前填写技术答案。\n", "当前仅编写提示词，五步实际开发均未开始。数据库先完成设计文档，后端步骤才按选定存储方案落地；智能体可独立验证，不依赖尚未开发的后端。\n"]
-    workflowLines = [header, "# 五步开发流程\n", workflow["flowNote"] + "\n", "唯一编辑源为 workflow.json。初始化已交付，五个开发步骤均未开始；浏览或复制不会执行开发或改变验收状态。技术选型等未决项保持 TBD，分别在相关步骤实现前确认。\n", "测试、统计、人工校对、导出、批量和课程交付检查点纳入相应步骤，不额外拆分主流程。\n", "[离线交互流程](workflow.html) · [五份完整提示词](prompts.md) · [待决策清单](decisions.md)\n"]
     statusNames = {"pending": "未开始", "prepared": "产物待验收", "accepted": "用户已验收", "inProgress": "执行中"}
+    statusSummary = "；".join(f"{stage['id']} {statusNames[stage['status']]}" for stage in workflow["stages"])
+    promptLines = [header, "# 五步开发提示词\n", "设计数据库 → 写需求文档 → 智能体开发 → 后端开发 → 开发前端。每份代码块可独立复制，执行到依赖未决选型的位置再确认，不提前填写技术答案。\n", f"当前状态：{statusSummary}。数据库先完成设计文档，后端步骤才按选定存储方案落地；智能体可独立验证，不依赖尚未开发的后端。\n"]
+    workflowLines = [header, "# 五步开发流程\n", workflow["flowNote"] + "\n", f"唯一编辑源为 workflow.json。初始化已交付；当前状态：{statusSummary}。浏览或复制不会执行开发或改变验收状态。技术选型等未决项保持 TBD，分别在相关步骤实现前确认。\n", "测试、统计、人工校对、导出、批量和课程交付检查点纳入相应步骤，不额外拆分主流程。\n", "[离线交互流程](workflow.html) · [五份完整提示词](prompts.md) · [待决策清单](decisions.md)\n"]
     for phase in workflow["phases"]:
         workflowLines += [f"## {phase['title']}\n", phase["schedule"] + "\n", "| 阶段 | 依赖 | 状态 | 产物 |", "|---|---|---|---|"]
         for stage in orderedStages:
