@@ -1,0 +1,169 @@
+<div id="semanote-workflow">
+  <style>
+    #semanote-workflow { color: var(--foreground); }
+    #semanote-workflow .phase-lane { display: grid; grid-template-columns: 6rem minmax(0, 1fr); gap: 0.75rem; align-items: start; margin-block: 0.75rem; }
+    #semanote-workflow .phase-label { padding-block: 0.5rem; color: var(--muted-foreground); }
+    #semanote-workflow .phase-nodes { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    #semanote-workflow .stage-fields { display: grid; grid-template-columns: 5rem minmax(0, 1fr); gap: 0.5rem 0.75rem; }
+    #semanote-workflow dt { color: var(--muted-foreground); }
+    #semanote-workflow dd { margin: 0; overflow-wrap: anywhere; }
+    #semanote-workflow ul { padding-inline-start: 1.25rem; margin-block: 0.5rem; }
+    #semanote-workflow li { margin-block: 0.25rem; }
+    #semanote-workflow .stage-heading { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+    #semanote-workflow .stage-detail { margin-block: 1rem; }
+    #semanote-workflow .prompt-source { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
+    #semanote-workflow .prompt-section { margin-block-start: 1rem; }
+    #semanote-workflow summary { color: var(--foreground); }
+    #semanote-workflow .read-list { overflow-wrap: anywhere; }
+    #semanote-workflow .copy-status { min-height: 1.5em; color: var(--muted-foreground); }
+    @media (max-width: 480px) {
+      #semanote-workflow .phase-lane { grid-template-columns: minmax(0, 1fr); gap: 0.25rem; }
+      #semanote-workflow .phase-label { padding-block: 0; }
+      #semanote-workflow .stage-fields { grid-template-columns: minmax(0, 1fr); gap: 0.25rem; }
+      #semanote-workflow dd { margin-block-end: 0.5rem; }
+    }
+  </style>
+  <h2>开发步骤</h2>
+  <div class="viz-row text-small"><span>24 个阶段</span><span>初始化产物待验收 · 技术选型待定</span></div>
+  <nav data-role="stage-map" aria-label="按阶段选择开发步骤"></nav>
+  <section class="stage-detail" aria-label="所选阶段详情">
+    <div class="stage-heading"><h3 data-role="stage-title"></h3><span class="viz-badge" data-role="stage-status"></span></div>
+    <dl class="stage-fields">
+      <dt>目标</dt><dd data-role="stage-goal"></dd>
+      <dt>前置阶段</dt><dd data-role="stage-dependencies"></dd>
+      <dt>待决策项</dt><dd data-role="stage-decisions"></dd>
+    </dl>
+    <details>
+      <summary class="cursor-interaction">必读输入</summary>
+      <ul class="read-list" data-role="stage-inputs"></ul>
+    </details>
+    <div class="card">
+      <h3>阶段产物</h3><ul data-role="stage-deliverables"></ul>
+      <h3>验收条件</h3><ul data-role="stage-checks"></ul>
+      <div class="text-small" data-role="stage-stop"></div>
+    </div>
+    <div class="viz-row" aria-label="阶段导航和提示词操作">
+      <button type="button" class="btn" data-role="previous">上一阶段</button>
+      <button type="button" class="btn" data-role="next">下一阶段</button>
+      <button type="button" class="btn btn-primary" data-role="copy">复制完整提示词</button>
+    </div>
+    <div class="copy-status text-small" role="status" aria-live="polite" data-role="copy-status"></div>
+    <details class="prompt-section" data-role="prompt-details">
+      <summary class="cursor-interaction">查看完整提示词</summary>
+      <pre class="prompt-source"><code data-role="prompt-text"></code></pre>
+    </details>
+  </section>
+  <script type="application/json" id="semanote-workflow-data">__WORKFLOW_DATA__</script>
+  <script>
+    (() => {
+      const root = document.getElementById('semanote-workflow');
+      const payload = JSON.parse(document.getElementById('semanote-workflow-data').textContent);
+      const field = name => root.querySelector('[data-role="' + name + '"]');
+      const stageById = new Map(payload.stages.map(stage => [stage.id, stage]));
+      const phaseOrder = payload.phases.flatMap(phase => payload.stages.filter(stage => stage.phaseId === phase.id).map(stage => stage.id));
+      const statusNames = { pending: '尚未开始', prepared: '产物已准备 · 待验收', accepted: '用户已验收', inProgress: '执行中' };
+      let currentId = 'P00';
+
+      // Only safe text nodes are used for source-derived labels and prompts.
+      function renderList(target, values) {
+        target.replaceChildren(...values.map(value => {
+          const item = document.createElement('li');
+          item.textContent = value;
+          return item;
+        }));
+      }
+
+      function rememberSelection() {
+        if (window.openai && typeof window.openai.setWidgetState === 'function') {
+          window.openai.setWidgetState({ modelContent: { selectedStage: currentId }, privateContent: null }).catch(() => {});
+        }
+      }
+
+      function selectStage(id, remember = false) {
+        if (!stageById.has(id)) return;
+        currentId = id;
+        const stage = stageById.get(id);
+        field('stage-title').textContent = stage.id + ' · ' + stage.title;
+        field('stage-status').textContent = statusNames[stage.status] || stage.status;
+        field('stage-goal').textContent = stage.goal;
+        field('stage-dependencies').textContent = stage.dependsOn.length ? stage.dependsOn.join('、') + '（须有用户验收证据）' : '无';
+        field('stage-decisions').textContent = stage.decisionIds.length ? stage.decisionIds.map(value => 'TBD[' + value + ']').join('、') : '无本阶段新增必决策项';
+        renderList(field('stage-inputs'), [...payload.commonRead, ...stage.requiredRead]);
+        renderList(field('stage-deliverables'), stage.deliverables);
+        renderList(field('stage-checks'), stage.checks);
+        field('stage-stop').textContent = '停止位置：' + stage.stopCondition;
+        field('prompt-text').textContent = stage.promptText;
+        field('copy-status').textContent = '';
+        field('prompt-details').open = false;
+        const index = phaseOrder.indexOf(id);
+        field('previous').disabled = index === 0;
+        field('next').disabled = index === phaseOrder.length - 1;
+        for (const button of root.querySelectorAll('[data-stage-id]')) {
+          button.setAttribute('aria-pressed', String(button.dataset.stageId === id));
+        }
+        if (remember) rememberSelection();
+      }
+
+      for (const phase of payload.phases) {
+        const lane = document.createElement('div');
+        lane.className = 'phase-lane';
+        const label = document.createElement('span');
+        label.className = 'phase-label';
+        label.textContent = phase.title;
+        const nodes = document.createElement('div');
+        nodes.className = 'phase-nodes';
+        for (const stage of payload.stages.filter(item => item.phaseId === phase.id)) {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'btn';
+          button.dataset.stageId = stage.id;
+          button.dataset.tooltip = stage.title;
+          button.setAttribute('aria-label', stage.id + ' ' + stage.title);
+          button.setAttribute('aria-pressed', 'false');
+          button.textContent = stage.id;
+          button.addEventListener('click', () => selectStage(stage.id, true));
+          nodes.append(button);
+        }
+        lane.append(label, nodes);
+        field('stage-map').append(lane);
+      }
+
+      field('previous').addEventListener('click', () => selectStage(phaseOrder[phaseOrder.indexOf(currentId) - 1], true));
+      field('next').addEventListener('click', () => selectStage(phaseOrder[phaseOrder.indexOf(currentId) + 1], true));
+      field('copy').addEventListener('click', async () => {
+        const copiedId = currentId;
+        const text = stageById.get(copiedId).promptText;
+        let copyTimeout;
+        try {
+          if (!navigator.clipboard || !navigator.clipboard.writeText) throw new Error('Clipboard unavailable');
+          await Promise.race([
+            navigator.clipboard.writeText(text),
+            new Promise((_, reject) => { copyTimeout = setTimeout(() => reject(new Error('Clipboard timeout')), 1500); })
+          ]);
+          if (copiedId !== currentId) return;
+          field('copy-status').textContent = '已复制 ' + copiedId + ' 的完整提示词';
+        } catch (_) {
+          if (copiedId !== currentId) return;
+          // file:// and sandboxed previews may deny clipboard access.
+          field('prompt-details').open = true;
+          const range = document.createRange();
+          range.selectNodeContents(field('prompt-text'));
+          const selection = window.getSelection();
+          if (selection) {
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+          field('copy-status').textContent = '复制受浏览器限制，已展开并选中完整提示词。请按 Ctrl+C，或长按复制。';
+        } finally {
+          clearTimeout(copyTimeout);
+        }
+      });
+      const savedId = window.openai && window.openai.widgetState && window.openai.widgetState.modelContent && window.openai.widgetState.modelContent.selectedStage;
+      selectStage(savedId || 'P00');
+      window.addEventListener('openai:set_globals', event => {
+        const state = event.detail && event.detail.globals && event.detail.globals.widgetState;
+        if (state && state.modelContent) selectStage(state.modelContent.selectedStage);
+      });
+    })();
+  </script>
+</div>

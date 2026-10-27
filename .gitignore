@@ -1,0 +1,54 @@
+# Local course originals and restricted corpus (never commit)
+/profile/
+/data/
+/artifacts/
+/deliverables/
+/recovery/
+/tmp/
+/work/
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.sqlite
+*.sqlite3
+*.db
+*.sql
+*.dump
+
+# Course documents, real screenshots and archive packages stay local
+*.csv
+*.tsv
+*.docx
+*.pdf
+*.pptx
+*.rp
+*.zip
+*.7z
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.log
+
+# Rebuildable environments and caches
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+coverage/
+dist/
+build/
+.DS_Store
+Thumbs.db
+~$*
+*.tmp

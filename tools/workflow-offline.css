@@ -1,0 +1,36 @@
+:root {
+  color-scheme: light dark;
+  --background: light-dark(#ffffff, #17191b);
+  --foreground: light-dark(#24292e, #e7eaed);
+  --card: light-dark(#f6f8fa, #212529);
+  --card-foreground: var(--foreground);
+  --muted-foreground: light-dark(#555e68, #b2bac2);
+  --primary: light-dark(#253f49, #d5e7ed);
+  --primary-foreground: light-dark(#ffffff, #1c3037);
+  --border: light-dark(#cbd1d7, #4c535a);
+  --accent: light-dark(#edf2f4, #303b42);
+  --accent-foreground: var(--foreground);
+  --font-size-base: 14px;
+}
+* { box-sizing: border-box; }
+body { max-width: 920px; margin: 0 auto; padding: 24px; background: var(--background); color: var(--foreground); font-family: system-ui, 'Microsoft YaHei', sans-serif; font-size: var(--font-size-base); line-height: 1.7; }
+h1, h2, h3 { font-weight: 500; }
+h2 { font-size: 1.5rem; margin-block: 0 0.75rem; }
+h3 { font-size: 1.05rem; margin-block: 0.75rem; }
+.text-small { font-size: 12px; }
+.text-muted { color: var(--muted-foreground); }
+.viz-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-block: 12px; }
+.card { padding: 16px; background: var(--card); color: var(--card-foreground); border: 1px solid var(--border); border-radius: 12px; margin-block: 16px; }
+.btn { font: inherit; min-height: 36px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 8px; color: var(--foreground); background: transparent; cursor: pointer; }
+.btn:hover { background: var(--accent); color: var(--accent-foreground); }
+.btn-primary, .btn[aria-pressed='true'] { background: var(--primary); color: var(--primary-foreground); border-color: transparent; }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.btn:focus-visible, summary:focus-visible { outline: 2px solid var(--foreground); outline-offset: 3px; }
+.viz-badge { color: var(--muted-foreground); font-size: 12px; }
+.cursor-interaction { cursor: pointer; }
+details { margin-block: 12px; }
+summary { min-height: 32px; }
+pre, code { font-family: inherit; }
+noscript { display: block; margin: 16px; }
+@media (max-width: 480px) { body { padding: 16px; } }
+@media (pointer: coarse) { .btn, summary { min-height: 44px; } }
