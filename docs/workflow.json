@@ -49,7 +49,7 @@
       "id": "P01",
       "title": "设计数据库",
       "phaseId": "development",
-      "status": "prepared",
+      "status": "accepted",
       "dependsOn": [],
       "goal": "设计通用中文文本标注系统的逻辑实体、字段、关系和版本一致性约束，形成 database.md；MySQL 为待核实的优先候选，平台/物理类型/SQL 方言仍按决策清单保留 TBD，不建库、不写业务代码。",
       "requiredRead": [
@@ -91,14 +91,15 @@
       "id": "P02",
       "title": "写需求文档",
       "phaseId": "development",
-      "status": "pending",
+      "status": "prepared",
       "dependsOn": [
         "P01"
       ],
-      "goal": "以数据库设计和课程要求为输入，形成清楚、可验收的 PRD，并回看数据设计。",
+      "goal": "以已获阶段准入的数据库逻辑设计和课程要求为输入，形成可检查的 PRD 并回看数据设计；仅交付需求文档，不构建软件、不安装依赖、不建库。",
       "requiredRead": [
         "docs/database.md",
-        "docs/submission-checklist.md"
+        "docs/submission-checklist.md",
+        "docs/acceptance.md"
       ],
       "decisionIds": [
         "D05",
