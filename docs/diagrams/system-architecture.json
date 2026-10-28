@@ -8,7 +8,7 @@
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/Ceeyu-iooi/Semanote-Agent.git",
-      "revision": "acd86eefa093434464007ab1242e9142326976bb",
+      "revision": "46d81c19c10180f35e5a2d68a191bca9132056c4",
       "link_mode": "local-only"
     }
   },
@@ -89,8 +89,8 @@
     {
       "id": "agent",
       "type": "backend",
-      "label": "Python 智能体",
-      "sublabel": "本地 JSON 进程 · 四层校验",
+      "label": "JavaScript 智能体",
+      "sublabel": "Node.js · 十一层校验",
       "pos": [
         980,
         40
@@ -106,9 +106,9 @@
           "end_line": 56
         },
         {
-          "path": "tools/agent_bridge.py",
-          "line": 17,
-          "end_line": 57
+          "path": "agent/bridge.mjs",
+          "line": 5,
+          "end_line": 18
         }
       ]
     },
@@ -129,7 +129,7 @@
         {
           "path": "frontend/src/components/DeveloperCenter.vue",
           "line": 4,
-          "end_line": 22
+          "end_line": 23
         },
         {
           "path": "frontend/src/main.js",
@@ -168,7 +168,7 @@
       "id": "provider",
       "type": "cloud",
       "label": "所选模型服务",
-      "sublabel": "默认 DeepSeek · 显式选择",
+      "sublabel": "供应商注册表 · 显式选择",
       "pos": [
         980,
         250
@@ -179,14 +179,14 @@
       ],
       "sources": [
         {
-          "path": "tools/agent_bridge.py",
-          "line": 46,
-          "end_line": 57
+          "path": "agent/provider.js",
+          "line": 28,
+          "end_line": 58
         },
         {
-          "path": "semanote_agent/providers.py",
-          "line": 1,
-          "end_line": 25
+          "path": "agent/provider.js",
+          "line": 28,
+          "end_line": 58
         }
       ]
     }

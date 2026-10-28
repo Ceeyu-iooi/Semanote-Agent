@@ -8,7 +8,7 @@
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/Ceeyu-iooi/Semanote-Agent.git",
-      "revision": "acd86eefa093434464007ab1242e9142326976bb",
+      "revision": "46d81c19c10180f35e5a2d68a191bca9132056c4",
       "link_mode": "local-only"
     }
   },
@@ -17,7 +17,7 @@
       "id": "app",
       "type": "frontend",
       "label": "Vue 应用状态",
-      "sublabel": "文本库 · 工作台 · 统计",
+      "sublabel": "十一层工作台 · 逐篇统计",
       "pos": [
         40,
         220
@@ -33,9 +33,14 @@
           "end_line": 51
         },
         {
-          "path": "frontend/src/components/StatisticsView.vue",
+          "path": "frontend/src/components/DocumentInsights.vue",
           "line": 1,
-          "end_line": 19
+          "end_line": 23
+        },
+        {
+          "path": "frontend/src/App.vue",
+          "line": 359,
+          "end_line": 373
         }
       ]
     },
@@ -56,7 +61,17 @@
         {
           "path": "frontend/src/components/AnnotationCanvas.vue",
           "line": 1,
-          "end_line": 34
+          "end_line": 29
+        },
+        {
+          "path": "frontend/src/annotationPresentation.js",
+          "line": 20,
+          "end_line": 31
+        },
+        {
+          "path": "frontend/src/components/PointerTip.vue",
+          "line": 1,
+          "end_line": 11
         }
       ]
     },
@@ -98,7 +113,7 @@
         {
           "path": "frontend/src/components/DeveloperCenter.vue",
           "line": 1,
-          "end_line": 22
+          "end_line": 23
         }
       ]
     },
@@ -193,14 +208,14 @@
       "title": "数据流",
       "items": [
         "保存回包绑定文档与编辑会话；冲突保留草稿并可载入最新版本",
-        "统计页从保存快照读取；候选、草稿和历史分别标识"
+        "逐篇统计区分候选/草稿/保存快照；关系/事件卡片返回原文"
       ]
     },
     {
       "dot": "slate",
       "title": "视觉与选区",
       "items": [
-        "业务页、独立开发者页、preview 共用 tokens.css；四层独立叠加",
+        "业务页、独立开发者页、preview 共用 tokens.css；十一层独立叠加",
         "浏览器 UTF-16 选区显式转 Unicode 码点；原文用文本节点渲染"
       ]
     }
