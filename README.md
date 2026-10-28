@@ -8,7 +8,7 @@
 
 本地启动：`python -X utf8 -B tools/local_web.py start`；浏览器打开 `http://127.0.0.1:8080`。
 
-Web 入口：[启动、操作、备份与恢复](docs/web-usage.md) · [Web 契约](docs/web-contract.md) · [共享设计规范与 preview](docs/design/README.md)。
+Web 入口：[交付与验证](docs/web-report.md) · [启动、操作、备份与恢复](docs/web-usage.md) · [Web 契约](docs/web-contract.md) · [共享设计规范与 preview](docs/design/README.md)。
 
 原有 P03 交付：[独立智能体](semanote_agent/__init__.py)、[标注契约](docs/annotation-contract.md)、[使用与恢复说明](docs/agent-usage.md)、[Archify 交互式原理图](docs/diagrams/agent-architecture.html)及 [P03 交付记录](docs/p03-report.md)。需求与数据依据保留在 [PRD](docs/PRD.md)、[数据库逻辑设计](docs/database.md)和[待决策清单](docs/decisions.md)；阶段准入见[验收记录](docs/acceptance.md)，P01/P02 记录保留历史事实。
 
