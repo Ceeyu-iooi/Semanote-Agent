@@ -98,6 +98,7 @@ class AgentBehaviorTests(unittest.TestCase):
 
     def testEmptyResultUnrequestedAndFailureAreDistinct(self):
         request, payloads = makeFixture(["ner"])
+        request['text'] = '树叶轻轻摇动。'
         payloads["ner"] = {"items": []}
         agent = AnnotationAgent(ScriptedProvider(payloads))
         emptyResponse = agent.annotate(request)

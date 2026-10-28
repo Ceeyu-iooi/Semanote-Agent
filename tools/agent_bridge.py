@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 import sys
+from dataclasses import replace
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from semanote_agent import AnnotationAgent
@@ -48,7 +49,17 @@ def runEnvelope(envelope):
     if action != "annotate" or envelope.get("remoteConsent") is not True:
         raise ValueError("Missing explicit remote consent")
     config = ProviderConfig.fromEnvironment(envelope.get("provider"), ".env")
-    agent = AnnotationAgent(ChatCompletionsProvider(config))
+    preferencesPath=Path('profile/runtime/model-preferences.json')
+    preferences=envelope.get('modelPreferences')
+    if preferences is None and preferencesPath.exists():
+        preferences=json.loads(preferencesPath.read_text(encoding='utf-8'))
+    if preferences is not None:
+        if preferences.get('provider')==config.provider:
+            config=replace(config,model=preferences.get('model') or config.model,timeoutSeconds=preferences.get('timeoutSeconds',config.timeoutSeconds))
+    def checkpoint(taskType, status, layer):
+        if envelope.get('streamProgress'):
+            print(json.dumps({'event':'progress','taskType':taskType,'status':status,'layer':layer},ensure_ascii=False),flush=True)
+    agent = AnnotationAgent(ChatCompletionsProvider(config), onCheckpoint=checkpoint)
     previousResponse = envelope.get("previousResponse")
     return agent.retryFailed(request, previousResponse) if previousResponse else agent.annotate(request)
 

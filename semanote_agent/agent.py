@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 from .annotations import convertItems, exactPositions, newIdentity
 from .errors import AnnotationError, InputError
+from .grounding import groundPayload, completeFormattedEntities
 from .rules import adapterVersion, contractVersion, promptVersion, specVersion, taskTypes, textFingerprint, validateRequest
 
 
@@ -54,7 +55,7 @@ def verifyRetryBaseline(request, response):
                 requireBaseline(isinstance(attempt, dict) and set(attempt) == {'attemptId', 'provider', 'model', 'resolvedModel', 'adapterVersion', 'promptVersion', 'startedAt', 'finishedAt', 'status', 'providerRequestId', 'error'})
                 requireBaseline(all((isinstance(attempt[field], str) and attempt[field] for field in ('attemptId', 'provider', 'model', 'adapterVersion', 'promptVersion', 'startedAt', 'finishedAt'))))
                 requireBaseline(attempt['status'] in ('success', 'failed'))
-                requireBaseline(attempt['adapterVersion'] == adapterVersion and attempt['promptVersion'] == promptVersion)
+                requireBaseline(attempt['adapterVersion'] in ('1.0.0', '1.1.0', '1.2.0', adapterVersion) and attempt['promptVersion'] in ('1.0.0', '1.1.0', promptVersion))
                 requireBaseline(attempt['resolvedModel'] is None or isinstance(attempt['resolvedModel'], str))
                 requireBaseline(attempt['providerRequestId'] is None or isinstance(attempt['providerRequestId'], str))
                 verifySavedError(attempt["error"], attempt["status"] == "failed")
@@ -138,9 +139,10 @@ def verifySavedError(error, required):
 class AnnotationAgent:
     """A synchronous, stateless agent; persistence and cross-process dedup belong to P04."""
 
-    def __init__(self, provider, onProgress=None):
+    def __init__(self, provider, onProgress=None, onCheckpoint=None):
         self.provider = provider
         self.onProgress = onProgress
+        self.onCheckpoint = onCheckpoint
 
     def annotate(self, request):
         """Run a new bounded plan without modifying the request or earlier results."""
@@ -170,19 +172,20 @@ class AnnotationAgent:
                 layer.update(status="failed", result=None, error={
                     "code": "dependencyFailed", "message": "词性依赖的分词未成功；未调用词性模型。", "retryable": True,
                 })
-                self.reportProgress(taskType, "failed")
+                self.reportProgress(taskType, "failed", layer)
                 continue
             tokens = layers["segmentation"]["result"]["items"] if taskType == "pos" else None
             attempt = {"attemptId": newIdentity(), "provider": self.provider.providerName,
                        "model": self.provider.modelName, "resolvedModel": None, "adapterVersion": adapterVersion,
                        "promptVersion": promptVersion, "startedAt": utcTimestamp(), "finishedAt": "",
                        "status": "failed", "providerRequestId": None, "error": None}
-            self.reportProgress(taskType, "running")
+            self.reportProgress(taskType, "running", layer)
             try:
                 reply = self.provider.generate(taskType, text, tokens)
                 attempt["providerRequestId"] = reply.providerRequestId
                 attempt["resolvedModel"] = reply.resolvedModel
-                items = convertItems(taskType, reply.payload, text, tokens)
+                items = convertItems(taskType, groundPayload(taskType, reply.payload, text), text, tokens)
+                if taskType == 'ner': items = completeFormattedEntities(items, text)
                 result = {"resultId": newIdentity(), "revisionId": request["revisionId"], "specVersion": specVersion,
                           "producerKind": "automatic", "dependencyResultId": layers["segmentation"]["result"]["resultId"] if taskType == "pos" else None,
                           "items": items}
@@ -193,13 +196,15 @@ class AnnotationAgent:
                 attempt["error"] = error.asDict()
             attempt["finishedAt"] = utcTimestamp()
             layer["attempts"].append(attempt)
-            self.reportProgress(taskType, layer["status"])
+            self.reportProgress(taskType, layer["status"], layer)
         return {"contractVersion": contractVersion, "requestId": request["requestId"], "revisionId": request["revisionId"],
                 "textHash": textFingerprint(text), "textLength": len(text), "offsetUnit": "unicodeCodePoint",
                 "requestedTasks": requestedTasks, "effectiveTasks": effectiveTasks,
                 "status": summarizeStatus(layers, effectiveTasks), "layers": layers}
 
-    def reportProgress(self, taskType, status):
+    def reportProgress(self, taskType, status, layer=None):
         """Progress contains task identity and state only, never source text."""
         if self.onProgress is not None:
             self.onProgress(taskType, status)
+        if self.onCheckpoint is not None:
+            self.onCheckpoint(taskType, status, copy.deepcopy(layer))
