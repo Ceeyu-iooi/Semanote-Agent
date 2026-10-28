@@ -1,6 +1,7 @@
-"""Manage this checkout's loopback-only MySQL/Spring processes and SQL backups."""
+"""Manage local MySQL, configurable Web visibility, and SQL backups for this checkout."""
 
 import argparse
+import ipaddress
 import json
 import os
 from pathlib import Path
@@ -72,7 +73,48 @@ def backendEnvironment():
     environment = dict(os.environ)
     environment.update({"SEMANOTE_PROJECT_ROOT": str(projectRoot), "SEMANOTE_PYTHON": os.sys.executable,
                         "SEMANOTE_DB_PASSWORD": config["appPassword"], "SEMANOTE_DB_USER": "semanote"})
+    if config.get("networkMode") == "lan":
+        interfaces = lanInterfaces()
+        if not interfaces: raise RuntimeError("No connected private physical LAN interface was found")
+        config["lanInterfaces"] = interfaces
+        (runtimeRoot / "local-config.json").write_text(json.dumps(config, indent=2), encoding="utf-8")
+        environment.update({"SEMANOTE_BIND_ADDRESS": "0.0.0.0", "SEMANOTE_LAN_HOSTS": ",".join(item["address"] for item in interfaces)})
+    else:
+        environment.update({"SEMANOTE_BIND_ADDRESS": "127.0.0.1", "SEMANOTE_LAN_HOSTS": ""})
     return environment
+
+
+def lanInterfaces():
+    """Discover private IPv4 on connected physical adapters, excluding VPN/VM interfaces."""
+    command = "Get-NetIPConfiguration | Where-Object { $_.NetAdapter.Status -eq 'Up' -and $_.NetAdapter.HardwareInterface -and $_.IPv4DefaultGateway } | ForEach-Object { $taskInterface=$_; $_.IPv4Address | ForEach-Object { [pscustomobject]@{ address=$_.IPAddress; prefixLength=$_.PrefixLength; interfaceAlias=$taskInterface.InterfaceAlias } } } | ConvertTo-Json -Compress"
+    result = subprocess.run(["powershell", "-NoProfile", "-Command", command], capture_output=True, text=True, encoding="mbcs", creationflags=creationFlags, check=True)
+    entries = json.loads(result.stdout) if result.stdout.strip() else []
+    if isinstance(entries, dict): entries = [entries]
+    interfaces = []
+    for item in entries:
+        address = ipaddress.ip_address(item["address"])
+        if address.version == 4 and address.is_private and not (address.is_loopback or address.is_link_local):
+            item["subnet"] = str(ipaddress.ip_network(f'{address}/{item["prefixLength"]}', strict=False))
+            interfaces.append(item)
+    return interfaces
+
+
+def printWebAddresses():
+    print("Web ready: http://127.0.0.1:8080", flush=True)
+    config, _, _ = paths()
+    if config.get("networkMode") == "lan":
+        for item in config.get("lanInterfaces", []):
+            print("LAN address: http://" + item["address"] + ":8080", flush=True)
+
+
+def setNetworkMode(mode):
+    """Persist only this workspace's web visibility; MySQL stays on loopback."""
+    config, _, _ = paths()
+    if mode == "lan" and not lanInterfaces(): raise RuntimeError("No connected private physical LAN interface was found")
+    config["networkMode"] = mode
+    (runtimeRoot / "local-config.json").write_text(json.dumps(config, indent=2), encoding="utf-8")
+    stopBackend()
+    startBackend()
 
 
 def startBackend():
@@ -80,7 +122,7 @@ def startBackend():
     try:
         with urllib.request.urlopen("http://127.0.0.1:8080/api/v1/health", timeout=2) as response:
             if json.load(response).get("status") == "ready":
-                print("Web ready: http://127.0.0.1:8080", flush=True)
+                printWebAddresses()
                 return
     except Exception:
         pass
@@ -93,7 +135,7 @@ def startBackend():
         try:
             with urllib.request.urlopen("http://127.0.0.1:8080/api/v1/health", timeout=2) as response:
                 if json.load(response).get("status") == "ready":
-                    print("Web ready: http://127.0.0.1:8080", flush=True)
+                    printWebAddresses()
                     return
         except Exception:
             pass
@@ -129,6 +171,7 @@ def stopBackend():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=["database", "start", "stop", "backup"])
+    parser.add_argument("action", choices=["database", "start", "stop", "backup", "lan", "local"])
     arguments = parser.parse_args()
-    {"database": startDatabase, "start": startBackend, "stop": stopBackend, "backup": backupDatabase}[arguments.action]()
+    {"database": startDatabase, "start": startBackend, "stop": stopBackend, "backup": backupDatabase,
+     "lan": lambda: setNetworkMode("lan"), "local": lambda: setNetworkMode("local")}[arguments.action]()

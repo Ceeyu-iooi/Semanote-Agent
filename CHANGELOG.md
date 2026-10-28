@@ -2,6 +2,8 @@
 
 ## 未发布
 
+- 按用户明确指示增加可持久化的局域网网页访问模式、私网 Host/Origin 白名单、限定网段/网卡/Java 程序/TCP 8080 的 Windows 防火墙配置及关闭方法；MySQL 仍本机监听。修复局域网 HTTP 下请求 UUID 生成兼容性。
+
 - Web：增加 Vue/JavaScript/Bootstrap 工作台、Java/Spring Boot REST 后端与 MySQL 存储；文本管理、导入/归档、全文搜索、四层自动候选与人工修正、版本快照、统计和 JSON 导出。
 - 增加逐项批量任务、持久队列、显式恢复；完整回执保留成功层，中断且无完整回执时明确提示整份重提可能额外计费。
 - 维护 Apple 来源设计变量与 HTML preview、开发者中心、Archify 各层框架与 GitFlow、Changelog；Agent 规范按职责拆分。

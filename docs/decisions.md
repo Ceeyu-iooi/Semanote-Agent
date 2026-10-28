@@ -10,7 +10,7 @@
 | D02 | confirmed | 本聊天确认 Java 21、Spring Boot 3.5（3.5.16）、Maven（便携 3.9.16）、JDBC；以本地 JSON 子进程调用 Python |
 | D03 | confirmed | 本聊天确认 MySQL 8.4（便携 8.4.13）、结构脚本、SQL 备份/恢复；配置和数据仅在 profile，不全局安装 |
 | D06 | confirmed | 本聊天确认 UTF-8/BOM CSV 三列每格独立文本、TXT 整文件一文本；10000 码点/文本、5 MiB/文件、500 非空文本/批，保留空格换行、跳过纯空白并报告、超限整次拒绝 |
-| D08 | confirmed | 本聊天确认 Windows 本地回环运行、当前 Chrome/Edge、Java 21/Python 3.12；其他部署环境不在本次承诺 |
+| D08 | confirmed | 本聊天确认 Windows、当前 Chrome/Edge、Java 21/Python 3.12；后续用户明确要求“开放局域网访问”，授权网页 LAN 共享及必要网段/端口防火墙规则，数据库仍回环。访问者共享当前工作空间，未增加登录或公网部署承诺 |
 | D13 | confirmed | 本聊天确认页面内草稿、不可变修订/结果、人工不被自动覆盖、乐观冲突、归档/恢复、统计/导出绑定同一保存快照；未承诺永久保留期或跨刷新草稿 |
 | D14 | confirmed | 本聊天确认 REST /api/v1、产品 JSON 导出 1.0.0、JDBC 物理结构；逻辑实体合并为校验后的 JSON 聚合，保留身份/位置/尝试；实现见 schema.sql 和 Web 契约 |
 

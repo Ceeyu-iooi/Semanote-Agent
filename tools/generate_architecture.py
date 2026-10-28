@@ -1,5 +1,6 @@
 """Author editable Archify sources for the implemented Web system and GitFlow policy."""
 import json
+import argparse
 from pathlib import Path
 import subprocess
 
@@ -7,6 +8,9 @@ projectRoot = Path(__file__).resolve().parent.parent
 revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=projectRoot, text=True).strip()
 repository = {"url": "https://github.com/Ceeyu-iooi/Semanote-Agent.git", "revision": revision, "link_mode": "local-only"}
 javaRoot = "backend/src/main/java/io/semanote/"
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--only", choices=["system-architecture", "frontend-architecture", "backend-architecture", "database-architecture", "git-workflow"])
+selected = parser.parse_args().only
 
 
 def source(path, line=1, end=None):
@@ -28,20 +32,21 @@ def architecture(name, title, nodes, edges, cards):
 
 
 def write(name, payload):
+    if selected and name != selected: return
     (projectRoot / "docs/diagrams" / (name + ".json")).write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
 
 
 architecture("system-architecture", "Semanote · B/S 系统框架", [
-    node("browser", "external", "本地浏览器", "Chrome / Edge · 单人", 40, 40, [source("docs/web-contract.md", 7, 19)], 160),
+    node("browser", "external", "浏览器", "本机 / 授权局域网", 40, 40, [source("docs/web-contract.md", 7, 19)], 160),
     node("vue", "frontend", "Vue 工作台", "文本 · 标注 · 统计", 300, 40, [source("frontend/src/App.vue", 1, 25), source("frontend/src/api.js", 1, 14)]),
     node("spring", "backend", "Spring Boot 服务", "REST /api/v1 · 版本与任务", 640, 40, [source(javaRoot + "api/WorkspaceController.java", 15, 47), source(javaRoot + "service/JobService.java", 95, 115)]),
     node("agent", "backend", "Python 智能体", "本地 JSON 进程 · 四层校验", 980, 40, [source(javaRoot + "agent/AgentBridge.java", 28, 56), source("tools/agent_bridge.py", 17, 57)]),
     node("reference", "frontend", "开发者中心", "设计规范 · Archify · 变更", 300, 250, [source("frontend/src/components/DeveloperCenter.vue", 4, 23)]),
     node("mysql", "database", "MySQL 8.4", "修订 · 候选 · 保存快照", 640, 250, [source("backend/src/main/resources/schema.sql", 12, 63), source(javaRoot + "service/WorkspaceService.java", 143, 191)]),
     node("provider", "cloud", "所选模型服务", "默认 DeepSeek · 显式选择", 980, 250, [source("tools/agent_bridge.py", 46, 57), source("semanote_agent/providers.py", 1, 25)]),
-], [edge("browser", "vue", "本地页面", "emphasis"), edge("vue", "spring", "HTTP JSON", "emphasis"), edge("spring", "agent", "stdin / stdout"), edge("vue", "reference", "同源资料"), edge("spring", "mysql", "JDBC 事务"), edge("agent", "provider", "同意后 HTTPS", "security")], [
+], [edge("browser", "vue", "网页访问", "emphasis"), edge("vue", "spring", "HTTP JSON", "emphasis"), edge("spring", "agent", "stdin / stdout"), edge("vue", "reference", "同源资料"), edge("spring", "mysql", "JDBC 事务"), edge("agent", "provider", "同意后 HTTPS", "security")], [
     ("智能标注 + 人工修正", ["自动结果先存候选；显式保存才更新当前快照", "人工修正生成新版本，统计/导出固定同一保存快照"]),
-    ("运行与数据边界", ["Java 与 MySQL 仅回环监听；无登录和多用户分配", "真实课程语料不外发；本次联调使用原创合成文本"]),
+    ("运行与数据边界", ["网页可显式开启局域网共享；MySQL 保持本机监听", "Host/Origin 白名单与网段防火墙限制；共享同一工作空间，无多用户分配"]),
 ])
 
 architecture("frontend-architecture", "Semanote · Vue 前端框架", [
@@ -90,4 +95,4 @@ for identity, lane, column, kind, label, detail in [
 ]: workflow["nodes"].append({"id": identity, "lane": lane, "col": column, "type": kind, "label": label, "sublabel": detail, "sources": [source("docs/git-workflow.md", 3, 29)]})
 for start, end, label in [("develop", "feature", "建分支"), ("feature", "review", "提交 PR"), ("review", "integrate", "通过后合并"), ("integrate", "release", "准备发布"), ("release", "main", "PR 合入"), ("main", "tag", "验证后打标"), ("main", "hotfix", "紧急修复"), ("hotfix", "sync", "评审合并")]: workflow["edges"].append(edge(start, end, label))
 write("git-workflow", workflow)
-print("Authored five Archify sources pinned to " + revision)
+print("Authored " + (selected or "five Archify sources") + " pinned to " + revision)

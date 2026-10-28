@@ -4,6 +4,7 @@ import AnnotationCanvas from './components/AnnotationCanvas.vue';
 import DeveloperCenter from './components/DeveloperCenter.vue';
 import StatisticsView from './components/StatisticsView.vue';
 import { request, send, taskNames, entityNames, stateNames } from './api.js';
+import { createRequestId } from './requestIdentity.js';
 
 const page = ref('library'), documents = ref([]), jobs = ref([]), statistics = ref(null), meta = ref(null);
 const loading = ref(true), refreshBusy = ref(false), loadError = ref(''), notice = ref(''), actionError = ref('');
@@ -137,12 +138,12 @@ async function startModel() {
   const failures = [], submittedIds = [];
   try {
     if (retryTarget.value) {
-      const job = await send(`/jobs/${retryTarget.value.id}/retry`, { requestId: crypto.randomUUID(), remoteConsent: true });
+      const job = await send(`/jobs/${retryTarget.value.id}/retry`, { requestId: createRequestId(), remoteConsent: true });
       submittedIds.push(job.id);
     } else {
       for (const document of modelTargets.value) {
         try {
-          const job = await send('/jobs', { requestId: crypto.randomUUID(), documentId: document.id, revisionId: document.currentRevisionId, tasks: selectedTasks.value, provider: provider.value, remoteConsent: true });
+          const job = await send('/jobs', { requestId: createRequestId(), documentId: document.id, revisionId: document.currentRevisionId, tasks: selectedTasks.value, provider: provider.value, remoteConsent: true });
           submittedIds.push(job.id);
         } catch (error) { failures.push(`${document.title}：${message(error)}`); }
       }

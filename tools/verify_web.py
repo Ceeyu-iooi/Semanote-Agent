@@ -35,7 +35,7 @@ def call(path, body=None, method=None, headers=None, raw=None):
 def start():
     global process
     environment = backendEnvironment()
-    environment.update({"SEMANOTE_PORT": "8081", "SEMANOTE_DB_URL": "jdbc:mysql://127.0.0.1:3307/" + databaseName + "?characterEncoding=UTF-8&serverTimezone=UTC"})
+    environment.update({"SEMANOTE_PORT": "8081", "SEMANOTE_BIND_ADDRESS": "127.0.0.1", "SEMANOTE_LAN_HOSTS": "", "SEMANOTE_DB_URL": "jdbc:mysql://127.0.0.1:3307/" + databaseName + "?characterEncoding=UTF-8&serverTimezone=UTC"})
     with (receiptRoot / "isolated-backend.log").open("ab") as log:
         process = subprocess.Popen(["java", "-jar", "backend/target/semanote-web-0.1.0-SNAPSHOT.jar"], cwd=projectRoot, env=environment, stdout=log, stderr=log, creationflags=creationFlags)
     for _ in range(100):

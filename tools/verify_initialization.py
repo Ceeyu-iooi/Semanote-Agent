@@ -110,7 +110,7 @@ def verifyGit(expectGit):
             raise ValueError("Outside publication allowlist: " + fileName)
         extension = Path(fileName).suffix.lower()
         allowedFormat = extension in {"", ".md", ".json", ".html", ".css", ".py", ".js", ".vue", ".java", ".xml", ".properties"}
-        allowedFormat = allowedFormat or fileName == "backend/src/main/resources/schema.sql" or (fileName.startswith("docs/licenses/") and extension == ".txt")
+        allowedFormat = allowedFormat or fileName in {"backend/src/main/resources/schema.sql", "tools/configure_lan.ps1"} or (fileName.startswith("docs/licenses/") and extension == ".txt")
         if not allowedFormat and fileName not in rootFiles:
             raise ValueError("Unexpected public file format: " + fileName)
         if any(part in {"__pycache__", "node_modules", "profile", "tmp", "target", "dist"} for part in Path(fileName).parts):
