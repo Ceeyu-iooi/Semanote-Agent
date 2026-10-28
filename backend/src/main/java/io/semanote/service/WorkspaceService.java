@@ -20,6 +20,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 /** Immutable revisions/snapshots, optimistic publication, and snapshot-derived statistics. */
 @Service
 public class WorkspaceService {
+    public static final List<String> TASKS=List.of("segmentation","keywords","pos","ner","paragraphs","relations","events","sentiment","intent","semantic","errors");
     private final WorkspaceRepository repository;
     private final AgentBridge bridge;
     private final TransactionTemplate transaction;
@@ -175,7 +176,7 @@ public class WorkspaceService {
         int successfulCount = 0;
         for (JsonNode layer : layers) if ("success".equals(layer.path("status").asText())) successfulCount++;
         if (successfulCount == 0) throw new ApiFailure(400, "emptySnapshot", "至少需要一个有效标注层。");
-        if (successfulCount < 4 && !body.path("allowPartial").asBoolean(false)) throw new ApiFailure(409, "partialConfirmationRequired", "并非四层全部成功；请明确选择保存部分结果。");
+        if (successfulCount < TASKS.size() && !body.path("allowPartial").asBoolean(false)) throw new ApiFailure(409, "partialConfirmationRequired", "并非所有标注层全部成功；请明确选择保存部分结果。");
         String snapshotId = identity(), finalJobId = jobId, finalBaseId = baseSnapshotId, finalKind = producerKind;
         transaction.executeWithoutResult(status -> {
             // Compare-and-set before insert: a concurrent text edit rolls back publication.
@@ -207,7 +208,7 @@ public class WorkspaceService {
 
     public static Map<String, Object> layerStatistics(JsonNode layers) {
         Map<String, Object> result = new LinkedHashMap<>();
-        for (String task : List.of("segmentation", "keywords", "pos", "ner")) {
+        for (String task : TASKS) {
             JsonNode layer = layers.path(task);
             Map<String, Object> metrics = new LinkedHashMap<>();
             String state = layer.path("status").asText("notRequested");
@@ -235,10 +236,15 @@ public class WorkspaceService {
         JsonNode data = repository.parse(repository.json(export(documentId, snapshotId)));
         StringBuilder output = new StringBuilder("# " + data.path("document").path("title").asText() + "\n\n");
         output.append(data.path("snapshot").path("revision").path("textBody").asText()).append("\n\n");
-        for (String task : List.of("segmentation", "keywords", "pos", "ner")) {
+        for (String task : TASKS) {
             JsonNode layer = data.path("snapshot").path("layers").path(task);
             output.append("## ").append(task).append(" · ").append(layer.path("status").asText()).append('\n');
-            for (JsonNode item : layer.path("result").path("items")) output.append("- ").append(item.path("itemText").asText()).append(" ").append(item.path("label").asText("")).append(" ").append(item.path("spans")).append('\n');
+            for (JsonNode item : layer.path("result").path("items")) {
+                output.append("- ").append(item.path("itemText").asText()).append(" ").append(item.path("label").asText("")).append(" ").append(item.path("spans")).append('\n');
+                if(item.has("subject"))output.append("  主体：").append(item.path("subject").path("itemText").asText()).append("；客体：").append(item.path("object").path("itemText").asText()).append('\n');
+                if(item.has("roles"))item.path("roles").fields().forEachRemaining(role->{output.append("  ").append(role.getKey()).append(": ");for(JsonNode entry:role.getValue())output.append(entry.path("itemText").asText()).append("；");output.append('\n');});
+                if(item.has("suggestion"))output.append("  建议：").append(item.path("suggestion").asText()).append("；原因：").append(item.path("explanation").asText()).append('\n');
+            }
             output.append('\n');
         }
         return output.toString();
@@ -248,7 +254,7 @@ public class WorkspaceService {
         List<Map<String, Object>> rows = repository.jdbc().queryForList("SELECT d.id,s.layersJson FROM textDocument d LEFT JOIN annotationSnapshot s ON s.id=d.currentSnapshotId AND s.revisionId=d.currentRevisionId WHERE d.archived=FALSE");
         Map<String, Integer> itemCounts = new LinkedHashMap<>(), coverage = new LinkedHashMap<>(), entityLabels = new LinkedHashMap<>(), posLabels = new LinkedHashMap<>(), keywords = new LinkedHashMap<>();
         int savedCount = 0;
-        for (String task : List.of("segmentation", "keywords", "pos", "ner")) { itemCounts.put(task, 0); coverage.put(task, 0); }
+        for (String task : TASKS) { itemCounts.put(task, 0); coverage.put(task, 0); }
         for (Map<String, Object> row : rows) {
             JsonNode layers = repository.parse(row.get("layersJson"));
             if (!layers.isNull()) savedCount++;

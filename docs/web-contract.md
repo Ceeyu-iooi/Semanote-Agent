@@ -1,5 +1,16 @@
 # Web 系统实施与接口契约
 
+## 0.1.1 当前补充
+
+本节优先于下面原 Web 交付记录。Java/Spring Boot 通过 JSON/NDJSON 调用 agent/bridge.mjs（Node.js 24），活动模块契约为 1.1.0。十一层定义见 annotation-contract.md；旧四层快照继续可读。产品 JSON 导出版本仍为 1.0.0，layers 加法扩展，TXT/MD 同步保留主客体、事件角色与修改建议。
+
+- GET/PUT /api/v1/settings/model：provider 默认身份及 providers 数组；每项含 id/name/baseUrl/model/timeoutSeconds/maxOutputTokens/jsonMode。GET 仅给 hasApiKey，PUT 可填写 apiKey，空值保留原密钥，地址变更需重填。入队配置固定在内存，不把凭据写入持久任务请求。
+- GET /api/v1/model-logs：provider/model/state/cache/query/page/size/sort 筛选；返回同一筛选快照的 rows/total/summary 及完整可选供应商/模型。读取本地脱敏元数据，未提供 usage 为未知，不估算货币费用。
+- 分块进度反映已实际处理的文本块，成功图层只在完整合并校验后返回。缓存命中也重新建立本次修订/结果身份并验证跨度。
+- 缺省恢复新任务使用当前所选供应商配置；不自动重试或切换。正文、标注草稿、候选、保存快照和历史原文状态互相区分，历史无快照时不可导出当前版本。
+
+以下为原 P04/P05 交付时的四层约定，冲突处以本节及 0.1.1 用户决策为准。
+
 日期：2026-10-28。用户已确认三组方案；本文件冻结 P04/P05 必要规则，模块契约仍为 1.0.0。
 
 ## 需求的准确表述

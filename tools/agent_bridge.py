@@ -1,4 +1,4 @@
-"""Local stdin/stdout adapter; reuse the independent agent's validators."""
+"""Historical P03 Python bridge; Web 0.1.1 uses agent/bridge.mjs instead."""
 
 import json
 from pathlib import Path

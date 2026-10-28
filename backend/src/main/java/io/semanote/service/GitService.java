@@ -48,6 +48,6 @@ public class GitService {
     public Object changes(String revision) {
         if (!revision.matches("[a-f0-9]{40}")) throw new ApiFailure(400, "invalidRevision", "请选择有效提交。");
         return Map.of("id", revision, "summary", git("show", "--format=fuller", "--stat", "--no-renames", revision, "--"),
-                "patch", git("show", "--format=", "--first-parent", "--no-ext-diff", "--no-renames", "--unified=3", revision, "--", "README.md", "AGENTS.md", "CHANGELOG.md", "frontend/src", "backend/src", "semanote_agent", "tools", "docs/*.md"));
+                "patch", git("show", "--format=", "--first-parent", "--no-ext-diff", "--no-renames", "--unified=3", revision, "--", "README.md", "AGENTS.md", "CHANGELOG.md", "frontend/src", "frontend/tests", "frontend/package.json", "backend/src", "backend/pom.xml", "agent", "semanote_agent", "tools", "docs/*.md", "docs/design/tokens.css", "docs/design/preview.css", "docs/design/preview.js"));
     }
 }

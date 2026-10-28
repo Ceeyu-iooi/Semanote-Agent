@@ -8,7 +8,7 @@ projectRoot = Path(__file__).resolve().parent.parent
 
 
 def syncReference():
-    """Render text safely; never copy profile, private files, screenshots or receipts."""
+    """Copy explicit public artifacts only; private data and unreviewed images stay local."""
     source = (projectRoot / "CHANGELOG.md").read_text(encoding="utf-8")
     body = []
     for line in source.splitlines():
@@ -37,6 +37,12 @@ def syncReference():
     for sourcePath in (projectRoot / "docs/licenses").iterdir():
         if sourcePath.is_file(): shutil.copyfile(sourcePath, licenseTarget / sourcePath.name)
     shutil.copyfile(projectRoot / "README.md", projectRoot / "frontend/dist/README.md")
+    for name in ("workspace.png", "insights.png"):
+        sourcePath=projectRoot / "assets/readme" / name
+        if sourcePath.exists():
+            target=projectRoot / "frontend/dist/assets/readme" / name
+            target.parent.mkdir(parents=True,exist_ok=True)
+            shutil.copyfile(sourcePath,target)
     print("Developer references synchronized from explicit public sources.")
 
 

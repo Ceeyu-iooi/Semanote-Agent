@@ -1,4 +1,6 @@
-# 独立智能体
+# 历史 Python 独立交付
+
+0.1.1 起活动 Web 智能体为 agent/（JavaScript）；本目录保留 P03 原交付兼容及其回归，Web 不再调用本目录。修改活动能力应进入 agent/，不要维护第二套新增功能。
 
 先读根 AGENTS.md、docs/annotation-contract.md、docs/agent-usage.md。
 

@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import secrets
+import shutil
 import subprocess
 import time
 import urllib.request
@@ -71,7 +72,7 @@ def startDatabase():
 def backendEnvironment():
     config, _, _ = paths()
     environment = dict(os.environ)
-    environment.update({"SEMANOTE_PROJECT_ROOT": str(projectRoot), "SEMANOTE_PYTHON": os.sys.executable,
+    environment.update({"SEMANOTE_PROJECT_ROOT": str(projectRoot), "SEMANOTE_NODE": shutil.which("node") or "node",
                         "SEMANOTE_DB_PASSWORD": config["appPassword"], "SEMANOTE_DB_USER": "semanote"})
     if config.get("networkMode") == "lan":
         interfaces = lanInterfaces()
@@ -126,7 +127,7 @@ def startBackend():
                 return
     except Exception:
         pass
-    artifact = projectRoot / "backend/target/semanote-web-0.1.0-SNAPSHOT.jar"
+    artifact = projectRoot / "backend/target/semanote-web-0.1.1-SNAPSHOT.jar"
     if not artifact.exists(): raise RuntimeError("Build backend first; see docs/web-usage.md")
     with (runtimeRoot / "backend.log").open("ab") as log:
         process = subprocess.Popen(["java", "-jar", str(artifact)], cwd=projectRoot, env=backendEnvironment(), stdout=log, stderr=log, creationflags=creationFlags)
