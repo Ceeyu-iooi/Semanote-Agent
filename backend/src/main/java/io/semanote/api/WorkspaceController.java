@@ -3,6 +3,8 @@ package io.semanote.api;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.semanote.service.JobService;
 import io.semanote.service.WorkspaceService;
+import io.semanote.service.GitService;
+import io.semanote.service.ModelSettingsService;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -17,7 +19,9 @@ import org.springframework.web.multipart.MultipartFile;
 public class WorkspaceController {
     private final WorkspaceService workspace;
     private final JobService jobs;
-    public WorkspaceController(WorkspaceService workspace, JobService jobs) { this.workspace = workspace; this.jobs = jobs; }
+    private final GitService git;
+    private final ModelSettingsService modelSettings;
+    public WorkspaceController(WorkspaceService workspace, JobService jobs, GitService git, ModelSettingsService modelSettings) { this.workspace = workspace; this.jobs = jobs; this.git = git; this.modelSettings=modelSettings; }
 
     @GetMapping("/health") public Map<String, Object> health() { return Map.of("status", "ready", "contractVersion", "1.0.0"); }
     @GetMapping("/meta") public Map<String, Object> meta() {
@@ -39,10 +43,16 @@ public class WorkspaceController {
     @PostMapping("/jobs/{id}/retry") public ResponseEntity<?> retry(@PathVariable String id, @RequestBody JsonNode body) { return ResponseEntity.accepted().body(jobs.retry(id, body)); }
     @PostMapping("/documents/{id}/snapshots") public Object saveSnapshot(@PathVariable String id, @RequestBody JsonNode body) { return workspace.saveSnapshot(id, body); }
     @GetMapping("/documents/{id}/snapshots/{snapshotId}") public Object snapshot(@PathVariable String id, @PathVariable String snapshotId) { return workspace.snapshot(id, snapshotId); }
-    @GetMapping(value="/documents/{id}/exports/{snapshotId}", produces=MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> export(@PathVariable String id, @PathVariable String snapshotId) {
+    @GetMapping(value="/documents/{id}/exports/{snapshotId}")
+    public ResponseEntity<?> export(@PathVariable String id, @PathVariable String snapshotId, @RequestParam(defaultValue="json") String format) {
+        if (List.of("txt", "md").contains(format)) return ResponseEntity.ok().contentType(new MediaType("text", "plain", java.nio.charset.StandardCharsets.UTF_8)).header("Content-Disposition", "attachment; filename=semanote-" + safeIdentity(snapshotId) + "." + format).body(workspace.exportText(id, snapshotId));
+        if (!"json".equals(format)) throw new ApiFailure(400, "invalidExportFormat", "请选择 JSON、TXT 或 Markdown。");
         return ResponseEntity.ok().header("Content-Disposition", "attachment; filename=semanote-" + safeIdentity(snapshotId) + ".json").body(workspace.export(id, snapshotId));
     }
     private String safeIdentity(String value) { return value.replaceAll("[^A-Za-z0-9_-]", ""); }
     @GetMapping("/statistics") public Object statistics() { return workspace.statistics(); }
+    @GetMapping("/development/git") public Object gitHistory() { return git.history(); }
+    @GetMapping("/development/git/{revision}") public Object gitChanges(@PathVariable String revision) { return git.changes(revision); }
+    @GetMapping("/settings/model") public Object modelSettings() { return modelSettings.read(); }
+    @PutMapping("/settings/model") public Object updateModelSettings(@RequestBody JsonNode body) { return modelSettings.save(body); }
 }

@@ -12,6 +12,8 @@
   --color-page: #f5f5f7;
   --color-pearl: #fafafc;
   --color-dark: #272729;
+  --color-dark-two: #2a2a2c;
+  --color-dark-three: #252527;
   --color-black: #000000;
   --color-border: #e0e0e0;
   --color-divider: #f0f0f0;
@@ -42,6 +44,22 @@
   --space-section: 80px;
   --content-width: 1440px;
   --motion-fast: 160ms;
+  --motion-medium: 260ms;
+  --motion-ease: cubic-bezier(.2,.7,.2,1);
+  /* Annotation data colors only; interactive controls retain Action Blue. */
+  --annotation-person: #216e4e;
+  --annotation-person-bg: #e5f3eb;
+  --annotation-location: #265aa5;
+  --annotation-location-bg: #e7effa;
+  --annotation-organization: #725199;
+  --annotation-organization-bg: #f0eafa;
+  --annotation-time: #92621d;
+  --annotation-time-bg: #fbf1dc;
+  --annotation-money: #9a4f38;
+  --annotation-money-bg: #faeae2;
+  --annotation-keyword: #92621d;
+  --annotation-verb: #725199;
+  --annotation-noun: #265aa5;
   --bs-body-font-family: var(--font-body);
   --bs-body-font-size: var(--text-body);
   --bs-body-line-height: 1.47;

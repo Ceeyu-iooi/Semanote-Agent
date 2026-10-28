@@ -12,6 +12,8 @@ import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ConcurrentHashMap;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.springframework.stereotype.Service;
 
 /** Durable per-text jobs; no implicit model retries, even after server restart. */
@@ -21,10 +23,12 @@ public class JobService {
     private final WorkspaceRepository repository;
     private final WorkspaceService workspace;
     private final AgentBridge bridge;
+    private final ModelSettingsService modelSettings;
+    private final Map<String, JsonNode> progress = new ConcurrentHashMap<>();
     private final ThreadPoolExecutor executor = new ThreadPoolExecutor(1, 1, 0, TimeUnit.SECONDS, new ArrayBlockingQueue<>(500));
 
-    public JobService(WorkspaceRepository repository, WorkspaceService workspace, AgentBridge bridge) {
-        this.repository = repository; this.workspace = workspace; this.bridge = bridge;
+    public JobService(WorkspaceRepository repository, WorkspaceService workspace, AgentBridge bridge, ModelSettingsService modelSettings) {
+        this.repository = repository; this.workspace = workspace; this.bridge = bridge; this.modelSettings=modelSettings;
     }
 
     @PostConstruct
@@ -43,6 +47,7 @@ public class JobService {
         Map<String, Object> job = repository.one("SELECT * FROM annotationJob WHERE id=?", jobId);
         job.put("request", repository.parse(job.remove("requestJson")));
         job.put("response", repository.parse(job.remove("responseJson")));
+        job.put("progress", progress.get(jobId));
         return job;
     }
 
@@ -89,7 +94,7 @@ public class JobService {
     }
 
     private static void requireConsent(JsonNode body) {
-        if (!body.path("remoteConsent").isBoolean() || !body.path("remoteConsent").asBoolean()) throw new ApiFailure(400, "remoteConsentRequired", "自动标注会发送文本到所选模型；请先确认有权发送，受限课程语料不可发送。");
+        if (!body.path("remoteConsent").isBoolean() || !body.path("remoteConsent").asBoolean()) throw new ApiFailure(400, "remoteConsentRequired", "自动标注会发送文本到所选模型；请先确认有权发送。");
     }
 
     private Map<String, Object> enqueue(String id, String documentId, String revisionId, String provider, Object request, String previousId, JsonNode previousResponse) {
@@ -97,7 +102,8 @@ public class JobService {
         String timestamp = WorkspaceService.now();
         repository.jdbc().update("INSERT INTO annotationJob(id,documentId,revisionId,previousJobId,provider,state,requestJson,createdAt,updatedAt) VALUES (?,?,?,?,?,'queued',?,?,?)", id, documentId, revisionId, previousId, provider, repository.json(request), timestamp, timestamp);
         Map<String, Object> envelope = new LinkedHashMap<>();
-        envelope.put("action", "annotate"); envelope.put("remoteConsent", true); envelope.put("request", request); envelope.put("provider", provider);
+        envelope.put("action", "annotate"); envelope.put("remoteConsent", true); envelope.put("streamProgress", true); envelope.put("request", request); envelope.put("provider", provider);
+        envelope.put("modelPreferences", modelSettings.read());
         if (previousResponse != null && !previousResponse.isNull()) envelope.put("previousResponse", previousResponse);
         executor.execute(() -> execute(id, envelope));
         return job(id);
@@ -106,12 +112,19 @@ public class JobService {
     private void execute(String jobId, Map<String, Object> envelope) {
         repository.jdbc().update("UPDATE annotationJob SET state='running',updatedAt=? WHERE id=?", WorkspaceService.now(), jobId);
         try {
-            JsonNode response = bridge.invoke(envelope, true);
+            JsonNode response = bridge.invoke(envelope, true, event -> {
+                ObjectNode checkpoint = (ObjectNode) repository.parse("{}");
+                JsonNode previous = progress.get(jobId);
+                ObjectNode layers = previous == null ? (ObjectNode) repository.parse("{}") : (ObjectNode) previous.path("layers").deepCopy();
+                if (event.path("status").asText().equals("success")) layers.set(event.path("taskType").asText(), event.path("layer"));
+                checkpoint.put("taskType", event.path("taskType").asText()); checkpoint.put("status", event.path("status").asText());
+                checkpoint.set("layers", layers); progress.put(jobId, checkpoint);
+            });
             repository.jdbc().update("UPDATE annotationJob SET state=?,responseJson=?,updatedAt=? WHERE id=?", response.path("status").asText("failed"), repository.json(response), WorkspaceService.now(), jobId);
         } catch (ApiFailure failure) {
             repository.jdbc().update("UPDATE annotationJob SET state='failed',errorMessage=?,updatedAt=? WHERE id=?", failure.getMessage(), WorkspaceService.now(), jobId);
         } catch (Exception exception) {
             repository.jdbc().update("UPDATE annotationJob SET state='failed',errorMessage=?,updatedAt=? WHERE id=?", "调用未完成，未自动重发。", WorkspaceService.now(), jobId);
-        }
+        } finally { progress.remove(jobId); }
     }
 }

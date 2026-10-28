@@ -7,6 +7,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import java.io.ByteArrayOutputStream;
+import java.io.BufferedInputStream;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import io.semanote.api.ApiFailure;
@@ -26,17 +29,34 @@ public class AgentBridge {
     }
 
     public JsonNode invoke(Object envelope, boolean remote) {
+        return invoke(envelope, remote, event -> {});
+    }
+
+    public JsonNode invoke(Object envelope, boolean remote, Consumer<JsonNode> onProgress) {
         Process process = null;
         try {
             process = new ProcessBuilder(python, "-X", "utf8", "-B", "tools/agent_bridge.py")
                     .directory(projectRoot.toFile()).redirectError(ProcessBuilder.Redirect.DISCARD).start();
             Process activeProcess = process;
             CompletableFuture<byte[]> output = CompletableFuture.supplyAsync(() -> {
-                try { return activeProcess.getInputStream().readNBytes(8 * 1024 * 1024 + 1); }
-                catch (IOException exception) { return new byte[0]; }
+                try (var stream = new BufferedInputStream(activeProcess.getInputStream())) {
+                    ByteArrayOutputStream line = new ByteArrayOutputStream();
+                    byte[] result = new byte[0];
+                    long total = 0;
+                    for (int character; (character = stream.read()) != -1;) {
+                        if (++total > 16 * 1024 * 1024) throw new IOException("Output limit");
+                        if (character != '\n') { line.write(character); continue; }
+                        byte[] bytes = line.toByteArray(); line.reset();
+                        JsonNode message = mapper.readTree(bytes);
+                        if (message != null && "progress".equals(message.path("event").asText())) onProgress.accept(message);
+                        else result = bytes;
+                    }
+                    if (line.size() > 0) result = line.toByteArray();
+                    return result;
+                } catch (Exception exception) { throw new IllegalStateException(exception); }
             });
             try (var input = process.getOutputStream()) { input.write(mapper.writeValueAsBytes(envelope)); }
-            if (!process.waitFor(remote ? 300 : 20, TimeUnit.SECONDS)) {
+            if (!process.waitFor(remote ? 1000 : 20, TimeUnit.SECONDS)) {
                 process.destroyForcibly();
                 throw new ApiFailure(503, "agentTimeout", "调用超时，未自动重发；请核对后显式重试。");
             }

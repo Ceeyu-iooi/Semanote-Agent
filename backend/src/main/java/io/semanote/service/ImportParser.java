@@ -7,6 +7,10 @@ import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.io.ByteArrayInputStream;
+import java.util.zip.ZipInputStream;
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLStreamConstants;
 
 /** Strict UTF-8 and RFC-style quoted CSV; fields retain original characters. */
 public final class ImportParser {
@@ -17,14 +21,15 @@ public final class ImportParser {
     public static ImportResult parse(String fileName, byte[] bytes) {
         if (bytes.length > 5 * 1024 * 1024) throw new ApiFailure(413, "fileTooLarge", "文件超过 5 MiB。");
         String content;
+        String extension = fileName.toLowerCase(java.util.Locale.ROOT);
         try {
-            content = StandardCharsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT)
+            content = extension.endsWith(".docx") ? docx(bytes) : StandardCharsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT)
                     .onUnmappableCharacter(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(bytes)).toString();
         } catch (CharacterCodingException exception) { throw new ApiFailure(400, "invalidEncoding", "请将文件另存为 UTF-8 后导入。"); }
         if (content.startsWith("\uFEFF")) content = content.substring(1);
         List<ImportedText> texts = new ArrayList<>();
         int skippedCount = 0;
-        if (fileName.toLowerCase(java.util.Locale.ROOT).endsWith(".txt")) {
+        if (extension.endsWith(".txt") || extension.endsWith(".md") || extension.endsWith(".docx")) {
             if (isBlank(content)) skippedCount++;
             else { validateText(content); texts.add(new ImportedText(content, 1, 1, "text")); }
         } else if (fileName.toLowerCase(java.util.Locale.ROOT).endsWith(".csv")) {
@@ -41,8 +46,45 @@ public final class ImportParser {
                     if (texts.size() > 500) throw new ApiFailure(413, "batchTooLarge", "单批最多 500 个非空白文本；本次未导入，请拆分文件。");
                 }
             }
-        } else throw new ApiFailure(400, "unsupportedFile", "请选择 UTF-8 TXT 或三列 CSV 文件。");
+        } else throw new ApiFailure(400, "unsupportedFile", "请选择 DOCX、UTF-8 TXT、MD 或三列 CSV 文件。");
         return new ImportResult(texts, skippedCount);
+    }
+
+    private static String docx(byte[] bytes) {
+        // Only main-document text is read; external relationships, macros and embedded objects are never opened.
+        try (var zip = new ZipInputStream(new ByteArrayInputStream(bytes))) {
+            int expandedBytes = 0, entries = 0;
+            for (var entry = zip.getNextEntry(); entry != null; entry = zip.getNextEntry()) {
+                if (++entries > 1000) throw new ApiFailure(413, "expandedFileTooLarge", "DOCX 条目过多。");
+                if (!"word/document.xml".equals(entry.getName())) {
+                    expandedBytes += zip.readNBytes(10 * 1024 * 1024 + 1).length;
+                    if (expandedBytes > 10 * 1024 * 1024) throw new ApiFailure(413, "expandedFileTooLarge", "DOCX 解压后过大。");
+                    continue;
+                }
+                byte[] xml = zip.readNBytes(10 * 1024 * 1024 + 1);
+                if (xml.length > 10 * 1024 * 1024) throw new ApiFailure(413, "expandedFileTooLarge", "DOCX 正文解压后过大。");
+                XMLInputFactory factory = XMLInputFactory.newFactory();
+                factory.setProperty(XMLInputFactory.SUPPORT_DTD, false);
+                factory.setProperty("javax.xml.stream.isSupportingExternalEntities", false);
+                factory.setXMLResolver((publicId, systemId, baseUri, namespace) -> { throw new javax.xml.stream.XMLStreamException("External resource rejected"); });
+                var reader = factory.createXMLStreamReader(new ByteArrayInputStream(xml), "UTF-8");
+                StringBuilder text = new StringBuilder();
+                while (reader.hasNext()) {
+                    int event = reader.next();
+                    if (event == XMLStreamConstants.DTD) throw new IllegalArgumentException("DTD rejected");
+                    if (event == XMLStreamConstants.START_ELEMENT) {
+                        String name = reader.getLocalName();
+                        if ("t".equals(name)) text.append(reader.getElementText());
+                        else if ("tab".equals(name)) text.append('\t');
+                        else if ("br".equals(name) || "cr".equals(name)) text.append('\n');
+                    } else if (event == XMLStreamConstants.END_ELEMENT && "p".equals(reader.getLocalName())) text.append('\n');
+                }
+                reader.close();
+                return text.toString();
+            }
+        } catch (ApiFailure failure) { throw failure; }
+        catch (Exception exception) { throw new ApiFailure(400, "invalidDocx", "DOCX 正文无法读取，请检查文件或另存为 TXT。"); }
+        throw new ApiFailure(400, "invalidDocx", "文件缺少 DOCX 正文。");
     }
 
     public static boolean isBlank(String text) {

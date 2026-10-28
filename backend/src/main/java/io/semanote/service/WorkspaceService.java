@@ -55,7 +55,9 @@ public class WorkspaceService {
             row.put("textLength", text.codePointCount(0, text.length()));
             row.put("searchText", text);
             row.put("preview", text.substring(0, text.offsetByCodePoints(0, Math.min(90, text.codePointCount(0, text.length())))));
-            row.put("source", repository.parse(row.remove("sourceJson")));
+            JsonNode source = repository.parse(row.remove("sourceJson"));
+            if (source.isObject()) ((com.fasterxml.jackson.databind.node.ObjectNode) source).remove("occurrences");
+            row.put("source", source);
         }
         return rows;
     }
@@ -227,6 +229,19 @@ public class WorkspaceService {
             result.put(task, metrics);
         }
         return result;
+    }
+
+    public String exportText(String documentId, String snapshotId) {
+        JsonNode data = repository.parse(repository.json(export(documentId, snapshotId)));
+        StringBuilder output = new StringBuilder("# " + data.path("document").path("title").asText() + "\n\n");
+        output.append(data.path("snapshot").path("revision").path("textBody").asText()).append("\n\n");
+        for (String task : List.of("segmentation", "keywords", "pos", "ner")) {
+            JsonNode layer = data.path("snapshot").path("layers").path(task);
+            output.append("## ").append(task).append(" · ").append(layer.path("status").asText()).append('\n');
+            for (JsonNode item : layer.path("result").path("items")) output.append("- ").append(item.path("itemText").asText()).append(" ").append(item.path("label").asText("")).append(" ").append(item.path("spans")).append('\n');
+            output.append('\n');
+        }
+        return output.toString();
     }
 
     public Map<String, Object> statistics() {

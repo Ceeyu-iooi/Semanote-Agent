@@ -21,7 +21,7 @@ def syncReference():
     destination = projectRoot / "frontend/dist/reference"
     destination.mkdir(parents=True, exist_ok=True)
     designRoot = projectRoot / "docs/design"
-    for relative in ("preview.html", "tokens.css", "README.md", "apple/DESIGN.md", "apple/LICENSE", "apple/source.json"):
+    for relative in ("preview.html", "preview.css", "preview.js", "DESIGN.md", "tokens.css", "README.md", "apple/DESIGN.md", "apple/LICENSE", "apple/source.json"):
         target = destination / "design" / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(designRoot / relative, target)
