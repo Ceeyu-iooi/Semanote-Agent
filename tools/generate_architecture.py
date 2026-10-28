@@ -58,7 +58,7 @@ architecture("system-architecture", "Semanote · B/S 系统框架", [
 ])
 
 architecture("frontend-architecture", "Semanote · Vue 前端框架", [
-    node("app", "frontend", "Vue 应用状态", "十一层工作台 · 逐篇统计", 40, 220, [source("frontend/src/App.vue", 8, 51), source("frontend/src/components/DocumentInsights.vue", 1, 35), source("frontend/src/components/ModelLogs.vue", 1, 20)], height=96),
+    node("app", "frontend", "Vue 应用状态", "十一层工作台 · 逐篇统计", 40, 220, [source("frontend/src/App.vue", 8, 51), source("frontend/src/components/DocumentInsights.vue", 1, 35), anchor("frontend/src/App.vue", "function revealAnnotation", 14)], height=96),
     node("canvas", "frontend", "AnnotationCanvas", "码点选区 · 重叠高亮", 420, 40, [source("frontend/src/components/AnnotationCanvas.vue", 1, 30),source("frontend/src/annotationPresentation.js", 20, 45),source("frontend/src/components/PointerTip.vue",1,13)]),
     node("client", "frontend", "API 客户端", "fetch · 错误与请求边界", 420, 220, [source("frontend/src/api.js", 1, 14)]),
     node("developer", "frontend", "DeveloperCenter", "规范与 Archify 资料导航", 420, 400, [source("frontend/src/components/DeveloperCenter.vue", 1, 23)]),

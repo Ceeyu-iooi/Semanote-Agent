@@ -104,12 +104,13 @@ def verifyGit(expectGit):
         print("SKIP Git refs: repository not yet initialized.")
         return
     rootFiles = {"README.md", "AGENTS.md", "CHANGELOG.md", "VERSION", ".gitignore", ".gitattributes", ".editorconfig", ".env.example"}
+    readmeImages = {"assets/readme/workspace.png", "assets/readme/insights.png"}
     tracked = runGit("ls-files").splitlines()
     for fileName in tracked:
-        if fileName not in rootFiles and not fileName.startswith(("docs/", "tools/", ".github/", "semanote_agent/", "tests/", "examples/", "frontend/", "backend/")):
+        if fileName not in rootFiles | readmeImages and not fileName.startswith(("docs/", "tools/", ".github/", "agent/", "semanote_agent/", "tests/", "examples/", "frontend/", "backend/")):
             raise ValueError("Outside publication allowlist: " + fileName)
         extension = Path(fileName).suffix.lower()
-        allowedFormat = extension in {"", ".md", ".json", ".html", ".css", ".py", ".js", ".vue", ".java", ".xml", ".properties"}
+        allowedFormat = extension in {"", ".md", ".json", ".html", ".css", ".py", ".js", ".mjs", ".vue", ".java", ".xml", ".properties"} or fileName in readmeImages
         allowedFormat = allowedFormat or fileName in {"backend/src/main/resources/schema.sql", "tools/configure_lan.ps1"} or (fileName.startswith("docs/licenses/") and extension == ".txt")
         if not allowedFormat and fileName not in rootFiles:
             raise ValueError("Unexpected public file format: " + fileName)
