@@ -8,7 +8,7 @@
     "output": "docs/diagrams/git-workflow.html",
     "repository": {
       "url": "https://github.com/Ceeyu-iooi/Semanote-Agent.git",
-      "revision": "83d3f0e7e896739413a97f9839995acbb6ce91b0",
+      "revision": "acd86eefa093434464007ab1242e9142326976bb",
       "link_mode": "local-only"
     }
   },
@@ -123,7 +123,7 @@
       "lane": "release",
       "col": 5,
       "type": "database",
-      "label": "vX.Y.Z",
+      "label": "X.Y.Z",
       "sublabel": "不可移动标签",
       "sources": [
         {

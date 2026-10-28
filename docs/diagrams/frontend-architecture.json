@@ -8,7 +8,7 @@
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/Ceeyu-iooi/Semanote-Agent.git",
-      "revision": "83d3f0e7e896739413a97f9839995acbb6ce91b0",
+      "revision": "acd86eefa093434464007ab1242e9142326976bb",
       "link_mode": "local-only"
     }
   },
@@ -56,7 +56,7 @@
         {
           "path": "frontend/src/components/AnnotationCanvas.vue",
           "line": 1,
-          "end_line": 35
+          "end_line": 34
         }
       ]
     },
@@ -98,7 +98,7 @@
         {
           "path": "frontend/src/components/DeveloperCenter.vue",
           "line": 1,
-          "end_line": 23
+          "end_line": 22
         }
       ]
     },
@@ -169,7 +169,7 @@
       "id": "app-developer",
       "from": "app",
       "to": "developer",
-      "label": "开发者导航",
+      "label": "独立 /developer",
       "variant": "default"
     },
     {
@@ -200,7 +200,7 @@
       "dot": "slate",
       "title": "视觉与选区",
       "items": [
-        "业务页、开发者页、preview 共用 tokens.css",
+        "业务页、独立开发者页、preview 共用 tokens.css；四层独立叠加",
         "浏览器 UTF-16 选区显式转 Unicode 码点；原文用文本节点渲染"
       ]
     }

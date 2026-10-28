@@ -8,7 +8,7 @@
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/Ceeyu-iooi/Semanote-Agent.git",
-      "revision": "ef99ef2b57e5c557b88bf80a05c73ea081eec455",
+      "revision": "acd86eefa093434464007ab1242e9142326976bb",
       "link_mode": "local-only"
     }
   },
@@ -115,8 +115,8 @@
     {
       "id": "reference",
       "type": "frontend",
-      "label": "开发者中心",
-      "sublabel": "设计规范 · Archify · 变更",
+      "label": "独立开发者中心",
+      "sublabel": "设计 · Archify · 实际 Git",
       "pos": [
         300,
         250
@@ -129,7 +129,12 @@
         {
           "path": "frontend/src/components/DeveloperCenter.vue",
           "line": 4,
-          "end_line": 23
+          "end_line": 22
+        },
+        {
+          "path": "frontend/src/main.js",
+          "line": 1,
+          "end_line": 8
         }
       ]
     },
@@ -212,7 +217,7 @@
       "id": "vue-reference",
       "from": "vue",
       "to": "reference",
-      "label": "同源资料",
+      "label": "独立 /developer",
       "variant": "default"
     },
     {

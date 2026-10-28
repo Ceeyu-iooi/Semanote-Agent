@@ -2,10 +2,15 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "P03 文本标注智能体 · 独立模块处理原理",
+    "title": "Semanote · 智能体推理与原文对齐",
     "locale": "zh-CN",
     "output": "docs/diagrams/agent-architecture.html",
-    "quality_profile": "showcase"
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/Ceeyu-iooi/Semanote-Agent.git",
+      "revision": "acd86eefa093434464007ab1242e9142326976bb",
+      "link_mode": "local-only"
+    }
   },
   "components": [
     {
@@ -20,6 +25,13 @@
       "size": [
         170,
         74
+      ],
+      "sources": [
+        {
+          "path": "semanote_agent/__main__.py",
+          "line": 1,
+          "end_line": 20
+        }
       ]
     },
     {
@@ -35,6 +47,13 @@
       "size": [
         190,
         74
+      ],
+      "sources": [
+        {
+          "path": "semanote_agent/rules.py",
+          "line": 29,
+          "end_line": 49
+        }
       ]
     },
     {
@@ -49,6 +68,13 @@
       "size": [
         185,
         74
+      ],
+      "sources": [
+        {
+          "path": "semanote_agent/agent.py",
+          "line": 140,
+          "end_line": 175
+        }
       ]
     },
     {
@@ -64,6 +90,13 @@
       "size": [
         215,
         86
+      ],
+      "sources": [
+        {
+          "path": "semanote_agent/agent.py",
+          "line": 175,
+          "end_line": 210
+        }
       ]
     },
     {
@@ -79,6 +112,13 @@
       "size": [
         190,
         86
+      ],
+      "sources": [
+        {
+          "path": "semanote_agent/providers.py",
+          "line": 80,
+          "end_line": 125
+        }
       ]
     },
     {
@@ -94,13 +134,20 @@
       "size": [
         200,
         86
+      ],
+      "sources": [
+        {
+          "path": "semanote_agent/config.py",
+          "line": 105,
+          "end_line": 125
+        }
       ]
     },
     {
       "id": "resultGuard",
       "type": "security",
-      "label": "响应与标注校验",
-      "sublabel": "JSON / 标签 / 区间",
+      "label": "原文对齐与标注校验",
+      "sublabel": "定位 / 格式补全 / 区间",
       "tag": "原文切片一致",
       "pos": [
         335,
@@ -109,6 +156,18 @@
       "size": [
         190,
         86
+      ],
+      "sources": [
+        {
+          "path": "semanote_agent/grounding.py",
+          "line": 1,
+          "end_line": 50
+        },
+        {
+          "path": "semanote_agent/annotations.py",
+          "line": 60,
+          "end_line": 95
+        }
       ]
     },
     {
@@ -123,6 +182,13 @@
       "size": [
         215,
         86
+      ],
+      "sources": [
+        {
+          "path": "semanote_agent/agent.py",
+          "line": 200,
+          "end_line": 210
+        }
       ]
     },
     {
@@ -138,6 +204,13 @@
       "size": [
         190,
         86
+      ],
+      "sources": [
+        {
+          "path": "docs/annotation-contract.md",
+          "line": 25,
+          "end_line": 48
+        }
       ]
     }
   ],
@@ -224,7 +297,7 @@
       "title": "供应商与数据边界",
       "items": [
         "首选 DeepSeek；其他兼容 Chat Completions 的服务显式配置，不自动换供应商。",
-        "仅原创合成文本可用于当前外部验证；真实语料外发授权仍为 TBD[D09]。",
+        "本次仅授权当前 DeepSeek 的代表性 CSV 样本；不扩大到全库或其他服务。",
         "原文中的指令只作待标注数据，模型响应只解析和校验。"
       ]
     },
@@ -234,7 +307,7 @@
       "items": [
         "合法零结果、未执行、调用失败和校验失败分别表达，不返回伪成功。",
         "重新推理只新增自动候选，不覆盖人工版或静默迁移旧区间。",
-        "独立模块已实现并经本地测试及 DeepSeek 合成输入验证；Web 后端、存储和前端仍待 P04/P05。"
+        "Web 后端接收真实图层检查点，界面只对已返回结果播放呈现动画。"
       ]
     }
   ]
