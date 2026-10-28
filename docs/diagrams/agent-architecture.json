@@ -1,0 +1,241 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "P03 文本标注智能体 · 独立模块处理原理",
+    "locale": "zh-CN",
+    "output": "docs/diagrams/agent-architecture.html",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    {
+      "id": "caller",
+      "type": "external",
+      "label": "独立调用入口",
+      "sublabel": "Python 3.12 / CLI",
+      "pos": [
+        40,
+        40
+      ],
+      "size": [
+        170,
+        74
+      ]
+    },
+    {
+      "id": "inputGuard",
+      "type": "security",
+      "label": "输入与修订校验",
+      "sublabel": "固定原文与身份",
+      "tag": "非法输入拒绝",
+      "pos": [
+        335,
+        40
+      ],
+      "size": [
+        190,
+        74
+      ]
+    },
+    {
+      "id": "planner",
+      "type": "backend",
+      "label": "任务编排",
+      "sublabel": "所选任务与依赖",
+      "pos": [
+        665,
+        40
+      ],
+      "size": [
+        185,
+        74
+      ]
+    },
+    {
+      "id": "runner",
+      "type": "backend",
+      "label": "四类能力执行",
+      "sublabel": "分词 / 关键词 / POS / NER",
+      "tag": "POS 依赖分词",
+      "pos": [
+        665,
+        250
+      ],
+      "size": [
+        215,
+        86
+      ]
+    },
+    {
+      "id": "providerAdapter",
+      "type": "backend",
+      "label": "供应商适配",
+      "sublabel": "端点 / 模型 / 凭据",
+      "tag": "显式切换",
+      "pos": [
+        335,
+        250
+      ],
+      "size": [
+        190,
+        86
+      ]
+    },
+    {
+      "id": "modelProvider",
+      "type": "cloud",
+      "label": "大模型 API",
+      "sublabel": "DeepSeek / 其他兼容服务",
+      "tag": "仅发送获准文本",
+      "pos": [
+        40,
+        250
+      ],
+      "size": [
+        200,
+        86
+      ]
+    },
+    {
+      "id": "resultGuard",
+      "type": "security",
+      "label": "响应与标注校验",
+      "sublabel": "JSON / 标签 / 区间",
+      "tag": "原文切片一致",
+      "pos": [
+        335,
+        510
+      ],
+      "size": [
+        190,
+        86
+      ]
+    },
+    {
+      "id": "aggregator",
+      "type": "backend",
+      "label": "逐层状态汇总",
+      "sublabel": "成功 / 部分失败 / 失败",
+      "pos": [
+        665,
+        510
+      ],
+      "size": [
+        215,
+        86
+      ]
+    },
+    {
+      "id": "result",
+      "type": "external",
+      "label": "自动标注候选",
+      "sublabel": "固定输入修订",
+      "tag": "交调用方保存",
+      "pos": [
+        1010,
+        510
+      ],
+      "size": [
+        190,
+        86
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "submit",
+      "from": "caller",
+      "to": "inputGuard",
+      "label": "文本与任务",
+      "variant": "emphasis"
+    },
+    {
+      "id": "validInput",
+      "from": "inputGuard",
+      "to": "planner",
+      "label": "有效请求",
+      "variant": "emphasis"
+    },
+    {
+      "id": "schedule",
+      "from": "planner",
+      "to": "runner",
+      "label": "按依赖执行",
+      "variant": "emphasis"
+    },
+    {
+      "id": "invoke",
+      "from": "runner",
+      "to": "providerAdapter",
+      "label": "逐层请求",
+      "variant": "emphasis"
+    },
+    {
+      "id": "send",
+      "from": "providerAdapter",
+      "to": "modelProvider",
+      "label": "HTTPS JSON",
+      "variant": "security"
+    },
+    {
+      "id": "receive",
+      "from": "modelProvider",
+      "to": "providerAdapter",
+      "label": "模型响应"
+    },
+    {
+      "id": "validate",
+      "from": "providerAdapter",
+      "to": "resultGuard",
+      "label": "响应候选"
+    },
+    {
+      "id": "validatedLayer",
+      "from": "resultGuard",
+      "to": "aggregator",
+      "label": "校验结论"
+    },
+    {
+      "id": "failedCall",
+      "from": "runner",
+      "to": "aggregator",
+      "label": "调用或依赖失败"
+    },
+    {
+      "id": "return",
+      "from": "aggregator",
+      "to": "result",
+      "label": "结果与错误",
+      "variant": "emphasis"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "四类任务与依赖",
+      "items": [
+        "分词、关键词、词性、命名实体全部必做；可分别选择或组合执行。",
+        "词性使用同修订分词结果；分词失败时词性报依赖失败，关键词和实体可独立继续。",
+        "冻结契约 1.0.0：Unicode 码点区间、UD 17 类词性、原文关键词及五类实体。"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "供应商与数据边界",
+      "items": [
+        "首选 DeepSeek；其他兼容 Chat Completions 的服务显式配置，不自动换供应商。",
+        "仅原创合成文本可用于当前外部验证；真实语料外发授权仍为 TBD[D09]。",
+        "原文中的指令只作待标注数据，模型响应只解析和校验。"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "版本、错误与阶段边界",
+      "items": [
+        "合法零结果、未执行、调用失败和校验失败分别表达，不返回伪成功。",
+        "重新推理只新增自动候选，不覆盖人工版或静默迁移旧区间。",
+        "独立模块已实现并经本地测试及 DeepSeek 合成输入验证；Web 后端、存储和前端仍待 P04/P05。"
+      ]
+    }
+  ]
+}

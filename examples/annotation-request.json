@@ -1,0 +1,6 @@
+{
+  "requestId": "synthetic-demo-001",
+  "revisionId": "synthetic-text-001-r1",
+  "text": "2026年10月27日，林澄在杭州的青禾研究院参加 NLP 交流，支付人民币300元🙂。\n林澄随后返回杭州。",
+  "tasks": ["segmentation", "keywords", "pos", "ner"]
+}

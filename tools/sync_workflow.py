@@ -18,8 +18,6 @@ def composePrompt(workflow, stage):
     dependencyText = "无；核查当前项目与资料即可。"
     if stage["dependsOn"]:
         dependencyText = "、".join(stage["dependsOn"]) + " 已有用户验收证据；没有证据时先核实，不自动宣称通过。"
-    if stage["id"] == "P15":
-        dependencyText += " 统计属于课程基本要求，可在 P13 后独立进行；P14 的人工修订同步在 P18 集中验证。"
     decisionsText = "无本阶段新增必决策项；其他未决项仍按原清单保留。"
     if stage["decisionIds"]:
         decisionsText = "、".join("TBD[" + value + "]" for value in stage["decisionIds"])
@@ -45,9 +43,13 @@ def composePrompt(workflow, stage):
 def validateSource(workflow):
     """Validate stable IDs and an acyclic dependency graph before writing."""
     stages = workflow["stages"]
-    expectedIds = ["P00", "P01", "P02", "P03", "P04", "P05", "P06", "P07", "P08a", "P08b", "P08c", "P08d"] + [f"P{number:02d}" for number in range(9, 21)]
+    expectedIds = [f"P{number:02d}" for number in range(1, 6)]
     if [stage["id"] for stage in stages] != expectedIds:
-        raise ValueError("Expected exactly P00–P20 with P08a–d in source order")
+        raise ValueError("Expected exactly five steps: P01–P05")
+    if [stage["title"] for stage in stages] != ["设计数据库", "写需求文档", "智能体开发", "后端开发", "开发前端"]:
+        raise ValueError("Step titles must follow the five-step workflow requested by the user")
+    if workflow.get("schemaVersion") != 2:
+        raise ValueError("Expected workflow schemaVersion 2")
     stageById = {stage["id"]: stage for stage in stages}
     phaseIds = {phase["id"] for phase in workflow["phases"]}
     decisionText = (projectRoot / "docs/decisions.md").read_text(encoding="utf-8")
@@ -90,12 +92,12 @@ def renderViews(workflow, rawSource):
     payload = dict(workflow)
     payload["sourceWorkflowSha256"] = sourceHash
     payload["stages"] = [dict(stage, promptText=composePrompt(workflow, stage)) for stage in workflow["stages"]]
-    stageById = {stage["id"]: stage for stage in payload["stages"]}
     orderedStages = [stage for phase in workflow["phases"] for stage in payload["stages"] if stage["phaseId"] == phase["id"]]
     header = f"<!-- Generated from workflow.json; SHA-256: {sourceHash}. Do not edit this generated file. -->\n"
-    promptLines = [header, "# 完整开发提示词\n", "每个代码块可独立复制，已包含共同边界。只执行当前指定阶段，结束后等待用户验收。技术选型保持 TBD，P03 确认后才能实现。\n", "编号用于定位，前置依赖决定执行顺序。P15 为课程必做统计，可在 P13 后先于人工校对开展；P16 同时依赖 P14 与 P15。\n"]
-    workflowLines = [header, "# 开发流程\n", "唯一编辑源为 workflow.json，提示词和离线流程由同一内容生成。浏览阶段不会执行代码或改变验收状态。\n", "P00 的 prepared 表示产物已准备，尚待用户验收；其余阶段均未开始。当前仅有初始化文档，没有产品原型和业务软件。\n", "沿用参考博客的数据设计→PRD→后端→接口验证→前端主线，并补充课程中期、评估与验收。不得照搬博客的技术栈和登录等业务功能。\n", "P15 统计是基本要求，可在 P13 后独立实现；P14 人工校对是已选扩展。P16 需二者通过。编号不强制串行，依赖以表为准。\n", "[离线交互流程](workflow.html) · [完整提示词](prompts.md) · [待决策清单](decisions.md)\n"]
     statusNames = {"pending": "未开始", "prepared": "产物待验收", "accepted": "用户已验收", "inProgress": "执行中"}
+    statusSummary = "；".join(f"{stage['id']} {statusNames[stage['status']]}" for stage in workflow["stages"])
+    promptLines = [header, "# 五步开发提示词\n", "设计数据库 → 写需求文档 → 智能体开发 → 后端开发 → 开发前端。每份代码块可独立复制，执行到依赖未决选型的位置再确认，不提前填写技术答案。\n", f"当前状态：{statusSummary}。数据库先完成设计文档，后端步骤才按选定存储方案落地；智能体可独立验证，不依赖尚未开发的后端。\n"]
+    workflowLines = [header, "# 五步开发流程\n", workflow["flowNote"] + "\n", f"唯一编辑源为 workflow.json。初始化已交付；当前状态：{statusSummary}。浏览或复制不会执行开发或改变验收状态。技术选型等未决项保持 TBD，分别在相关步骤实现前确认。\n", "测试、统计、人工校对、导出、批量和课程交付检查点纳入相应步骤，不额外拆分主流程。\n", "[离线交互流程](workflow.html) · [五份完整提示词](prompts.md) · [待决策清单](decisions.md)\n"]
     for phase in workflow["phases"]:
         workflowLines += [f"## {phase['title']}\n", phase["schedule"] + "\n", "| 阶段 | 依赖 | 状态 | 产物 |", "|---|---|---|---|"]
         for stage in orderedStages:
