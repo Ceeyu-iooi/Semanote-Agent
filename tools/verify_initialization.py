@@ -97,16 +97,16 @@ def verifyDocumentation():
 
 
 def verifyGit(expectGit):
-    """Reject publication of files outside the reviewed initialization allowlist."""
+    """Check the initialization baseline and explicitly reviewed P03 public paths."""
     if not (projectRoot / ".git").exists():
         if expectGit:
             raise ValueError("Git repository is missing")
         print("SKIP Git refs: repository not yet initialized.")
         return
-    rootFiles = {"README.md", "AGENTS.md", "CHANGELOG.md", "VERSION", ".gitignore", ".gitattributes", ".editorconfig"}
+    rootFiles = {"README.md", "AGENTS.md", "CHANGELOG.md", "VERSION", ".gitignore", ".gitattributes", ".editorconfig", ".env.example"}
     tracked = runGit("ls-files").splitlines()
     for fileName in tracked:
-        if fileName not in rootFiles and not fileName.startswith(("docs/", "tools/", ".github/")):
+        if fileName not in rootFiles and not fileName.startswith(("docs/", "tools/", ".github/", "semanote_agent/", "tests/", "examples/")):
             raise ValueError("Outside publication allowlist: " + fileName)
         if Path(fileName).suffix.lower() not in {"", ".md", ".json", ".html", ".css", ".py"} and fileName not in rootFiles:
             raise ValueError("Unexpected public file format: " + fileName)

@@ -7,6 +7,9 @@
 /tmp/
 /work/
 
+# Local Archify delivery provenance; public HTML and editable source are retained.
+/docs/diagrams/*.delivery.json
+
 # Secrets and local configuration
 .env
 .env.*

@@ -1,10 +1,10 @@
-<!-- Generated from workflow.json; SHA-256: 0da3d20209bf66ba8730c1e2b1e0714e4b03db9c427cb7adf1d42b68b0f62d5b. Do not edit this generated file. -->
+<!-- Generated from workflow.json; SHA-256: 9d4bb0af0e7742b946199d02fca6a0ffca1addb72bd08b76b0b0031c5c044733. Do not edit this generated file. -->
 
 # 五步开发提示词
 
 设计数据库 → 写需求文档 → 智能体开发 → 后端开发 → 开发前端。每份代码块可独立复制，执行到依赖未决选型的位置再确认，不提前填写技术答案。
 
-当前状态：P01 用户已验收；P02 产物待验收；P03 未开始；P04 未开始；P05 未开始。数据库先完成设计文档，后端步骤才按选定存储方案落地；智能体可独立验证，不依赖尚未开发的后端。
+当前状态：P01 用户已验收；P02 用户已验收；P03 产物待验收；P04 未开始；P05 未开始。数据库先完成设计文档，后端步骤才按选定存储方案落地；智能体可独立验证，不依赖尚未开发的后端。
 
 <a id="p01"></a>
 
