@@ -45,6 +45,8 @@ python -X utf8 -B tools/local_web.py start
 
 ## 构建和开发依赖恢复
 
+Windows 重建前先停止本项目后端：`python -X utf8 -B tools/local_web.py stop`，避免运行中的 JAR 被锁定；构建通过后重新 start。
+
 浏览器所需 Vue/Bootstrap 已编译进 frontend/dist，网页部署不需要 frontend/node_modules；活动智能体仍需要 Node.js 24。确认成品可运行后，可以清除本次 npm 环境，开发时由锁文件恢复：
 
 ```powershell

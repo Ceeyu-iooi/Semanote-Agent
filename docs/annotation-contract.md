@@ -6,7 +6,7 @@ JavaScript 入口：`node agent/bridge.mjs`，stdin 接收 action/envelope，std
 
 | 层 | 候选与结果 |
 |---|---|
-| paragraphs | 按序 itemText，拼接必须逐字等于原文（含全部空白）；本地按已有换行和语义边界生成，展示只增加 CSS 换行 |
+| paragraphs | 按序 itemText，拼接必须逐字等于原文（含全部空白）；本地按已有换行、句末及可用语义边界生成，展示只增加 CSS 换行 |
 | relations | itemText/occurrence 证据、label、subject/object 原文词面；结果主客体各有独立原文 spans |
 | events | itemText/occurrence 证据、label、roles.subject/object/time/location/cause/result 数组；角色逐字来自原文，优先事件证据内出现。唯一的上下文角色可指向其他位置；多处歧义须提供 {itemText,occurrences:[0起始序号]}，不存在的信息不得补造 |
 | sentiment | 句子 itemText/occurrence、POSITIVE/NEGATIVE/NEUTRAL；所选层需覆盖各句非空白字符 |

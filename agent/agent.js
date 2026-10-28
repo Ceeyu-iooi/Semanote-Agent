@@ -32,6 +32,7 @@ function paragraphs(text,semantic=[]){
  const chars=Array.from(text),boundaries=new Set([0,chars.length]);
  for(let i=0;i<chars.length;i++)if(chars[i]==='\n')boundaries.add(i+1);
  for(const item of semantic){boundaries.add(item.spans[0].start);}
+ if(!semantic.length)for(let index=0;index<chars.length;index++)if(/[。！？!?]/u.test(chars[index])){let end=index+1;while(end<chars.length&&/[”’」』]/u.test(chars[end]))end++;boundaries.add(end);}
  const points=[...boundaries].sort((a,b)=>a-b);
  return points.slice(0,-1).map((start,index)=>({itemText:chars.slice(start,points[index+1]).join('')}));
 }
@@ -103,7 +104,7 @@ export async function annotate(request,config,{previousResponse=null,onProgress=
    }
    const layer=layers[task];layer.status='success';layer.error=null;layer.result={resultId:randomUUID(),revisionId:request.revisionId,specVersion:'1.1.0',producerKind:'automatic',dependencyResultId:task==='pos'?layers.segmentation.result.resultId:null,items};
   }catch(error){layers[task].status='failed';layers[task].result=null;layers[task].error={code:error.code||'invalidAnnotation',message:'该层未通过原文或模型校验，请检查后显式重试。',retryable:true};}
-  layers[task].attempts.push({attemptId:randomUUID(),provider:config.id,model:config.model,resolvedModel:config.model,adapterVersion,promptVersion,startedAt,finishedAt:new Date().toISOString(),status:layers[task].status,providerRequestId:null,error:layers[task].error});
+  layers[task].attempts.push({attemptId:randomUUID(),provider:config.id,model:config.model,resolvedModel:null,adapterVersion,promptVersion,startedAt,finishedAt:new Date().toISOString(),status:layers[task].status,providerRequestId:null,error:layers[task].error});
   onProgress({event:'progress',taskType:task,status:layers[task].status,layer:layers[task]});
  }
  const successful=effectiveTasks.filter(task=>layers[task].status==='success').length;

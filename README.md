@@ -106,7 +106,7 @@ tools/            构建、启动、验证、备份和文档同步
 profile/          本机数据与凭据，Git 忽略
 ```
 
-前端 Vue/Bootstrap 已打包进 `frontend/dist`，运行成品不需要 `frontend/node_modules`；活动智能体仍需 Node.js。恢复开发依赖使用 `npm ci --prefix frontend`，或直接运行 `tools/build_web.py`。
+前端 Vue/Bootstrap 已打包进 `frontend/dist`，运行成品不需要 `frontend/node_modules`；活动智能体仍需 Node.js。恢复开发依赖使用 `npm ci --prefix frontend`。Windows 重建前先执行 `tools/local_web.py stop`，再运行 `tools/build_web.py`，通过后重新 start，避免运行中的 JAR 被锁定。
 
 [工作规范](AGENTS.md) · [开发流程](docs/workflow.md) · [需求映射](docs/requirements.md) · [PRD](docs/PRD.md) · [数据库设计](docs/database.md) · [决策](docs/decisions.md) · [验收](docs/acceptance.md) · [课程提交清单](docs/submission-checklist.md) · [GitFlow](docs/git-workflow.md) · [Changelog](CHANGELOG.md)
 
