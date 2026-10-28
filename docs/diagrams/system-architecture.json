@@ -8,7 +8,7 @@
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/Ceeyu-iooi/Semanote-Agent.git",
-      "revision": "83d3f0e7e896739413a97f9839995acbb6ce91b0",
+      "revision": "ef99ef2b57e5c557b88bf80a05c73ea081eec455",
       "link_mode": "local-only"
     }
   },
@@ -16,8 +16,8 @@
     {
       "id": "browser",
       "type": "external",
-      "label": "本地浏览器",
-      "sublabel": "Chrome / Edge · 单人",
+      "label": "浏览器",
+      "sublabel": "本机 / 授权局域网",
       "pos": [
         40,
         40
@@ -191,7 +191,7 @@
       "id": "browser-vue",
       "from": "browser",
       "to": "vue",
-      "label": "本地页面",
+      "label": "网页访问",
       "variant": "emphasis"
     },
     {
@@ -243,8 +243,8 @@
       "dot": "slate",
       "title": "运行与数据边界",
       "items": [
-        "Java 与 MySQL 仅回环监听；无登录和多用户分配",
-        "真实课程语料不外发；本次联调使用原创合成文本"
+        "网页可显式开启局域网共享；MySQL 保持本机监听",
+        "Host/Origin 白名单与网段防火墙限制；共享同一工作空间，无多用户分配"
       ]
     }
   ]
