@@ -21,6 +21,7 @@
 *.sqlite3
 *.db
 *.sql
+!backend/src/main/resources/schema.sql
 *.dump
 
 # Course documents, real screenshots and archive packages stay local
@@ -51,6 +52,7 @@ __pycache__/
 coverage/
 dist/
 build/
+target/
 .DS_Store
 Thumbs.db
 ~$*

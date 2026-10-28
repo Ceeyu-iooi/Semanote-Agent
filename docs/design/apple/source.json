@@ -1,0 +1,16 @@
+{
+  "retrievedOn": "2026-10-28",
+  "preview": "https://getdesign.md/design-md/apple/preview",
+  "files": [
+    {
+      "file": "DESIGN.md",
+      "url": "https://raw.githubusercontent.com/VoltAgent/awesome-design-md/main/design-md/apple/DESIGN.md",
+      "sha256": "83fbc614443a9b3d7569e9956a43e7b8740f9d0f939f58b8154f7a7cec3002b2"
+    },
+    {
+      "file": "LICENSE",
+      "url": "https://raw.githubusercontent.com/VoltAgent/awesome-design-md/main/LICENSE",
+      "sha256": "6d4bdc9a9cf30e7beb593475fdcdbf29f981ea6bd7923f202866145409f87b44"
+    }
+  ]
+}
