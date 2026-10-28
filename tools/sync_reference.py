@@ -16,7 +16,7 @@ def syncReference():
         elif line.startswith("### "): body.append("<h3>" + html.escape(line[4:]) + "</h3>")
         elif line.startswith("- "): body.append("<p class=entry>" + html.escape(line[2:]) + "</p>")
         elif line and not line.startswith("# "): body.append("<p>" + html.escape(line) + "</p>")
-    page = '<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Semanote · Changelog</title><link rel="stylesheet" href="design/tokens.css"><style>body{margin:0;padding:48px 32px;background:var(--color-canvas);color:var(--color-ink);font:400 17px/1.6 var(--font-body)}main{max-width:900px;margin:auto}h1{font-size:40px;font-weight:600}h2{font-size:28px;margin-top:48px;padding-top:24px;border-top:1px solid var(--color-border)}h3{font-size:21px}.eyebrow{color:var(--color-primary);font-size:12px;letter-spacing:1px}.entry{padding-left:17px;border-left:2px solid var(--color-border)}@media(max-width:640px){body{padding:24px 17px}h1{font-size:28px}}</style><main><p class="eyebrow">SEMANTOTE / PROJECT HISTORY</p><h1>Changelog</h1>' + ''.join(body) + '</main></html>\n'
+    page = '<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Semanote · Changelog</title><link rel="stylesheet" href="design/tokens.css"><style>body{margin:0;padding:48px 32px;background:var(--color-canvas);color:var(--color-ink);font:400 17px/1.6 var(--font-body)}main{max-width:900px;margin:auto}h1{font-size:40px;font-weight:600}h2{font-size:28px;margin-top:48px;padding-top:24px;border-top:1px solid var(--color-border)}h3{font-size:21px}.eyebrow{color:var(--color-primary);font-size:12px;letter-spacing:1px}.entry{padding-left:17px;border-left:2px solid var(--color-border)}@media(max-width:640px){body{padding:24px 17px}h1{font-size:28px}}</style><main><p class="eyebrow">SEMANOTE / PROJECT HISTORY</p><h1>Changelog</h1>' + ''.join(body) + '</main></html>\n'
     (projectRoot / "docs/changelog.html").write_text(page, encoding="utf-8")
     destination = projectRoot / "frontend/dist/reference"
     destination.mkdir(parents=True, exist_ok=True)
@@ -32,6 +32,10 @@ def syncReference():
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(sourcePath, target)
     shutil.copyfile(projectRoot / "docs/changelog.html", destination / "changelog.html")
+    licenseTarget = projectRoot / "frontend/dist/licenses"
+    licenseTarget.mkdir(exist_ok=True)
+    for sourcePath in (projectRoot / "docs/licenses").iterdir():
+        if sourcePath.is_file(): shutil.copyfile(sourcePath, licenseTarget / sourcePath.name)
     shutil.copyfile(projectRoot / "README.md", projectRoot / "frontend/dist/README.md")
     print("Developer references synchronized from explicit public sources.")
 

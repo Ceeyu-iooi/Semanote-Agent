@@ -95,6 +95,7 @@ try:
     check("batch/text/file limits reject without truncation", upload("many.csv", ("A,B,C\n" + "a,b,c\n" * 167).encode())[0] == 413 and call("/documents", {"title": "超限", "text": "😀" * 10001})[0] == 413 and upload("large.txt", b"a" * (5 * 1024 * 1024 + 1))[0] == 413)
     check("full text search payload includes content after preview", call("/documents", {"title": "搜索", "text": "字" * 100 + "末尾词"})[1]["revision"]["textBody"].endswith("末尾词") and any("末尾词" in item.get("searchText", "") for item in call("/documents")[1]))
     check("cross-site multipart write rejected", call("/documents", {"title": "跨站", "text": "测试"}, headers={"Content-Type": "application/json", "Origin": "https://example.com"})[0] == 403)
+    check("nonlocal Host cannot read the workspace", call("/documents", headers={"Host": "example.com:8081"})[0] == 403)
     jobBody = {"requestId": str(uuid.uuid4()), "documentId": document["id"], "revisionId": document["currentRevisionId"], "tasks": ["ner"], "provider": "missing_" + uuid.uuid4().hex[:20], "remoteConsent": True}
     code, job = call("/jobs", jobBody)
     check("durable job idempotency", code == 202 and call("/jobs", jobBody)[1]["id"] == job["id"])

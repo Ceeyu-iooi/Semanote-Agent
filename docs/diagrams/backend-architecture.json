@@ -1,0 +1,241 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Semanote · Spring Boot 后端框架",
+    "locale": "zh-CN",
+    "output": "docs/diagrams/backend-architecture.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/Ceeyu-iooi/Semanote-Agent.git",
+      "revision": "83d3f0e7e896739413a97f9839995acbb6ce91b0",
+      "link_mode": "local-only"
+    }
+  },
+  "components": [
+    {
+      "id": "http",
+      "type": "backend",
+      "label": "HTTP 入口",
+      "sublabel": "REST · 输入/来源边界",
+      "pos": [
+        40,
+        40
+      ],
+      "size": [
+        200,
+        72
+      ],
+      "sources": [
+        {
+          "path": "backend/src/main/java/io/semanote/api/WorkspaceController.java",
+          "line": 15,
+          "end_line": 47
+        },
+        {
+          "path": "backend/src/main/java/io/semanote/api/LocalOriginFilter.java",
+          "line": 14,
+          "end_line": 28
+        }
+      ]
+    },
+    {
+      "id": "services",
+      "type": "backend",
+      "label": "业务与任务服务",
+      "sublabel": "版本事务 · 持久队列",
+      "pos": [
+        360,
+        40
+      ],
+      "size": [
+        200,
+        72
+      ],
+      "sources": [
+        {
+          "path": "backend/src/main/java/io/semanote/service/WorkspaceService.java",
+          "line": 143,
+          "end_line": 191
+        },
+        {
+          "path": "backend/src/main/java/io/semanote/service/JobService.java",
+          "line": 95,
+          "end_line": 115
+        }
+      ]
+    },
+    {
+      "id": "repository",
+      "type": "backend",
+      "label": "JDBC Repository",
+      "sublabel": "参数化 SQL · JSON 聚合",
+      "pos": [
+        680,
+        40
+      ],
+      "size": [
+        200,
+        72
+      ],
+      "sources": [
+        {
+          "path": "backend/src/main/java/io/semanote/data/WorkspaceRepository.java",
+          "line": 14,
+          "end_line": 40
+        },
+        {
+          "path": "backend/src/main/java/io/semanote/service/WorkspaceService.java",
+          "line": 174,
+          "end_line": 191
+        }
+      ]
+    },
+    {
+      "id": "database",
+      "type": "database",
+      "label": "MySQL",
+      "sublabel": "不可变修订与结果",
+      "pos": [
+        1000,
+        40
+      ],
+      "size": [
+        200,
+        72
+      ],
+      "sources": [
+        {
+          "path": "backend/src/main/resources/schema.sql",
+          "line": 1,
+          "end_line": 63
+        }
+      ]
+    },
+    {
+      "id": "bridge",
+      "type": "backend",
+      "label": "AgentBridge",
+      "sublabel": "固定程序 · 超时/脱敏",
+      "pos": [
+        360,
+        280
+      ],
+      "size": [
+        200,
+        72
+      ],
+      "sources": [
+        {
+          "path": "backend/src/main/java/io/semanote/agent/AgentBridge.java",
+          "line": 28,
+          "end_line": 56
+        }
+      ]
+    },
+    {
+      "id": "python",
+      "type": "backend",
+      "label": "Python 适配入口",
+      "sublabel": "人工转换 / 独立智能体",
+      "pos": [
+        680,
+        280
+      ],
+      "size": [
+        200,
+        72
+      ],
+      "sources": [
+        {
+          "path": "tools/agent_bridge.py",
+          "line": 17,
+          "end_line": 57
+        }
+      ]
+    },
+    {
+      "id": "provider",
+      "type": "cloud",
+      "label": "模型服务",
+      "sublabel": "只有自动标注才联网",
+      "pos": [
+        1000,
+        280
+      ],
+      "size": [
+        200,
+        72
+      ],
+      "sources": [
+        {
+          "path": "tools/agent_bridge.py",
+          "line": 46,
+          "end_line": 57
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "http-services",
+      "from": "http",
+      "to": "services",
+      "label": "校验后调用",
+      "variant": "emphasis"
+    },
+    {
+      "id": "services-repository",
+      "from": "services",
+      "to": "repository",
+      "label": "事务读写",
+      "variant": "emphasis"
+    },
+    {
+      "id": "repository-database",
+      "from": "repository",
+      "to": "database",
+      "label": "JDBC SQL",
+      "variant": "default"
+    },
+    {
+      "id": "services-bridge",
+      "from": "services",
+      "to": "bridge",
+      "label": "事务外执行",
+      "variant": "default"
+    },
+    {
+      "id": "bridge-python",
+      "from": "bridge",
+      "to": "python",
+      "label": "JSON 管道",
+      "variant": "default"
+    },
+    {
+      "id": "python-provider",
+      "from": "python",
+      "to": "provider",
+      "label": "明确同意后",
+      "variant": "security"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "服务职责",
+      "items": [
+        "WorkspaceService：修订、快照、统计与导出；ImportParser：UTF-8/CSV 校验",
+        "JobService：任务先落库再排队，单工作线程，无自动重试/切换"
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "可恢复状态",
+      "items": [
+        "rowVersion 比较并更新；过期修订候选无法发布",
+        "重启标记未完成任务中断；无完整回执时明确提示整份重提风险"
+      ]
+    }
+  ]
+}

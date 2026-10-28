@@ -466,3 +466,11 @@ Q01–Q14 的逐项处置见 PRD 第 9 节；它们从“待梳理”进入“�
 | annotationSnapshot / exportJob / batch | P03 返回完整候选而不持久化；P04 须显式选保存快照、计算统计及实现产品导出/批量恢复。CLI 文件不代替这些实体 |
 
 D03、剩余 D13/D14 和其他 P04 决策仍未冻结；不从 Python 智能体选型推导后端语言或数据库确认。
+
+## 12. P04 物理落地（2026-10-28）
+
+用户已确认 MySQL 8.4/JDBC 和 Web 版本契约；实际结构见 `backend/src/main/resources/schema.sql`，当前为 V1 幂等引导，不修改已有数据。逻辑实体按生命周期合并：importBatch 保留导入汇总；textDocument/sourceJson 保留每次出现和来源；textRevision 保留精确原文、摘要与修订；annotationJob 的 request/response JSON 保留单层结果、规则/标签、供应商尝试与错误；annotationSnapshot 保留显式保存的四层组合及人工/自动来源、基线与候选身份。独立规则版本沿用 1.0.0。
+
+这是聚合存储，未为每个逻辑实体单独建表：关键词各位置/实体重叠/POS token 引用仍留在校验后的 JSON 中。导出收敛为绑定保存快照的即时只读下载，不承诺下载历史或后台 exportJob。文档当前指针由服务事务和 rowVersion 维护；物理外键覆盖修订/任务/快照及来源关系，不把服务约束冒充数据库外键。
+
+没有账户表或任务分配表。多用户扩展需另行确认身份/角色/权限、任务归属与审计，不能只加 assignee 字段就宣称支持多用户。原始课程 CSV 未进入数据库；全部验证均为原创合成。备份/恢复见 [Web 使用说明](web-usage.md)，框架图见 [数据库聚合框架](diagrams/database-architecture.html)。

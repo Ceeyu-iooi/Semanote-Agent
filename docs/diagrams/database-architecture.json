@@ -1,0 +1,187 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Semanote · 数据库聚合框架",
+    "locale": "zh-CN",
+    "output": "docs/diagrams/database-architecture.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/Ceeyu-iooi/Semanote-Agent.git",
+      "revision": "83d3f0e7e896739413a97f9839995acbb6ce91b0",
+      "link_mode": "local-only"
+    }
+  },
+  "components": [
+    {
+      "id": "document",
+      "type": "database",
+      "label": "textDocument",
+      "sublabel": "标题 · 当前指针 · rowVersion",
+      "pos": [
+        40,
+        220
+      ],
+      "size": [
+        200,
+        72
+      ],
+      "sources": [
+        {
+          "path": "backend/src/main/resources/schema.sql",
+          "line": 12,
+          "end_line": 22
+        }
+      ]
+    },
+    {
+      "id": "revision",
+      "type": "database",
+      "label": "textRevision",
+      "sublabel": "不可变原文 · hash · 修订号",
+      "pos": [
+        400,
+        220
+      ],
+      "size": [
+        200,
+        72
+      ],
+      "sources": [
+        {
+          "path": "backend/src/main/resources/schema.sql",
+          "line": 23,
+          "end_line": 32
+        }
+      ]
+    },
+    {
+      "id": "snapshot",
+      "type": "database",
+      "label": "annotationSnapshot",
+      "sublabel": "修订/来源 · 已验证 layers",
+      "pos": [
+        760,
+        220
+      ],
+      "size": [
+        200,
+        72
+      ],
+      "sources": [
+        {
+          "path": "backend/src/main/resources/schema.sql",
+          "line": 49,
+          "end_line": 62
+        },
+        {
+          "path": "backend/src/main/java/io/semanote/service/WorkspaceService.java",
+          "line": 143,
+          "end_line": 191
+        }
+      ]
+    },
+    {
+      "id": "job",
+      "type": "database",
+      "label": "annotationJob",
+      "sublabel": "请求 · 回执 · 尝试与状态",
+      "pos": [
+        400,
+        40
+      ],
+      "size": [
+        200,
+        72
+      ],
+      "sources": [
+        {
+          "path": "backend/src/main/resources/schema.sql",
+          "line": 33,
+          "end_line": 48
+        }
+      ]
+    },
+    {
+      "id": "import",
+      "type": "database",
+      "label": "importBatch",
+      "sublabel": "文件身份 · 计数 · 来源追踪",
+      "pos": [
+        40,
+        420
+      ],
+      "size": [
+        200,
+        72
+      ],
+      "sources": [
+        {
+          "path": "backend/src/main/resources/schema.sql",
+          "line": 6,
+          "end_line": 11
+        },
+        {
+          "path": "backend/src/main/java/io/semanote/service/WorkspaceService.java",
+          "line": 114,
+          "end_line": 134
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "document-revision",
+      "from": "document",
+      "to": "revision",
+      "label": "拥有修订",
+      "variant": "emphasis"
+    },
+    {
+      "id": "revision-snapshot",
+      "from": "revision",
+      "to": "snapshot",
+      "label": "绑定同修订",
+      "variant": "emphasis"
+    },
+    {
+      "id": "revision-job",
+      "from": "revision",
+      "to": "job",
+      "label": "固定推理输入",
+      "variant": "default"
+    },
+    {
+      "id": "job-snapshot",
+      "from": "job",
+      "to": "snapshot",
+      "label": "可选候选来源",
+      "variant": "default"
+    },
+    {
+      "id": "import-document",
+      "from": "import",
+      "to": "document",
+      "label": "逐格保留出现",
+      "variant": "default"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "聚合而非字段 ERD",
+      "items": [
+        "条目、区间、标签、供应商尝试保存在经契约校验的 JSON 聚合",
+        "schemaVersion 记录 V1 引导；完整物理字段与外键见 schema.sql"
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "一致性",
+      "items": [
+        "文档当前指针由服务事务维护，修订与快照不可变",
+        "人工可直接建立快照或关联候选；即时导出不另存后台导出任务"
+      ]
+    }
+  ]
+}

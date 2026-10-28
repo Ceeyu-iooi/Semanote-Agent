@@ -41,8 +41,8 @@ public class WorkspaceController {
     @GetMapping("/documents/{id}/snapshots/{snapshotId}") public Object snapshot(@PathVariable String id, @PathVariable String snapshotId) { return workspace.snapshot(id, snapshotId); }
     @GetMapping(value="/documents/{id}/exports/{snapshotId}", produces=MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> export(@PathVariable String id, @PathVariable String snapshotId) {
-        return ResponseEntity.ok().header("Content-Disposition", "attachment; filename=semanote-" + UUIDSafe(snapshotId) + ".json").body(workspace.export(id, snapshotId));
+        return ResponseEntity.ok().header("Content-Disposition", "attachment; filename=semanote-" + safeIdentity(snapshotId) + ".json").body(workspace.export(id, snapshotId));
     }
-    private String UUIDSafe(String value) { return value.replaceAll("[^A-Za-z0-9_-]", ""); }
+    private String safeIdentity(String value) { return value.replaceAll("[^A-Za-z0-9_-]", ""); }
     @GetMapping("/statistics") public Object statistics() { return workspace.statistics(); }
 }

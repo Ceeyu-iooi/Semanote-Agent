@@ -18,6 +18,7 @@
   --color-chip: #d2d2d7;
   --color-selection: #0066cc14;
   --color-selection-strong: #0066cc24;
+  --color-backdrop: rgba(0,0,0,.35);
   --font-display: "SF Pro Display", system-ui, -apple-system, "Microsoft YaHei", sans-serif;
   --font-body: "SF Pro Text", system-ui, -apple-system, "Microsoft YaHei", sans-serif;
   --text-hero: 56px;
