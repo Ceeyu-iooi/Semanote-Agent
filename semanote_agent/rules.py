@@ -6,8 +6,8 @@ from .errors import InputError
 
 contractVersion = "1.0.0"
 specVersion = "1.0.0"
-adapterVersion = "1.0.0"
-promptVersion = "1.0.0"
+adapterVersion = "1.3.0"
+promptVersion = "1.2.0"
 taskTypes = ("segmentation", "keywords", "pos", "ner")
 posLabels = {
     "ADJ": "形容词", "ADP": "介词", "ADV": "副词", "AUX": "助动词",

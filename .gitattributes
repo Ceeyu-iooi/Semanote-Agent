@@ -8,4 +8,4 @@
 *.csv binary
 
 # Preserve Archify Viewer bytes and its artifact-bound verification receipts.
-docs/diagrams/agent-architecture.html -whitespace
+docs/diagrams/*.html -whitespace

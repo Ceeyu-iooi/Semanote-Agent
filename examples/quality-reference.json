@@ -1,0 +1,16 @@
+{
+  "kind": "original-synthetic-reference-not-corpus-benchmark",
+  "text": "2026年4月12日，林晓在杭州的向日葵书店支付120元。林晓随后阅读《春日笔记》。",
+  "nerMentions": [
+    {"itemText": "2026年4月12日", "label": "TIME"},
+    {"itemText": "林晓", "label": "PERSON"},
+    {"itemText": "杭州", "label": "LOCATION"},
+    {"itemText": "向日葵书店", "label": "ORGANIZATION"},
+    {"itemText": "120元", "label": "MONEY"}
+  ],
+  "posChecks": [
+    {"itemText": "支付", "label": "VERB"},
+    {"itemText": "阅读", "label": "VERB"}
+  ],
+  "limits": "Only this deliberately unambiguous synthetic reference has predefined semantic expectations. It is not an independent human gold standard or a measurement of train.csv accuracy."
+}

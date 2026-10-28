@@ -1,0 +1,252 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Semanote · GitFlow 工作流规范",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "output": "docs/diagrams/git-workflow.html",
+    "repository": {
+      "url": "https://github.com/Ceeyu-iooi/Semanote-Agent.git",
+      "revision": "acd86eefa093434464007ab1242e9142326976bb",
+      "link_mode": "local-only"
+    }
+  },
+  "lanes": [
+    {
+      "id": "development",
+      "label": "功能开发与集成"
+    },
+    {
+      "id": "release",
+      "label": "发布与版本"
+    },
+    {
+      "id": "hotfix",
+      "label": "紧急修复",
+      "variant": "exception"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "develop",
+      "lane": "development",
+      "col": 0,
+      "type": "backend",
+      "label": "develop",
+      "sublabel": "集成起点",
+      "sources": [
+        {
+          "path": "docs/git-workflow.md",
+          "line": 3,
+          "end_line": 29
+        }
+      ]
+    },
+    {
+      "id": "feature",
+      "lane": "development",
+      "col": 1,
+      "type": "backend",
+      "label": "feature/*",
+      "sublabel": "本次功能开发",
+      "sources": [
+        {
+          "path": "docs/git-workflow.md",
+          "line": 3,
+          "end_line": 29
+        }
+      ]
+    },
+    {
+      "id": "review",
+      "lane": "development",
+      "col": 2,
+      "type": "security",
+      "label": "PR 评审",
+      "sublabel": "验证与白名单",
+      "sources": [
+        {
+          "path": "docs/git-workflow.md",
+          "line": 3,
+          "end_line": 29
+        }
+      ]
+    },
+    {
+      "id": "integrate",
+      "lane": "development",
+      "col": 3,
+      "type": "backend",
+      "label": "develop 集成",
+      "sublabel": "保留合并提交",
+      "sources": [
+        {
+          "path": "docs/git-workflow.md",
+          "line": 3,
+          "end_line": 29
+        }
+      ]
+    },
+    {
+      "id": "release",
+      "lane": "release",
+      "col": 3,
+      "type": "backend",
+      "label": "release/X.Y.Z",
+      "sublabel": "发布检查",
+      "sources": [
+        {
+          "path": "docs/git-workflow.md",
+          "line": 3,
+          "end_line": 29
+        }
+      ]
+    },
+    {
+      "id": "main",
+      "lane": "release",
+      "col": 4,
+      "type": "backend",
+      "label": "main",
+      "sublabel": "正式发布基线",
+      "sources": [
+        {
+          "path": "docs/git-workflow.md",
+          "line": 3,
+          "end_line": 29
+        }
+      ]
+    },
+    {
+      "id": "tag",
+      "lane": "release",
+      "col": 5,
+      "type": "database",
+      "label": "X.Y.Z",
+      "sublabel": "不可移动标签",
+      "sources": [
+        {
+          "path": "docs/git-workflow.md",
+          "line": 3,
+          "end_line": 29
+        }
+      ]
+    },
+    {
+      "id": "hotfix",
+      "lane": "hotfix",
+      "col": 4,
+      "type": "backend",
+      "label": "hotfix/X.Y.Z",
+      "sublabel": "从 main 修复",
+      "sources": [
+        {
+          "path": "docs/git-workflow.md",
+          "line": 3,
+          "end_line": 29
+        }
+      ]
+    },
+    {
+      "id": "sync",
+      "lane": "hotfix",
+      "col": 5,
+      "type": "backend",
+      "label": "PR 同步",
+      "sublabel": "main / develop",
+      "sources": [
+        {
+          "path": "docs/git-workflow.md",
+          "line": 3,
+          "end_line": 29
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "develop-feature",
+      "from": "develop",
+      "to": "feature",
+      "label": "建分支",
+      "variant": "default"
+    },
+    {
+      "id": "feature-review",
+      "from": "feature",
+      "to": "review",
+      "label": "提交 PR",
+      "variant": "default"
+    },
+    {
+      "id": "review-integrate",
+      "from": "review",
+      "to": "integrate",
+      "label": "通过后合并",
+      "variant": "default"
+    },
+    {
+      "id": "integrate-release",
+      "from": "integrate",
+      "to": "release",
+      "label": "准备发布",
+      "variant": "default"
+    },
+    {
+      "id": "release-main",
+      "from": "release",
+      "to": "main",
+      "label": "PR 合入",
+      "variant": "default"
+    },
+    {
+      "id": "main-tag",
+      "from": "main",
+      "to": "tag",
+      "label": "验证后打标",
+      "variant": "default"
+    },
+    {
+      "id": "main-hotfix",
+      "from": "main",
+      "to": "hotfix",
+      "label": "紧急修复",
+      "variant": "default"
+    },
+    {
+      "id": "hotfix-sync",
+      "from": "hotfix",
+      "to": "sync",
+      "label": "评审合并",
+      "variant": "default"
+    }
+  ],
+  "mainPath": [
+    "develop",
+    "feature",
+    "review",
+    "integrate",
+    "release",
+    "main",
+    "tag"
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "规范图，不是已发布历史",
+      "items": [
+        "保留 merge commit；功能不直接提交长期分支",
+        "此图不表示分支保护已配置，也不表示已完成新版本发布"
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "同步和公开边界",
+      "items": [
+        "release 合入 main 后同步 develop；hotfix 同步两者，有活动 release 时一并同步",
+        "公开推送前核对白名单、暂存差异和凭据；不上传 profile 或真实语料"
+      ]
+    }
+  ]
+}

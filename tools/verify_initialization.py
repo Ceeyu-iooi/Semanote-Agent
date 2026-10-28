@@ -97,7 +97,7 @@ def verifyDocumentation():
 
 
 def verifyGit(expectGit):
-    """Check the initialization baseline and explicitly reviewed P03 public paths."""
+    """Check the baseline and explicitly reviewed agent/Web publication paths."""
     if not (projectRoot / ".git").exists():
         if expectGit:
             raise ValueError("Git repository is missing")
@@ -106,11 +106,14 @@ def verifyGit(expectGit):
     rootFiles = {"README.md", "AGENTS.md", "CHANGELOG.md", "VERSION", ".gitignore", ".gitattributes", ".editorconfig", ".env.example"}
     tracked = runGit("ls-files").splitlines()
     for fileName in tracked:
-        if fileName not in rootFiles and not fileName.startswith(("docs/", "tools/", ".github/", "semanote_agent/", "tests/", "examples/")):
+        if fileName not in rootFiles and not fileName.startswith(("docs/", "tools/", ".github/", "semanote_agent/", "tests/", "examples/", "frontend/", "backend/")):
             raise ValueError("Outside publication allowlist: " + fileName)
-        if Path(fileName).suffix.lower() not in {"", ".md", ".json", ".html", ".css", ".py"} and fileName not in rootFiles:
+        extension = Path(fileName).suffix.lower()
+        allowedFormat = extension in {"", ".md", ".json", ".html", ".css", ".py", ".js", ".vue", ".java", ".xml", ".properties"}
+        allowedFormat = allowedFormat or fileName in {"backend/src/main/resources/schema.sql", "tools/configure_lan.ps1"} or (fileName.startswith("docs/licenses/") and extension == ".txt")
+        if not allowedFormat and fileName not in rootFiles:
             raise ValueError("Unexpected public file format: " + fileName)
-        if any(part in {"__pycache__", "node_modules", "profile", "tmp"} for part in Path(fileName).parts):
+        if any(part in {"__pycache__", "node_modules", "profile", "tmp", "target", "dist"} for part in Path(fileName).parts):
             raise ValueError("Unexpected tracked environment/original: " + fileName)
     ignored = subprocess.run(["git", "-C", str(projectRoot), "check-ignore", "profile/manifest.json", "profile/data/train.csv", "deliverables/example.docx"], capture_output=True, text=True, encoding="utf-8")
     if len(ignored.stdout.splitlines()) != 3:

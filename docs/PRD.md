@@ -1,5 +1,8 @@
 # Semanote-Agent 产品需求文档
 
+> 2026-10-28 Web 实施补充：用户已确认 Vue/JavaScript/Bootstrap、Java21/Spring Boot3.5/JDBC/MySQL8.4 及导入/版本规则，并授权 P04/P05。新增统一 Apple 设计规范、开发者中心、Archify 各层架构、Changelog/GitFlow；单人工作流，多用户仅设计。当前冻结值以 [Web 契约](web-contract.md)、[设计规范](design/README.md)及 decisions.md 最新登记为准，下文 TBD 保留历史设计背景。
+
+
 阶段：P02；创建：2026-10-27；P03 回看：2026-10-28。P02 已获进入 P03 的用户指示，P03 独立模块已交付待验收，Web 后端和前端未开始。标注规则与独立模块契约以本文第 12 节和 annotation-contract.md 的已确认版本为准。
 
 ## 1. 依据、目标与用户
