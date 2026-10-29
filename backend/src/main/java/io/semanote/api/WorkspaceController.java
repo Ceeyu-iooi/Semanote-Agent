@@ -5,6 +5,7 @@ import io.semanote.service.JobService;
 import io.semanote.service.WorkspaceService;
 import io.semanote.service.GitService;
 import io.semanote.service.ModelSettingsService;
+import io.semanote.service.ModelLogService;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -21,11 +22,12 @@ public class WorkspaceController {
     private final JobService jobs;
     private final GitService git;
     private final ModelSettingsService modelSettings;
-    public WorkspaceController(WorkspaceService workspace, JobService jobs, GitService git, ModelSettingsService modelSettings) { this.workspace = workspace; this.jobs = jobs; this.git = git; this.modelSettings=modelSettings; }
+    private final ModelLogService modelLogs;
+    public WorkspaceController(WorkspaceService workspace, JobService jobs, GitService git, ModelSettingsService modelSettings, ModelLogService modelLogs) { this.workspace = workspace; this.jobs = jobs; this.git = git; this.modelSettings=modelSettings; this.modelLogs=modelLogs; }
 
     @GetMapping("/health") public Map<String, Object> health() { return Map.of("status", "ready", "contractVersion", "1.0.0"); }
     @GetMapping("/meta") public Map<String, Object> meta() {
-        return Map.of("tasks", List.of("segmentation", "keywords", "pos", "ner"),
+        return Map.of("tasks", WorkspaceService.TASKS,
                 "entityLabels", List.of("PERSON", "LOCATION", "ORGANIZATION", "TIME", "MONEY"),
                 "posLabels", List.of("ADJ", "ADP", "ADV", "AUX", "CCONJ", "DET", "INTJ", "NOUN", "NUM", "PART", "PRON", "PROPN", "PUNCT", "SCONJ", "SYM", "VERB", "X"),
                 "maxTextLength", 10000, "maxBatchSize", 500, "maxFileBytes", 5242880, "offsetUnit", "unicodeCodePoint");
@@ -55,4 +57,5 @@ public class WorkspaceController {
     @GetMapping("/development/git/{revision}") public Object gitChanges(@PathVariable String revision) { return git.changes(revision); }
     @GetMapping("/settings/model") public Object modelSettings() { return modelSettings.read(); }
     @PutMapping("/settings/model") public Object updateModelSettings(@RequestBody JsonNode body) { return modelSettings.save(body); }
+    @GetMapping("/model-logs") public Object modelLogs(@RequestParam(defaultValue="") String provider,@RequestParam(defaultValue="") String model,@RequestParam(defaultValue="") String state,@RequestParam(defaultValue="") String cache,@RequestParam(defaultValue="") String query,@RequestParam(defaultValue="1") int page,@RequestParam(defaultValue="30") int size,@RequestParam(defaultValue="time") String sort) { return modelLogs.list(provider,model,state,cache,query,page,size,sort); }
 }

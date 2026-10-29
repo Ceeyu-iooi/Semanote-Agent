@@ -2,13 +2,13 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "Semanote · Spring Boot 后端框架",
+    "title": "Semanote · Java 后端与本地配置框架",
     "locale": "zh-CN",
     "output": "docs/diagrams/backend-architecture.html",
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/Ceeyu-iooi/Semanote-Agent.git",
-      "revision": "acd86eefa093434464007ab1242e9142326976bb",
+      "revision": "46d81c19c10180f35e5a2d68a191bca9132056c4",
       "link_mode": "local-only"
     }
   },
@@ -17,20 +17,20 @@
       "id": "http",
       "type": "backend",
       "label": "HTTP 入口",
-      "sublabel": "REST · 输入/来源边界",
+      "sublabel": "REST · 来源边界",
       "pos": [
         40,
-        40
+        220
       ],
       "size": [
-        200,
+        160,
         72
       ],
       "sources": [
         {
           "path": "backend/src/main/java/io/semanote/api/WorkspaceController.java",
-          "line": 15,
-          "end_line": 47
+          "line": 18,
+          "end_line": 60
         },
         {
           "path": "backend/src/main/java/io/semanote/api/LocalOriginFilter.java",
@@ -42,11 +42,11 @@
     {
       "id": "services",
       "type": "backend",
-      "label": "业务与任务服务",
-      "sublabel": "版本事务 · 持久队列",
+      "label": "版本与任务服务",
+      "sublabel": "事务 · 队列 · 配置快照",
       "pos": [
-        360,
-        40
+        320,
+        220
       ],
       "size": [
         200,
@@ -55,13 +55,13 @@
       "sources": [
         {
           "path": "backend/src/main/java/io/semanote/service/WorkspaceService.java",
-          "line": 143,
-          "end_line": 191
+          "line": 146,
+          "end_line": 194
         },
         {
           "path": "backend/src/main/java/io/semanote/service/JobService.java",
-          "line": 95,
-          "end_line": 115
+          "line": 102,
+          "end_line": 133
         }
       ]
     },
@@ -71,11 +71,11 @@
       "label": "JDBC Repository",
       "sublabel": "参数化 SQL · JSON 聚合",
       "pos": [
-        680,
-        40
+        660,
+        220
       ],
       "size": [
-        200,
+        180,
         72
       ],
       "sources": [
@@ -83,11 +83,6 @@
           "path": "backend/src/main/java/io/semanote/data/WorkspaceRepository.java",
           "line": 14,
           "end_line": 40
-        },
-        {
-          "path": "backend/src/main/java/io/semanote/service/WorkspaceService.java",
-          "line": 174,
-          "end_line": 191
         }
       ]
     },
@@ -95,10 +90,31 @@
       "id": "database",
       "type": "database",
       "label": "MySQL",
-      "sublabel": "不可变修订与结果",
+      "sublabel": "修订 · 候选 · 保存快照",
       "pos": [
-        1000,
-        40
+        960,
+        220
+      ],
+      "size": [
+        180,
+        72
+      ],
+      "sources": [
+        {
+          "path": "backend/src/main/resources/schema.sql",
+          "line": 12,
+          "end_line": 63
+        }
+      ]
+    },
+    {
+      "id": "settings",
+      "type": "backend",
+      "label": "供应商与日志服务",
+      "sublabel": "密钥遮蔽 · 元数据筛选",
+      "pos": [
+        320,
+        20
       ],
       "size": [
         200,
@@ -106,9 +122,40 @@
       ],
       "sources": [
         {
-          "path": "backend/src/main/resources/schema.sql",
-          "line": 1,
-          "end_line": 63
+          "path": "backend/src/main/java/io/semanote/service/ModelSettingsService.java",
+          "line": 17,
+          "end_line": 49
+        },
+        {
+          "path": "backend/src/main/java/io/semanote/service/ModelLogService.java",
+          "line": 16,
+          "end_line": 34
+        }
+      ]
+    },
+    {
+      "id": "files",
+      "type": "database",
+      "label": "本地受限配置",
+      "sublabel": "供应商注册表 · 调用元数据",
+      "pos": [
+        660,
+        20
+      ],
+      "size": [
+        180,
+        72
+      ],
+      "sources": [
+        {
+          "path": "backend/src/main/java/io/semanote/service/ModelSettingsService.java",
+          "line": 17,
+          "end_line": 49
+        },
+        {
+          "path": "backend/src/main/java/io/semanote/service/ModelLogService.java",
+          "line": 18,
+          "end_line": 27
         }
       ]
     },
@@ -116,10 +163,10 @@
       "id": "bridge",
       "type": "backend",
       "label": "AgentBridge",
-      "sublabel": "固定程序 · 超时/脱敏",
+      "sublabel": "固定 Node 程序 · 超时",
       "pos": [
-        360,
-        280
+        320,
+        430
       ],
       "size": [
         200,
@@ -129,49 +176,54 @@
         {
           "path": "backend/src/main/java/io/semanote/agent/AgentBridge.java",
           "line": 28,
-          "end_line": 56
+          "end_line": 65
         }
       ]
     },
     {
-      "id": "python",
+      "id": "node",
       "type": "backend",
-      "label": "Python 适配入口",
-      "sublabel": "人工转换 / 独立智能体",
+      "label": "JavaScript 智能体",
+      "sublabel": "本地人工 / 远程合并推理",
       "pos": [
-        680,
-        280
+        660,
+        430
       ],
       "size": [
-        200,
+        180,
         72
       ],
       "sources": [
         {
-          "path": "tools/agent_bridge.py",
-          "line": 17,
-          "end_line": 57
+          "path": "agent/bridge.mjs",
+          "line": 5,
+          "end_line": 18
+        },
+        {
+          "path": "agent/agent.js",
+          "line": 47,
+          "end_line": 94
         }
       ]
     },
     {
       "id": "provider",
       "type": "cloud",
-      "label": "模型服务",
+      "label": "所选模型",
       "sublabel": "只有自动标注才联网",
       "pos": [
-        1000,
-        280
+        960,
+        430
       ],
       "size": [
-        200,
+        180,
         72
       ],
       "sources": [
         {
-          "path": "tools/agent_bridge.py",
-          "line": 46,
-          "end_line": 57
+          "path": "agent/provider.js",
+          "line": 26,
+          "end_line": 55
         }
       ]
     }
@@ -181,7 +233,7 @@
       "id": "http-services",
       "from": "http",
       "to": "services",
-      "label": "校验后调用",
+      "label": "业务请求",
       "variant": "emphasis"
     },
     {
@@ -195,7 +247,28 @@
       "id": "repository-database",
       "from": "repository",
       "to": "database",
-      "label": "JDBC SQL",
+      "label": "JDBC",
+      "variant": "default"
+    },
+    {
+      "id": "http-settings",
+      "from": "http",
+      "to": "settings",
+      "label": "设置/日志",
+      "variant": "default"
+    },
+    {
+      "id": "services-settings",
+      "from": "services",
+      "to": "settings",
+      "label": "入队配置",
+      "variant": "default"
+    },
+    {
+      "id": "settings-files",
+      "from": "settings",
+      "to": "files",
+      "label": "本地读写",
       "variant": "default"
     },
     {
@@ -206,15 +279,15 @@
       "variant": "default"
     },
     {
-      "id": "bridge-python",
+      "id": "bridge-node",
       "from": "bridge",
-      "to": "python",
+      "to": "node",
       "label": "JSON 管道",
       "variant": "default"
     },
     {
-      "id": "python-provider",
-      "from": "python",
+      "id": "node-provider",
+      "from": "node",
       "to": "provider",
       "label": "明确同意后",
       "variant": "security"
@@ -223,18 +296,18 @@
   "cards": [
     {
       "dot": "cyan",
-      "title": "服务职责",
+      "title": "一致性",
       "items": [
-        "WorkspaceService：修订、快照、统计与导出；ImportParser：UTF-8/CSV 校验",
-        "JobService：任务先落库再排队，单工作线程，无自动重试/切换"
+        "每个任务入队时固定配置；密钥不进入持久任务请求",
+        "不可变修订和快照，乐观冲突返回 409，重启中断只显式恢复"
       ]
     },
     {
       "dot": "slate",
-      "title": "可恢复状态",
+      "title": "本地资料",
       "items": [
-        "rowVersion 比较并更新；过期修订候选无法发布",
-        "重启标记未完成任务中断；无完整回执时明确提示整份重提风险"
+        "MySQL 仅保存业务版本；配置与调用元数据保存在 profile",
+        "智能体的推理缓存与日志写入路径见智能体框架；不回显原文或密钥"
       ]
     }
   ]

@@ -1,3 +1,27 @@
+# 0.1.1 JavaScript 智能体
+
+活动入口 `node agent/bridge.mjs`，Node.js 24，无第三方运行时依赖。Java 后端通过管道传递 envelope；CLI 可将 JSON 文件通过 stdin 输入。旧 Python 说明保留在下方，仅用于 P03 历史兼容。
+
+## 模型配置与调用
+
+网页左下角「设置 → 模型」预置 DeepSeek 和阿里云百炼，可添加其他 OpenAI 兼容供应商，填写名称、基础 HTTPS 地址、模型、密钥、超时和 token 上限；保存后作用于新任务。读取设置只回显 hasApiKey，空密钥表示保留；改地址必须重新填写对应密钥。配置文件 profile/runtime/model-providers.json 被 Git 忽略。公开示例不包含工作空间专属地址或密钥。
+
+推理 envelope：`{action:"annotate",remoteConsent:true,provider:"aliyun",request:{requestId,revisionId,text,tasks}}`；活动模块响应 1.1.0、任务和码点规则见 [契约](annotation-contract.md)。调用前明确同意文本允许发给所选服务。此轮百炼只测试原创合成文本，不扩展既有 DeepSeek 的受限语料授权。
+
+`action:"manual"` 只在本地转换人工 layers；`action:"validateAutomatic"` 验证自动 response 与原 request；均不调用模型。显式重试可传 previousResponse，保留已通过验证的成功层。
+
+## 缓存、用量与恢复
+
+每个最多 650 码点原文块将所选任务合并为一次请求。固定提示前缀和紧凑 tokens 候选减少重复输入；本地成功层缓存按端点、凭据摘要、模型、参数、提示内容和规则版本、原文摘要隔离。缓存只在 profile/runtime/annotation-cache，包含受限推理衍生资料；不会提交到 Git。原文或模型配置改变不会误用旧结果。
+
+供应商缓存与本地缓存分别计数。[DeepSeek 缓存说明](https://api-docs.deepseek.com/guides/kv_cache/) 和 [百炼上下文缓存说明](https://docs.modelstudio.console.alibabacloud.com/en/model-studio/context-cache) 支持使用真实 usage 字段读取命中 token；是否命中由服务决定，不作承诺。网页「调用日志」记录筛选表格、实际耗时/输入/输出/缓存 token，不保存正文、密钥或原始错误；没有用量时显示未知，没有价格时不推算金额。
+
+网络失败、非法 JSON、重复键、响应截断、词面不匹配和歧义定位均不会包装成成功。模型新增标点可被确定性丢弃，原文标点由本地保留；原文非空白字符仍须完整顺序匹配。句子和语义候选按原文顺序定位，不信任模型的偏移量。关系/事件证据扩展为所在原句；明确上下文角色保留独立来源跨度，无法消除的歧义需校对。
+
+[八轮迭代与成本对照](0.1.1-report.md)。结构覆盖不是语义准确率；长距离跨块关系需人工补充。原始数据库备份见 web-usage.md；保留模型缓存可以避免再次付费，构建缓存与临时测试环境可清理。
+
+---
+
 # 独立智能体运行与恢复
 
 适用 Python 3.12；本机实际版本为 3.12.5。请从项目根目录运行。P03 不需要安装 Python 包、NLP 模型、Java、数据库或网页依赖；没有需要裁剪的 node_modules，也没有第三方 Python 锁文件。

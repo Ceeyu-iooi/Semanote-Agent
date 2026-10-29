@@ -2,13 +2,13 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "Semanote · 智能体推理与原文对齐",
+    "title": "Semanote · JavaScript 智能体与缓存调度",
     "locale": "zh-CN",
     "output": "docs/diagrams/agent-architecture.html",
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/Ceeyu-iooi/Semanote-Agent.git",
-      "revision": "acd86eefa093434464007ab1242e9142326976bb",
+      "revision": "46d81c19c10180f35e5a2d68a191bca9132056c4",
       "link_mode": "local-only"
     }
   },
@@ -16,298 +16,313 @@
     {
       "id": "caller",
       "type": "external",
-      "label": "独立调用入口",
-      "sublabel": "Python 3.12 / CLI",
+      "label": "Java 调用方",
+      "sublabel": "JSON / NDJSON",
       "pos": [
         40,
-        40
+        220
       ],
       "size": [
-        170,
-        74
+        160,
+        72
       ],
       "sources": [
         {
-          "path": "semanote_agent/__main__.py",
-          "line": 1,
-          "end_line": 20
+          "path": "backend/src/main/java/io/semanote/agent/AgentBridge.java",
+          "line": 28,
+          "end_line": 65
         }
       ]
     },
     {
-      "id": "inputGuard",
+      "id": "input",
       "type": "security",
-      "label": "输入与修订校验",
-      "sublabel": "固定原文与身份",
-      "tag": "非法输入拒绝",
+      "label": "输入与恢复校验",
+      "sublabel": "修订 · 任务 · 原文摘要",
       "pos": [
-        335,
-        40
+        300,
+        220
       ],
       "size": [
-        190,
-        74
+        180,
+        72
       ],
       "sources": [
         {
-          "path": "semanote_agent/rules.py",
-          "line": 29,
-          "end_line": 49
+          "path": "agent/bridge.mjs",
+          "line": 5,
+          "end_line": 18
+        },
+        {
+          "path": "agent/contract.js",
+          "line": 86,
+          "end_line": 124
         }
       ]
     },
     {
       "id": "planner",
       "type": "backend",
-      "label": "任务编排",
-      "sublabel": "所选任务与依赖",
+      "label": "分块与缓存调度",
+      "sublabel": "650 码点 · 仅推理缺失层",
       "pos": [
-        665,
-        40
+        560,
+        220
       ],
       "size": [
-        185,
-        74
+        190,
+        72
       ],
       "sources": [
         {
-          "path": "semanote_agent/agent.py",
-          "line": 140,
-          "end_line": 175
+          "path": "agent/agent.js",
+          "line": 47,
+          "end_line": 94
+        }
+      ]
+    },
+    {
+      "id": "cache",
+      "type": "database",
+      "label": "本地成功层缓存",
+      "sublabel": "端点/模型/规则/文本隔离",
+      "pos": [
+        560,
+        20
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "agent/provider.js",
+          "line": 10,
+          "end_line": 12
+        },
+        {
+          "path": "agent/provider.js",
+          "line": 58,
+          "end_line": 58
+        },
+        {
+          "path": "agent/agent.js",
+          "line": 57,
+          "end_line": 91
         }
       ]
     },
     {
       "id": "runner",
       "type": "backend",
-      "label": "四类能力执行",
-      "sublabel": "分词 / 关键词 / POS / NER",
-      "tag": "POS 依赖分词",
+      "label": "多任务合并推理",
+      "sublabel": "固定前缀 · 紧凑候选",
       "pos": [
-        665,
-        250
-      ],
-      "size": [
-        215,
-        86
-      ],
-      "sources": [
-        {
-          "path": "semanote_agent/agent.py",
-          "line": 175,
-          "end_line": 210
-        }
-      ]
-    },
-    {
-      "id": "providerAdapter",
-      "type": "backend",
-      "label": "供应商适配",
-      "sublabel": "端点 / 模型 / 凭据",
-      "tag": "显式切换",
-      "pos": [
-        335,
-        250
+        820,
+        220
       ],
       "size": [
         190,
-        86
+        72
       ],
       "sources": [
         {
-          "path": "semanote_agent/providers.py",
-          "line": 80,
-          "end_line": 125
-        }
-      ]
-    },
-    {
-      "id": "modelProvider",
-      "type": "cloud",
-      "label": "大模型 API",
-      "sublabel": "DeepSeek / 其他兼容服务",
-      "tag": "仅发送获准文本",
-      "pos": [
-        40,
-        250
-      ],
-      "size": [
-        200,
-        86
-      ],
-      "sources": [
-        {
-          "path": "semanote_agent/config.py",
-          "line": 105,
-          "end_line": 125
-        }
-      ]
-    },
-    {
-      "id": "resultGuard",
-      "type": "security",
-      "label": "原文对齐与标注校验",
-      "sublabel": "定位 / 格式补全 / 区间",
-      "tag": "原文切片一致",
-      "pos": [
-        335,
-        510
-      ],
-      "size": [
-        190,
-        86
-      ],
-      "sources": [
-        {
-          "path": "semanote_agent/grounding.py",
-          "line": 1,
-          "end_line": 50
+          "path": "agent/agent.js",
+          "line": 67,
+          "end_line": 92
         },
         {
-          "path": "semanote_agent/annotations.py",
-          "line": 60,
-          "end_line": 95
+          "path": "agent/prompts.js",
+          "line": 1,
+          "end_line": 15
         }
       ]
     },
     {
-      "id": "aggregator",
-      "type": "backend",
-      "label": "逐层状态汇总",
-      "sublabel": "成功 / 部分失败 / 失败",
+      "id": "provider",
+      "type": "cloud",
+      "label": "所选兼容模型",
+      "sublabel": "明确同意后 HTTPS",
       "pos": [
-        665,
-        510
+        1080,
+        220
       ],
       "size": [
-        215,
-        86
+        190,
+        72
       ],
       "sources": [
         {
-          "path": "semanote_agent/agent.py",
-          "line": 200,
-          "end_line": 210
+          "path": "agent/provider.js",
+          "line": 27,
+          "end_line": 58
+        },
+        {
+          "path": "agent/bridge.mjs",
+          "line": 12,
+          "end_line": 17
+        }
+      ]
+    },
+    {
+      "id": "logs",
+      "type": "database",
+      "label": "本地调用元数据",
+      "sublabel": "耗时 · usage · 脱敏错误",
+      "pos": [
+        1080,
+        20
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "agent/provider.js",
+          "line": 29,
+          "end_line": 35
+        },
+        {
+          "path": "agent/provider.js",
+          "line": 45,
+          "end_line": 55
+        }
+      ]
+    },
+    {
+      "id": "guard",
+      "type": "security",
+      "label": "原文定位与合并",
+      "sublabel": "完整覆盖 · 角色来源 · POS",
+      "pos": [
+        820,
+        430
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "agent/grounding.js",
+          "line": 1,
+          "end_line": 29
+        },
+        {
+          "path": "agent/contract.js",
+          "line": 43,
+          "end_line": 110
+        },
+        {
+          "path": "agent/agent.js",
+          "line": 94,
+          "end_line": 109
         }
       ]
     },
     {
       "id": "result",
-      "type": "external",
-      "label": "自动标注候选",
-      "sublabel": "固定输入修订",
-      "tag": "交调用方保存",
+      "type": "backend",
+      "label": "十一层候选回执",
+      "sublabel": "成功/失败 · 身份与尝试",
       "pos": [
-        1010,
-        510
+        560,
+        430
       ],
       "size": [
         190,
-        86
+        72
       ],
       "sources": [
         {
-          "path": "docs/annotation-contract.md",
-          "line": 25,
-          "end_line": 48
+          "path": "agent/agent.js",
+          "line": 110,
+          "end_line": 112
         }
       ]
     }
   ],
   "connections": [
     {
-      "id": "submit",
+      "id": "caller-input",
       "from": "caller",
-      "to": "inputGuard",
-      "label": "文本与任务",
+      "to": "input",
+      "label": "JSON",
       "variant": "emphasis"
     },
     {
-      "id": "validInput",
-      "from": "inputGuard",
+      "id": "input-planner",
+      "from": "input",
       "to": "planner",
-      "label": "有效请求",
+      "label": "任务依赖",
       "variant": "emphasis"
     },
     {
-      "id": "schedule",
+      "id": "planner-cache",
+      "from": "planner",
+      "to": "cache",
+      "label": "按层读写",
+      "variant": "default"
+    },
+    {
+      "id": "planner-runner",
       "from": "planner",
       "to": "runner",
-      "label": "按依赖执行",
+      "label": "未命中",
       "variant": "emphasis"
     },
     {
-      "id": "invoke",
+      "id": "runner-provider",
       "from": "runner",
-      "to": "providerAdapter",
-      "label": "逐层请求",
-      "variant": "emphasis"
-    },
-    {
-      "id": "send",
-      "from": "providerAdapter",
-      "to": "modelProvider",
-      "label": "HTTPS JSON",
+      "to": "provider",
+      "label": "HTTPS",
       "variant": "security"
     },
     {
-      "id": "receive",
-      "from": "modelProvider",
-      "to": "providerAdapter",
-      "label": "模型响应"
+      "id": "provider-logs",
+      "from": "provider",
+      "to": "logs",
+      "label": "调用元数据",
+      "variant": "default"
     },
     {
-      "id": "validate",
-      "from": "providerAdapter",
-      "to": "resultGuard",
-      "label": "响应候选"
+      "id": "provider-guard",
+      "from": "provider",
+      "to": "guard",
+      "label": "候选",
+      "variant": "default"
     },
     {
-      "id": "validatedLayer",
-      "from": "resultGuard",
-      "to": "aggregator",
-      "label": "校验结论"
+      "id": "planner-guard",
+      "from": "planner",
+      "to": "guard",
+      "label": "缓存命中",
+      "variant": "default"
     },
     {
-      "id": "failedCall",
-      "from": "runner",
-      "to": "aggregator",
-      "label": "调用或依赖失败"
-    },
-    {
-      "id": "return",
-      "from": "aggregator",
+      "id": "guard-result",
+      "from": "guard",
       "to": "result",
-      "label": "结果与错误",
+      "label": "校验",
       "variant": "emphasis"
     }
   ],
   "cards": [
     {
       "dot": "cyan",
-      "title": "四类任务与依赖",
+      "title": "成本与恢复",
       "items": [
-        "分词、关键词、词性、命名实体全部必做；可分别选择或组合执行。",
-        "词性使用同修订分词结果；分词失败时词性报依赖失败，关键词和实体可独立继续。",
-        "冻结契约 1.0.0：Unicode 码点区间、UD 17 类词性、原文关键词及五类实体。"
+        "每块合并所选任务；成功层可复用，失败不隐式重发",
+        "缓存重新建立本次修订/结果身份；实际 usage 与本地复用分开记录"
       ]
     },
     {
-      "dot": "emerald",
-      "title": "供应商与数据边界",
+      "dot": "slate",
+      "title": "能力边界",
       "items": [
-        "首选 DeepSeek；其他兼容 Chat Completions 的服务显式配置，不自动换供应商。",
-        "本次仅授权当前 DeepSeek 的代表性 CSV 样本；不扩大到全库或其他服务。",
-        "原文中的指令只作待标注数据，模型响应只解析和校验。"
-      ]
-    },
-    {
-      "dot": "rose",
-      "title": "版本、错误与阶段边界",
-      "items": [
-        "合法零结果、未执行、调用失败和校验失败分别表达，不返回伪成功。",
-        "重新推理只新增自动候选，不覆盖人工版或静默迁移旧区间。",
-        "Web 后端接收真实图层检查点，界面只对已返回结果播放呈现动画。"
+        "分词/关键词/词性/实体 + 分段/关系/事件/情感/意图/语义/错误",
+        "原文不改写；跨块关系和歧义角色需校对，本轮百炼只测试合成文本"
       ]
     }
   ]

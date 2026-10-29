@@ -11,3 +11,11 @@ document.querySelectorAll('.demo-token').forEach((word,index)=>word.style.setPro
 document.querySelector('#previewSettings').addEventListener('click',()=>document.querySelector('#readingDialog').showModal());
 document.querySelector('#demoSize').addEventListener('input',event=>{document.querySelector('#annotationDemo').style.setProperty('--demo-text-size',`${event.target.value}px`);document.querySelector('#demoSizeValue').textContent=`${event.target.value}px`;});
 document.querySelector('#reducedMotion').addEventListener('change',event=>{document.documentElement.dataset.motion=event.target.checked?'reduced':'full';});
+
+const pointerDesignTip=document.querySelector('#pointerDesignTip');
+function hidePointerDesignTip(){pointerDesignTip.hidden=true;}
+document.querySelectorAll('[data-pointer-tip],[data-hint]').forEach(element=>{
+ const show=event=>{pointerDesignTip.textContent=element.dataset.pointerTip||element.dataset.hint;pointerDesignTip.hidden=false;const target=element.getBoundingClientRect(),box=pointerDesignTip.getBoundingClientRect();const x=event.clientX??target.left,y=event.clientY??target.bottom;pointerDesignTip.style.left=`${Math.max(8,Math.min(x+14,innerWidth-box.width-8))}px`;pointerDesignTip.style.top=`${Math.max(8,Math.min(y+18,innerHeight-box.height-8))}px`;};
+ element.addEventListener('pointermove',show);element.addEventListener('focus',show);element.addEventListener('pointerleave',hidePointerDesignTip);element.addEventListener('blur',hidePointerDesignTip);
+});
+window.addEventListener('scroll',hidePointerDesignTip,true);window.addEventListener('resize',hidePointerDesignTip);document.addEventListener('keydown',event=>{if(event.key==='Escape')hidePointerDesignTip();});

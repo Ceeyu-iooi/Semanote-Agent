@@ -19,13 +19,13 @@ import io.semanote.api.ApiFailure;
 public class AgentBridge {
     private final ObjectMapper mapper;
     private final Path projectRoot;
-    private final String python;
+    private final String node;
 
     public AgentBridge(ObjectMapper mapper, @Value("${semanote.project-root}") String projectRoot,
-                       @Value("${semanote.python}") String python) {
+                       @Value("${semanote.node:node}") String node) {
         this.mapper = mapper;
         this.projectRoot = Path.of(projectRoot).toAbsolutePath().normalize();
-        this.python = python;
+        this.node = node;
     }
 
     public JsonNode invoke(Object envelope, boolean remote) {
@@ -35,7 +35,7 @@ public class AgentBridge {
     public JsonNode invoke(Object envelope, boolean remote, Consumer<JsonNode> onProgress) {
         Process process = null;
         try {
-            process = new ProcessBuilder(python, "-X", "utf8", "-B", "tools/agent_bridge.py")
+            process = new ProcessBuilder(node, "agent/bridge.mjs")
                     .directory(projectRoot.toFile()).redirectError(ProcessBuilder.Redirect.DISCARD).start();
             Process activeProcess = process;
             CompletableFuture<byte[]> output = CompletableFuture.supplyAsync(() -> {
@@ -56,7 +56,7 @@ public class AgentBridge {
                 } catch (Exception exception) { throw new IllegalStateException(exception); }
             });
             try (var input = process.getOutputStream()) { input.write(mapper.writeValueAsBytes(envelope)); }
-            if (!process.waitFor(remote ? 1000 : 20, TimeUnit.SECONDS)) {
+            if (!process.waitFor(remote ? 4000 : 20, TimeUnit.SECONDS)) {
                 process.destroyForcibly();
                 throw new ApiFailure(503, "agentTimeout", "调用超时，未自动重发；请核对后显式重试。");
             }
@@ -71,7 +71,7 @@ public class AgentBridge {
         } catch (ApiFailure failure) { throw failure; }
         catch (Exception exception) {
             if (exception instanceof InterruptedException) Thread.currentThread().interrupt();
-            throw new ApiFailure(503, "agentUnavailable", "智能体暂不可用，请检查本地 Python 与模型配置。");
+            throw new ApiFailure(503, "agentUnavailable", "智能体暂不可用，请检查本地 Node.js 与模型配置。");
         } finally { if (process != null && process.isAlive()) process.destroyForcibly(); }
     }
 }

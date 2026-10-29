@@ -61,9 +61,9 @@ public class JobService {
         String provider = body.path("provider").asText("deepseek");
         if (!provider.matches("[a-z][a-z0-9_]{0,39}")) throw new ApiFailure(400, "invalidProvider", "供应商名称不正确。");
         JsonNode tasks = body.path("tasks");
-        if (!tasks.isArray() || tasks.isEmpty() || tasks.size() > 4) throw new ApiFailure(400, "invalidTasks", "请选择至少一项标注任务。");
+        if (!tasks.isArray() || tasks.isEmpty() || tasks.size() > WorkspaceService.TASKS.size()) throw new ApiFailure(400, "invalidTasks", "请选择至少一项标注任务。");
         java.util.Set<String> seen = new java.util.HashSet<>();
-        for (JsonNode task : tasks) if (!task.isTextual() || !List.of("segmentation", "keywords", "pos", "ner").contains(task.asText()) || !seen.add(task.asText())) throw new ApiFailure(400, "invalidTasks", "任务类型不正确或重复。");
+        for (JsonNode task : tasks) if (!task.isTextual() || !WorkspaceService.TASKS.contains(task.asText()) || !seen.add(task.asText())) throw new ApiFailure(400, "invalidTasks", "任务类型不正确或重复。");
         List<Map<String, Object>> existing = repository.jdbc().queryForList("SELECT id,documentId,revisionId,provider,requestJson FROM annotationJob WHERE id=?", jobId);
         if (!existing.isEmpty()) {
             Map<String, Object> old = existing.getFirst();
@@ -99,11 +99,12 @@ public class JobService {
 
     private Map<String, Object> enqueue(String id, String documentId, String revisionId, String provider, Object request, String previousId, JsonNode previousResponse) {
         if (executor.getQueue().remainingCapacity() == 0) throw new ApiFailure(503, "queueFull", "队列已满，请等待当前任务完成。");
+        JsonNode providerConfig=modelSettings.executionConfig(provider);
         String timestamp = WorkspaceService.now();
         repository.jdbc().update("INSERT INTO annotationJob(id,documentId,revisionId,previousJobId,provider,state,requestJson,createdAt,updatedAt) VALUES (?,?,?,?,?,'queued',?,?,?)", id, documentId, revisionId, previousId, provider, repository.json(request), timestamp, timestamp);
         Map<String, Object> envelope = new LinkedHashMap<>();
         envelope.put("action", "annotate"); envelope.put("remoteConsent", true); envelope.put("streamProgress", true); envelope.put("request", request); envelope.put("provider", provider);
-        envelope.put("modelPreferences", modelSettings.read());
+        envelope.put("providerConfig", providerConfig);
         if (previousResponse != null && !previousResponse.isNull()) envelope.put("previousResponse", previousResponse);
         executor.execute(() -> execute(id, envelope));
         return job(id);
@@ -118,7 +119,9 @@ public class JobService {
                 ObjectNode layers = previous == null ? (ObjectNode) repository.parse("{}") : (ObjectNode) previous.path("layers").deepCopy();
                 if (event.path("status").asText().equals("success")) layers.set(event.path("taskType").asText(), event.path("layer"));
                 checkpoint.put("taskType", event.path("taskType").asText()); checkpoint.put("status", event.path("status").asText());
-                checkpoint.set("layers", layers); progress.put(jobId, checkpoint);
+                checkpoint.set("layers", layers);
+                for(String field:List.of("completedChunks","totalChunks"))if(event.has(field))checkpoint.set(field,event.get(field));
+                progress.put(jobId, checkpoint);
             });
             repository.jdbc().update("UPDATE annotationJob SET state=?,responseJson=?,updatedAt=? WHERE id=?", response.path("status").asText("failed"), repository.json(response), WorkspaceService.now(), jobId);
         } catch (ApiFailure failure) {

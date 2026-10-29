@@ -1,5 +1,5 @@
 ---
-version: 1.1.0
+version: 1.2.0
 name: Semanote-Apple-design-system
 description: A photography-first interface that turns marketing into a museum gallery. Edge-to-edge product tiles alternate light and dark canvases, framed by SF Pro Display headlines with negative letter-spacing and a single Action Blue (#0066cc) interactive color. UI chrome recedes so the product can speak — no decorative gradients, no shadows on chrome, only the one signature drop-shadow under product imagery resting on a surface.
 
@@ -469,3 +469,14 @@ Parchment 资料页尾，展示来源、规范与返回入口，不堆放产品�
 ## Known Gaps
 
 上游没有提供业务表单、错误、文本标注语义色和任务进度；这些由本轮用户指令补充，不能假称 Apple 原规范。颜色不能替代标签；数据集没有人工金标准，结构正确不等于语义准确。
+
+
+## 0.1.1 — Evidence, overlays and navigation
+
+Pointer overlays use white canvas, existing ink, a hairline border and 11px radius; place 14px right and 18px below the pointer, then constrain the measured box to an 8px viewport inset. Keyboard focus anchors to the control. Scroll, resize and Escape dismiss the overlay. No chrome shadows are introduced.
+
+Desktop navigation collapses to a compact rail. Narrow layouts retain labelled navigation. The annotation canvas uses an Action Blue arrow cursor while source inputs preserve normal editing. Paragraph/semantic breaks are presentation only; original character order and spacing stay unchanged.
+
+Additive data marks: grammatical errors use a negative wavy underline; sentiment uses positive/negative neutral data encoding; relation/event cards use existing entity surfaces. Show labels with colors. Per-document charts identify their candidate/draft/snapshot source; radar axes encode counts, never accuracy. Contextual event roles each retain their own exact source spans.
+
+Git history is horizontal, older left and newer right. Place the slider below the commit graph; its blue filled track represents the earlier portion. This progress encoding is the only data gradient here. Keep actual commits distinct from the GitFlow policy diagram.

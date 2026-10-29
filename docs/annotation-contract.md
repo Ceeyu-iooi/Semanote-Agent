@@ -1,3 +1,25 @@
+# 0.1.1 活动智能体契约补充
+
+JavaScript 入口：`node agent/bridge.mjs`，stdin 接收 action/envelope，stdout 输出 NDJSON 进度与唯一最终 JSON。Node.js 24，标准库 ESM。下方原契约 1.0.0 保留为历史和四项核心定义。
+
+新增响应契约 **1.1.0**：原有字段/四类任务含义保留，layers 加入 paragraphs、relations、events、sentiment、intent、semantic、errors；execution 增加真实网络请求、本地缓存、块数、usage 及耗时，不改变结果跨度。Unicode 码点、左闭右开、原文摘要与修订绑定保持不变。已保存旧四层结果可继续读取/人工修订/导出；自动候选发布前以本地转换器重建并核验，忽略 JSON 对象字段顺序，不忽略数组顺序。
+
+| 层 | 候选与结果 |
+|---|---|
+| paragraphs | 按序 itemText，拼接必须逐字等于原文（含全部空白）；本地按已有换行、句末及可用语义边界生成，展示只增加 CSS 换行 |
+| relations | itemText/occurrence 证据、label、subject/object 原文词面；结果主客体各有独立原文 spans |
+| events | itemText/occurrence 证据、label、roles.subject/object/time/location/cause/result 数组；角色逐字来自原文，优先事件证据内出现。唯一的上下文角色可指向其他位置；多处歧义须提供 {itemText,occurrences:[0起始序号]}，不存在的信息不得补造 |
+| sentiment | 句子 itemText/occurrence、POSITIVE/NEGATIVE/NEUTRAL；所选层需覆盖各句非空白字符 |
+| intent | itemText/occurrence、INFORM/REQUEST/QUESTION/COMMAND/PROMISE/OTHER |
+| semantic | itemText/occurrence、TOPIC/LIST_ITEM/EXPLANATION/CONCLUSION/OTHER；列举分点以原文片段表示 |
+| errors | itemText/occurrence、GRAMMAR/WORD_CHOICE/TYPO/PUNCTUATION、suggestion、explanation；修改建议独立保存，绝不直接改写原文 |
+
+关系类型/事件类型为长度受限的说明标签，不把图表当作标准本体。全层自动与人工快照均经活动 JavaScript 校验。只保存部分图层仍需明确 allowPartial；统计、JSON/TXT/MD 始终固定同一已保存快照。旧 Python CLI 为 P03 历史兼容入口，Web 不再调用。
+
+推理：每个最多 650 码点的原文块合并所选任务，一次返回紧凑候选，按原文位置合并；跨块关系/事件不强行推断，图中只展示有证据的候选，长距离跨块召回需人工补充。固定前缀、提示内容摘要、规则版本、供应商/端点/凭据摘要、模型/参数、文本摘要隔离本地按层缓存。结果失败不缓存，不隐式重试，显式重试保留已校验成功层。
+
+---
+
 # 智能体标注契约
 
 阶段：P03；日期：2026-10-27；状态：用户已确认并实现，模块契约 `1.0.0`；P03 整体交付待验收。

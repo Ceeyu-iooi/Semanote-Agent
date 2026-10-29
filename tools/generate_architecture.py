@@ -19,6 +19,12 @@ def source(path, line=1, end=None):
     return {"path": path, "line": line, **({"end_line": min(end,length)} if end else {})}
 
 
+def anchor(path, needle, following=20):
+    lines=(projectRoot/path).read_text(encoding="utf-8").splitlines()
+    line=next(index+1 for index,text in enumerate(lines) if needle in text)
+    return source(path,line,line+following)
+
+
 def node(identity, kind, label, detail, x, y, sources, width=200, height=72):
     return {"id": identity, "type": kind, "label": label, "sublabel": detail, "pos": [x, y], "size": [width, height], "sources": sources}
 
@@ -42,38 +48,40 @@ architecture("system-architecture", "Semanote · B/S 系统框架", [
     node("browser", "external", "浏览器", "本机 / 授权局域网", 40, 40, [source("docs/web-contract.md", 7, 19)], 160),
     node("vue", "frontend", "Vue 工作台", "文本 · 标注 · 统计", 300, 40, [source("frontend/src/App.vue", 1, 25), source("frontend/src/api.js", 1, 14)]),
     node("spring", "backend", "Spring Boot 服务", "REST /api/v1 · 版本与任务", 640, 40, [source(javaRoot + "api/WorkspaceController.java", 15, 47), source(javaRoot + "service/JobService.java", 95, 115)]),
-    node("agent", "backend", "Python 智能体", "本地 JSON 进程 · 四层校验", 980, 40, [source(javaRoot + "agent/AgentBridge.java", 28, 56), source("tools/agent_bridge.py", 17, 57)]),
+    node("agent", "backend", "JavaScript 智能体", "Node.js · 十一层校验", 980, 40, [source(javaRoot + "agent/AgentBridge.java", 28, 56), source("agent/bridge.mjs", 5, 24)]),
     node("reference", "frontend", "独立开发者中心", "设计 · Archify · 实际 Git", 300, 250, [source("frontend/src/components/DeveloperCenter.vue", 4, 23), source("frontend/src/main.js", 1, 10)]),
     node("mysql", "database", "MySQL 8.4", "修订 · 候选 · 保存快照", 640, 250, [source("backend/src/main/resources/schema.sql", 12, 63), source(javaRoot + "service/WorkspaceService.java", 143, 191)]),
-    node("provider", "cloud", "所选模型服务", "默认 DeepSeek · 显式选择", 980, 250, [source("tools/agent_bridge.py", 46, 57), source("semanote_agent/providers.py", 1, 25)]),
+    node("provider", "cloud", "所选模型服务", "供应商注册表 · 显式选择", 980, 250, [source("agent/provider.js", 28, 65), source("agent/provider.js", 28, 65)]),
 ], [edge("browser", "vue", "网页访问", "emphasis"), edge("vue", "spring", "HTTP JSON", "emphasis"), edge("spring", "agent", "stdin / stdout"), edge("vue", "reference", "独立 /developer"), edge("spring", "mysql", "JDBC 事务"), edge("agent", "provider", "同意后 HTTPS", "security")], [
     ("智能标注 + 人工修正", ["自动结果先存候选；显式保存才更新当前快照", "人工修正生成新版本，统计/导出固定同一保存快照"]),
     ("运行与数据边界", ["网页可显式开启局域网共享；MySQL 保持本机监听", "Host/Origin 白名单与网段防火墙限制；共享同一工作空间，无多用户分配"]),
 ])
 
 architecture("frontend-architecture", "Semanote · Vue 前端框架", [
-    node("app", "frontend", "Vue 应用状态", "文本库 · 工作台 · 统计", 40, 220, [source("frontend/src/App.vue", 8, 51), source("frontend/src/components/StatisticsView.vue", 1, 19)], height=96),
-    node("canvas", "frontend", "AnnotationCanvas", "码点选区 · 重叠高亮", 420, 40, [source("frontend/src/components/AnnotationCanvas.vue", 1, 35)]),
+    node("app", "frontend", "Vue 应用状态", "十一层工作台 · 逐篇统计", 40, 220, [source("frontend/src/App.vue", 8, 51), source("frontend/src/components/DocumentInsights.vue", 1, 35), anchor("frontend/src/App.vue", "function revealAnnotation", 14)], height=96),
+    node("canvas", "frontend", "AnnotationCanvas", "码点选区 · 重叠高亮", 420, 40, [source("frontend/src/components/AnnotationCanvas.vue", 1, 30),source("frontend/src/annotationPresentation.js", 20, 45),source("frontend/src/components/PointerTip.vue",1,13)]),
     node("client", "frontend", "API 客户端", "fetch · 错误与请求边界", 420, 220, [source("frontend/src/api.js", 1, 14)]),
     node("developer", "frontend", "DeveloperCenter", "规范与 Archify 资料导航", 420, 400, [source("frontend/src/components/DeveloperCenter.vue", 1, 23)]),
     node("api", "backend", "Spring REST", "同源 /api/v1", 800, 220, [source(javaRoot + "api/WorkspaceController.java", 15, 47)]),
     node("tokens", "frontend", "共享设计变量", "Apple 来源 · Bootstrap 覆盖", 800, 400, [source("frontend/src/main.js", 1, 7), source("docs/design/tokens.css", 1, 56)]),
 ], [edge("app", "canvas", "原文与条目"), edge("app", "client", "用户操作", "emphasis"), edge("app", "developer", "独立 /developer"), edge("client", "api", "HTTP JSON", "emphasis"), edge("developer", "tokens", "同一规范")], [
-    ("数据流", ["保存回包绑定文档与编辑会话；冲突保留草稿并可载入最新版本", "统计页从保存快照读取；候选、草稿和历史分别标识"]),
-    ("视觉与选区", ["业务页、独立开发者页、preview 共用 tokens.css；四层独立叠加", "浏览器 UTF-16 选区显式转 Unicode 码点；原文用文本节点渲染"]),
+    ("数据流", ["保存回包绑定文档与编辑会话；冲突保留草稿并可载入最新版本", "逐篇统计区分候选/草稿/保存快照；关系/事件卡片返回原文"]),
+    ("视觉与选区", ["业务页、独立开发者页、preview 共用 tokens.css；十一层独立叠加", "浏览器 UTF-16 选区显式转 Unicode 码点；原文用文本节点渲染"]),
 ])
 
-architecture("backend-architecture", "Semanote · Spring Boot 后端框架", [
-    node("http", "backend", "HTTP 入口", "REST · 输入/来源边界", 40, 40, [source(javaRoot + "api/WorkspaceController.java", 15, 47), source(javaRoot + "api/LocalOriginFilter.java", 14, 28)]),
-    node("services", "backend", "业务与任务服务", "版本事务 · 持久队列", 360, 40, [source(javaRoot + "service/WorkspaceService.java", 143, 191), source(javaRoot + "service/JobService.java", 95, 115)]),
-    node("repository", "backend", "JDBC Repository", "参数化 SQL · JSON 聚合", 680, 40, [source(javaRoot + "data/WorkspaceRepository.java", 14, 40), source(javaRoot + "service/WorkspaceService.java", 174, 191)]),
-    node("database", "database", "MySQL", "不可变修订与结果", 1000, 40, [source("backend/src/main/resources/schema.sql", 1, 63)]),
-    node("bridge", "backend", "AgentBridge", "固定程序 · 超时/脱敏", 360, 280, [source(javaRoot + "agent/AgentBridge.java", 28, 56)]),
-    node("python", "backend", "Python 适配入口", "人工转换 / 独立智能体", 680, 280, [source("tools/agent_bridge.py", 17, 57)]),
-    node("provider", "cloud", "模型服务", "只有自动标注才联网", 1000, 280, [source("tools/agent_bridge.py", 46, 57)]),
-], [edge("http", "services", "校验后调用", "emphasis"), edge("services", "repository", "事务读写", "emphasis"), edge("repository", "database", "JDBC SQL"), edge("services", "bridge", "事务外执行"), edge("bridge", "python", "JSON 管道"), edge("python", "provider", "明确同意后", "security")], [
-    ("服务职责", ["WorkspaceService：修订、快照、统计与导出；ImportParser：UTF-8/CSV 校验", "JobService：任务先落库再排队，单工作线程，无自动重试/切换"]),
-    ("可恢复状态", ["rowVersion 比较并更新；过期修订候选无法发布", "重启标记未完成任务中断；无完整回执时明确提示整份重提风险"]),
+architecture("backend-architecture", "Semanote · Java 后端与本地配置框架", [
+    node("http", "backend", "HTTP 入口", "REST · 来源边界", 40, 220, [source(javaRoot+"api/WorkspaceController.java",18,60),source(javaRoot+"api/LocalOriginFilter.java",14,28)],160),
+    node("services", "backend", "版本与任务服务", "事务 · 队列 · 配置快照", 320, 220, [source(javaRoot+"service/WorkspaceService.java",146,194),source(javaRoot+"service/JobService.java",102,144)]),
+    node("repository", "backend", "JDBC Repository", "参数化 SQL · JSON 聚合", 660, 220, [source(javaRoot+"data/WorkspaceRepository.java",14,40)],180),
+    node("database", "database", "MySQL", "修订 · 候选 · 保存快照", 960, 220, [source("backend/src/main/resources/schema.sql",12,63)],180),
+    node("settings", "backend", "供应商与日志服务", "密钥遮蔽 · 元数据筛选", 320, 20, [source(javaRoot+"service/ModelSettingsService.java",17,61),source(javaRoot+"service/ModelLogService.java",16,34)]),
+    node("files", "database", "本地受限配置", "供应商注册表 · 调用元数据", 660, 20, [source(javaRoot+"service/ModelSettingsService.java",17,61),source(javaRoot+"service/ModelLogService.java",18,27)],180),
+    node("bridge", "backend", "AgentBridge", "固定 Node 程序 · 超时", 320, 430, [source(javaRoot+"agent/AgentBridge.java",28,65)]),
+    node("node", "backend", "JavaScript 智能体", "本地人工 / 远程合并推理", 660, 430, [source("agent/bridge.mjs",5,25),anchor("agent/agent.js","export async function annotate",47)],180),
+    node("provider", "cloud", "所选模型", "只有自动标注才联网", 960, 430, [source("agent/provider.js",26,55)],180),
+], [edge("http","services","业务请求","emphasis"),edge("services","repository","事务读写","emphasis"),edge("repository","database","JDBC"),edge("http","settings","设置/日志"),edge("services","settings","入队配置"),edge("settings","files","本地读写"),edge("services","bridge","事务外执行"),edge("bridge","node","JSON 管道"),edge("node","provider","明确同意后","security")], [
+    ("一致性",["每个任务入队时固定配置；密钥不进入持久任务请求", "不可变修订和快照，乐观冲突返回 409，重启中断只显式恢复"]),
+    ("本地资料",["MySQL 仅保存业务版本；配置与调用元数据保存在 profile", "智能体的推理缓存与日志写入路径见智能体框架；不回显原文或密钥"]),
 ])
 
 architecture("database-architecture", "Semanote · 数据库聚合框架", [
@@ -97,16 +105,18 @@ for identity, lane, column, kind, label, detail in [
 ]: workflow["nodes"].append({"id": identity, "lane": lane, "col": column, "type": kind, "label": label, "sublabel": detail, "sources": [source("docs/git-workflow.md", 3, 29)]})
 for start, end, label in [("develop", "feature", "建分支"), ("feature", "review", "提交 PR"), ("review", "integrate", "通过后合并"), ("integrate", "release", "准备发布"), ("release", "main", "PR 合入"), ("main", "tag", "验证后打标"), ("main", "hotfix", "紧急修复"), ("hotfix", "sync", "评审合并")]: workflow["edges"].append(edge(start, end, label))
 write("git-workflow", workflow)
-agentPath=projectRoot / "docs/diagrams/agent-architecture.json"
-if agentPath.exists():
-    agent=json.loads(agentPath.read_text(encoding="utf-8"))
-    agent["meta"]["title"]="Semanote · 智能体推理与原文对齐"
-    agent["meta"]["repository"]=repository
-    agentSources={"caller":[source("semanote_agent/__main__.py",1,20)],"inputGuard":[source("semanote_agent/rules.py",29,49)],"planner":[source("semanote_agent/agent.py",140,175)],"runner":[source("semanote_agent/agent.py",175,220)],"providerAdapter":[source("semanote_agent/providers.py",80,125)],"modelProvider":[source("semanote_agent/config.py",105,125)],"resultGuard":[source("semanote_agent/grounding.py",1,50),source("semanote_agent/annotations.py",60,95)],"aggregator":[source("semanote_agent/agent.py",200,210)],"result":[source("docs/annotation-contract.md",25,48)]}
-    for component in agent["components"]:
-        component["sources"]=agentSources[component["id"]]
-        if component["id"]=="resultGuard":component.update(label="原文对齐与标注校验",sublabel="定位 / 格式补全 / 区间")
-    agent["cards"][1]["items"][1]="本次仅授权当前 DeepSeek 的代表性 CSV 样本；不扩大到全库或其他服务。"
-    agent["cards"][2]["items"][2]="Web 后端接收真实图层检查点，界面只对已返回结果播放呈现动画。"
-    write("agent-architecture",agent)
+architecture("agent-architecture", "Semanote · JavaScript 智能体与缓存调度", [
+    node("caller", "external", "Java 调用方", "JSON / NDJSON", 40, 220, [source(javaRoot+"agent/AgentBridge.java",28,65)],160),
+    node("input", "security", "输入与恢复校验", "修订 · 任务 · 原文摘要", 300, 220, [source("agent/bridge.mjs",5,25),anchor("agent/contract.js","export function validateRequest",38)],180),
+    node("planner", "backend", "分块与缓存调度", "650 码点 · 仅推理缺失层", 560, 220, [anchor("agent/agent.js","export async function annotate",47)],190),
+    node("cache", "database", "本地成功层缓存", "端点/模型/规则/文本隔离", 560, 20, [source("agent/provider.js",10,12),anchor("agent/provider.js","export function cacheIdentity",0),anchor("agent/agent.js","const key=cacheIdentity",34)],190),
+    node("runner", "backend", "多任务合并推理", "固定前缀 · 紧凑候选", 820, 220, [anchor("agent/agent.js","const modelTasks=",25),source("agent/prompts.js",1,18)],190),
+    node("provider", "cloud", "所选兼容模型", "明确同意后 HTTPS", 1080, 220, [source("agent/provider.js",27,65),source("agent/bridge.mjs",12,17)],190),
+    node("logs", "database", "本地调用元数据", "耗时 · usage · 脱敏错误", 1080, 20, [source("agent/provider.js",29,35),source("agent/provider.js",45,55)],190),
+    node("guard", "security", "原文定位与合并", "完整覆盖 · 角色来源 · POS", 820, 430, [source("agent/grounding.js",1,30),source("agent/contract.js",43,110),anchor("agent/agent.js","for(const task of pending)",15)],190),
+    node("result", "backend", "十一层候选回执", "成功/失败 · 身份与尝试", 560, 430, [anchor("agent/agent.js","const successful=",2)],190),
+], [edge("caller","input","JSON","emphasis"),edge("input","planner","任务依赖","emphasis"),edge("planner","cache","按层读写"),edge("planner","runner","未命中","emphasis"),edge("runner","provider","HTTPS","security"),edge("provider","logs","调用元数据"),edge("provider","guard","候选"),edge("planner","guard","缓存命中"),edge("guard","result","校验","emphasis")], [
+    ("成本与恢复",["每块合并所选任务；成功层可复用，失败不隐式重发", "缓存重新建立本次修订/结果身份；实际 usage 与本地复用分开记录"]),
+    ("能力边界",["分词/关键词/词性/实体 + 分段/关系/事件/情感/意图/语义/错误", "原文不改写；跨块关系和歧义角色需校对，本轮百炼只测试合成文本"]),
+])
 print("Authored " + (selected or "six Archify sources") + " pinned to " + revision)
