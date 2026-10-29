@@ -37,7 +37,7 @@ def start():
     environment = backendEnvironment()
     environment.update({"SEMANOTE_SEED_CORPUS":"false", "SEMANOTE_PORT": "8081", "SEMANOTE_BIND_ADDRESS": "127.0.0.1", "SEMANOTE_LAN_HOSTS": "", "SEMANOTE_DB_URL": "jdbc:mysql://127.0.0.1:3307/" + databaseName + "?characterEncoding=UTF-8&serverTimezone=UTC"})
     with (receiptRoot / "isolated-backend.log").open("ab") as log:
-        process = subprocess.Popen(["java", "-jar", "backend/target/semanote-web-0.1.1-SNAPSHOT.jar"], cwd=projectRoot, env=environment, stdout=log, stderr=log, creationflags=creationFlags)
+        process = subprocess.Popen(["java", "-jar", "backend/target/semanote-web-0.1.1.jar"], cwd=projectRoot, env=environment, stdout=log, stderr=log, creationflags=creationFlags)
     for _ in range(100):
         try:
             if call("/health")[0] == 200: return

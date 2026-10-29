@@ -2,8 +2,8 @@
   "schemaVersion": 2,
   "projectName": "Semanote-Agent",
   "baselineVersion": "0.1.0-docs.1",
-  "updatedOn": "2026-10-28",
-  "scope": "通用中文文本标注 B/S 系统；Vue/JavaScript/Bootstrap 前端、Java/Spring Boot 后端、MySQL 存储、既有 Python 智能体。四类必做，人工修正/JSON/批量纳入；单人工作流，多用户仅扩展设计。维护 Apple 来源设计规范与开发者中心。",
+  "updatedOn": "2026-10-29",
+  "scope": "通用中文文本标注 B/S 系统；Vue/JavaScript/Bootstrap 前端、Java/Spring Boot 后端、MySQL 存储，活动智能体为 Node.js/JavaScript，Python 保留历史兼容与维护工具。四类核心与分段、关系、事件、情感、意图、语义、错误共十一层，人工修正/JSON/批量纳入；单人工作流，多用户仅扩展设计。维护 Apple 来源设计规范与开发者中心。",
   "commonRead": [
     "AGENTS.md",
     "README.md",
@@ -313,6 +313,6 @@
       "stopCondition": "交付本次 Web 系统、设计规范、开发者中心、验证与恢复说明，标记 prepared 等待用户验收；不自动发布新版本或合并 PR。"
     }
   ],
-  "flowNote": "保持数据库设计 → 需求文档 → 智能体 → 后端 → 前端五步。2026-10-28 用户已授权 P04/P05，后端验证后联调前端；本地交付不自动代表用户验收。",
+  "flowNote": "保持数据库设计 → 需求文档 → 智能体 → 后端 → 前端五步。2026-10-28 用户授权 P04/P05；2026-10-29 用户在收到 0.1.1 候选后明确授权合并并发布。发布授权不替代课程整体验收或 D10 金标准评估。",
   "initializationStatus": "prepared"
 }

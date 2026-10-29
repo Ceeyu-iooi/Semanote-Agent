@@ -127,7 +127,7 @@ def startBackend():
                 return
     except Exception:
         pass
-    artifact = projectRoot / "backend/target/semanote-web-0.1.1-SNAPSHOT.jar"
+    artifact = projectRoot / "backend/target/semanote-web-0.1.1.jar"
     if not artifact.exists(): raise RuntimeError("Build backend first; see docs/web-usage.md")
     with (runtimeRoot / "backend.log").open("ab") as log:
         process = subprocess.Popen(["java", "-jar", str(artifact)], cwd=projectRoot, env=backendEnvironment(), stdout=log, stderr=log, creationflags=creationFlags)
