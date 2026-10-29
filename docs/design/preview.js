@@ -19,3 +19,5 @@ document.querySelectorAll('[data-pointer-tip],[data-hint]').forEach(element=>{
  element.addEventListener('pointermove',show);element.addEventListener('focus',show);element.addEventListener('pointerleave',hidePointerDesignTip);element.addEventListener('blur',hidePointerDesignTip);
 });
 window.addEventListener('scroll',hidePointerDesignTip,true);window.addEventListener('resize',hidePointerDesignTip);document.addEventListener('keydown',event=>{if(event.key==='Escape')hidePointerDesignTip();});
+
+document.querySelector('#specReplay').addEventListener('click',()=>{const workspace=document.querySelector('#specImmersive');workspace.classList.remove('spec-replaying');requestAnimationFrame(()=>requestAnimationFrame(()=>workspace.classList.add('spec-replaying')));});

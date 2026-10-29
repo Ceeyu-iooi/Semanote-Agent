@@ -8,7 +8,7 @@
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/Ceeyu-iooi/Semanote-Agent.git",
-      "revision": "46d81c19c10180f35e5a2d68a191bca9132056c4",
+      "revision": "13a19e5e2be9accc7ee158889cdf0b461f1cbd13",
       "link_mode": "local-only"
     }
   },
@@ -49,14 +49,9 @@
       ],
       "sources": [
         {
-          "path": "agent/bridge.mjs",
-          "line": 5,
-          "end_line": 18
-        },
-        {
           "path": "agent/contract.js",
-          "line": 86,
-          "end_line": 124
+          "line": 317,
+          "end_line": 347
         }
       ]
     },
@@ -76,8 +71,8 @@
       "sources": [
         {
           "path": "agent/agent.js",
-          "line": 47,
-          "end_line": 94
+          "line": 166,
+          "end_line": 196
         }
       ]
     },
@@ -97,18 +92,8 @@
       "sources": [
         {
           "path": "agent/provider.js",
-          "line": 10,
-          "end_line": 12
-        },
-        {
-          "path": "agent/provider.js",
-          "line": 58,
-          "end_line": 58
-        },
-        {
-          "path": "agent/agent.js",
-          "line": 57,
-          "end_line": 91
+          "line": 261,
+          "end_line": 276
         }
       ]
     },
@@ -128,13 +113,8 @@
       "sources": [
         {
           "path": "agent/agent.js",
-          "line": 67,
-          "end_line": 92
-        },
-        {
-          "path": "agent/prompts.js",
-          "line": 1,
-          "end_line": 15
+          "line": 279,
+          "end_line": 309
         }
       ]
     },
@@ -154,13 +134,8 @@
       "sources": [
         {
           "path": "agent/provider.js",
-          "line": 27,
-          "end_line": 58
-        },
-        {
-          "path": "agent/bridge.mjs",
-          "line": 12,
-          "end_line": 17
+          "line": 93,
+          "end_line": 123
         }
       ]
     },
@@ -180,13 +155,8 @@
       "sources": [
         {
           "path": "agent/provider.js",
-          "line": 29,
-          "end_line": 35
-        },
-        {
-          "path": "agent/provider.js",
-          "line": 45,
-          "end_line": 55
+          "line": 98,
+          "end_line": 128
         }
       ]
     },
@@ -205,19 +175,9 @@
       ],
       "sources": [
         {
-          "path": "agent/grounding.js",
-          "line": 1,
-          "end_line": 29
-        },
-        {
           "path": "agent/contract.js",
-          "line": 43,
-          "end_line": 110
-        },
-        {
-          "path": "agent/agent.js",
-          "line": 94,
-          "end_line": 109
+          "line": 53,
+          "end_line": 83
         }
       ]
     },
@@ -237,8 +197,8 @@
       "sources": [
         {
           "path": "agent/agent.js",
-          "line": 110,
-          "end_line": 112
+          "line": 470,
+          "end_line": 500
         }
       ]
     }
@@ -313,8 +273,8 @@
       "dot": "cyan",
       "title": "成本与恢复",
       "items": [
-        "每块合并所选任务；成功层可复用，失败不隐式重发",
-        "缓存重新建立本次修订/结果身份；实际 usage 与本地复用分开记录"
+        "每块合并所选任务；跨块关键词汇总排名，词性重试固定已成功分词",
+        "成功层缓存损坏按未命中处理，费用未知保持 null；真实检查点驱动抽取卡片"
       ]
     },
     {

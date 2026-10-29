@@ -1,5 +1,5 @@
 ---
-version: 1.2.0
+version: 1.3.0
 name: Semanote-Apple-design-system
 description: A photography-first interface that turns marketing into a museum gallery. Edge-to-edge product tiles alternate light and dark canvases, framed by SF Pro Display headlines with negative letter-spacing and a single Action Blue (#0066cc) interactive color. UI chrome recedes so the product can speak — no decorative gradients, no shadows on chrome, only the one signature drop-shadow under product imagery resting on a surface.
 
@@ -480,3 +480,28 @@ Desktop navigation collapses to a compact rail. Narrow layouts retain labelled n
 Additive data marks: grammatical errors use a negative wavy underline; sentiment uses positive/negative neutral data encoding; relation/event cards use existing entity surfaces. Show labels with colors. Per-document charts identify their candidate/draft/snapshot source; radar axes encode counts, never accuracy. Contextual event roles each retain their own exact source spans.
 
 Git history is horizontal, older left and newer right. Place the slider below the commit graph; its blue filled track represents the earlier portion. This progress encoding is the only data gradient here. Keep actual commits distinct from the GitFlow policy diagram.
+
+---
+
+## 15. Immersive Workspace & Navigation
+
+### Layout
+
+- Product and developer navigation stay at the top. Settings retain side navigation.
+- Center the source editor between two evidence rails; place per-document charts immediately below the source. At ≤833px show source, charts, evidence cards, then editable detail.
+- Supplier settings use a list/detail split. A configured-key indicator never implies connectivity, sync, or balance.
+
+### Motion
+
+- Extract returned content from the source-facing edge: 24px offset, 480ms, cubic-bezier(.16,1,.3,1.08), staggered by card. A small settling overshoot ends at the original geometry.
+- Loading placeholders reflect actual unfinished tasks. Animation never invents completed words or inference progress. System and user reduced-motion preferences remove transforms and animation.
+
+### Evidence Navigation
+
+- Actual Git parent paths use labelled main/develop/release/feature colors. Commit cards retain matching accent borders; selected time clips completed paths and moves a visible cursor. Older is left; the range fills from the left.
+- File changes have path filtering and addition/deletion totals. Code diffs have old/new line numbers, context and hunk boundaries; binary/omitted/truncated data is labelled.
+- System architecture nodes link to the relevant framework with an accessible breadcrumb return and restrained zoom transition.
+
+### Compatibility
+
+Retain chapters 01–12 and the eleven annotation layers. Action Blue remains the interaction color; branch and annotation colors encode data only. Reuse tokens.css in the product, developer center and preview.
