@@ -17,7 +17,7 @@ const paths = [
   "git-workflow",
 ];
 async function source(path, needle = null, count = 24) {
-  const lines = (await readFile(resolve(projectRoot, path), "utf8")).split(
+  const lines = (await readFile(resolve(projectRoot, path), "utf8")).trimEnd().split(
     "\n",
   );
   const line = needle
@@ -74,6 +74,8 @@ for (const name of paths.filter((name) => !selected || name === selected)) {
       input: ["agent/contract.js", "export function validateRequest"],
       planner: ["agent/agent.js", "export async function annotate"],
       cache: ["agent/provider.js", "export function cacheIdentity"],
+      provider: ["agent/provider.js", "export async function generate"],
+      logs: ["agent/provider.js", "const log ="],
       runner: ["agent/agent.js", "const modelTasks ="],
       guard: ["agent/contract.js", "export function validateCoverage"],
       result: ["agent/agent.js", "const successful ="],
