@@ -1,0 +1,256 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Semanote · B/S 系统框架",
+    "locale": "zh-CN",
+    "output": "docs/diagrams/system-architecture.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/Ceeyu-iooi/Semanote-Agent.git",
+      "revision": "46d81c19c10180f35e5a2d68a191bca9132056c4",
+      "link_mode": "local-only"
+    }
+  },
+  "components": [
+    {
+      "id": "browser",
+      "type": "external",
+      "label": "浏览器",
+      "sublabel": "本机 / 授权局域网",
+      "pos": [
+        40,
+        40
+      ],
+      "size": [
+        160,
+        72
+      ],
+      "sources": [
+        {
+          "path": "docs/web-contract.md",
+          "line": 7,
+          "end_line": 19
+        }
+      ]
+    },
+    {
+      "id": "vue",
+      "type": "frontend",
+      "label": "Vue 工作台",
+      "sublabel": "文本 · 标注 · 统计",
+      "pos": [
+        300,
+        40
+      ],
+      "size": [
+        200,
+        72
+      ],
+      "sources": [
+        {
+          "path": "frontend/src/App.vue",
+          "line": 1,
+          "end_line": 25
+        },
+        {
+          "path": "frontend/src/api.js",
+          "line": 1,
+          "end_line": 14
+        }
+      ]
+    },
+    {
+      "id": "spring",
+      "type": "backend",
+      "label": "Spring Boot 服务",
+      "sublabel": "REST /api/v1 · 版本与任务",
+      "pos": [
+        640,
+        40
+      ],
+      "size": [
+        200,
+        72
+      ],
+      "sources": [
+        {
+          "path": "backend/src/main/java/io/semanote/api/WorkspaceController.java",
+          "line": 15,
+          "end_line": 47
+        },
+        {
+          "path": "backend/src/main/java/io/semanote/service/JobService.java",
+          "line": 95,
+          "end_line": 115
+        }
+      ]
+    },
+    {
+      "id": "agent",
+      "type": "backend",
+      "label": "JavaScript 智能体",
+      "sublabel": "Node.js · 十一层校验",
+      "pos": [
+        980,
+        40
+      ],
+      "size": [
+        200,
+        72
+      ],
+      "sources": [
+        {
+          "path": "backend/src/main/java/io/semanote/agent/AgentBridge.java",
+          "line": 28,
+          "end_line": 56
+        },
+        {
+          "path": "agent/bridge.mjs",
+          "line": 5,
+          "end_line": 18
+        }
+      ]
+    },
+    {
+      "id": "reference",
+      "type": "frontend",
+      "label": "独立开发者中心",
+      "sublabel": "设计 · Archify · 实际 Git",
+      "pos": [
+        300,
+        250
+      ],
+      "size": [
+        200,
+        72
+      ],
+      "sources": [
+        {
+          "path": "frontend/src/components/DeveloperCenter.vue",
+          "line": 4,
+          "end_line": 23
+        },
+        {
+          "path": "frontend/src/main.js",
+          "line": 1,
+          "end_line": 8
+        }
+      ]
+    },
+    {
+      "id": "mysql",
+      "type": "database",
+      "label": "MySQL 8.4",
+      "sublabel": "修订 · 候选 · 保存快照",
+      "pos": [
+        640,
+        250
+      ],
+      "size": [
+        200,
+        72
+      ],
+      "sources": [
+        {
+          "path": "backend/src/main/resources/schema.sql",
+          "line": 12,
+          "end_line": 63
+        },
+        {
+          "path": "backend/src/main/java/io/semanote/service/WorkspaceService.java",
+          "line": 143,
+          "end_line": 191
+        }
+      ]
+    },
+    {
+      "id": "provider",
+      "type": "cloud",
+      "label": "所选模型服务",
+      "sublabel": "供应商注册表 · 显式选择",
+      "pos": [
+        980,
+        250
+      ],
+      "size": [
+        200,
+        72
+      ],
+      "sources": [
+        {
+          "path": "agent/provider.js",
+          "line": 28,
+          "end_line": 58
+        },
+        {
+          "path": "agent/provider.js",
+          "line": 28,
+          "end_line": 58
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "browser-vue",
+      "from": "browser",
+      "to": "vue",
+      "label": "网页访问",
+      "variant": "emphasis"
+    },
+    {
+      "id": "vue-spring",
+      "from": "vue",
+      "to": "spring",
+      "label": "HTTP JSON",
+      "variant": "emphasis"
+    },
+    {
+      "id": "spring-agent",
+      "from": "spring",
+      "to": "agent",
+      "label": "stdin / stdout",
+      "variant": "default"
+    },
+    {
+      "id": "vue-reference",
+      "from": "vue",
+      "to": "reference",
+      "label": "独立 /developer",
+      "variant": "default"
+    },
+    {
+      "id": "spring-mysql",
+      "from": "spring",
+      "to": "mysql",
+      "label": "JDBC 事务",
+      "variant": "default"
+    },
+    {
+      "id": "agent-provider",
+      "from": "agent",
+      "to": "provider",
+      "label": "同意后 HTTPS",
+      "variant": "security"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "智能标注 + 人工修正",
+      "items": [
+        "自动结果先存候选；显式保存才更新当前快照",
+        "人工修正生成新版本，统计/导出固定同一保存快照"
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "运行与数据边界",
+      "items": [
+        "网页可显式开启局域网共享；MySQL 保持本机监听",
+        "Host/Origin 白名单与网段防火墙限制；共享同一工作空间，无多用户分配"
+      ]
+    }
+  ]
+}

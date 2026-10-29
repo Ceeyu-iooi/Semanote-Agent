@@ -1,0 +1,329 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Semanote · JavaScript 智能体与缓存调度",
+    "locale": "zh-CN",
+    "output": "docs/diagrams/agent-architecture.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/Ceeyu-iooi/Semanote-Agent.git",
+      "revision": "46d81c19c10180f35e5a2d68a191bca9132056c4",
+      "link_mode": "local-only"
+    }
+  },
+  "components": [
+    {
+      "id": "caller",
+      "type": "external",
+      "label": "Java 调用方",
+      "sublabel": "JSON / NDJSON",
+      "pos": [
+        40,
+        220
+      ],
+      "size": [
+        160,
+        72
+      ],
+      "sources": [
+        {
+          "path": "backend/src/main/java/io/semanote/agent/AgentBridge.java",
+          "line": 28,
+          "end_line": 65
+        }
+      ]
+    },
+    {
+      "id": "input",
+      "type": "security",
+      "label": "输入与恢复校验",
+      "sublabel": "修订 · 任务 · 原文摘要",
+      "pos": [
+        300,
+        220
+      ],
+      "size": [
+        180,
+        72
+      ],
+      "sources": [
+        {
+          "path": "agent/bridge.mjs",
+          "line": 5,
+          "end_line": 18
+        },
+        {
+          "path": "agent/contract.js",
+          "line": 86,
+          "end_line": 124
+        }
+      ]
+    },
+    {
+      "id": "planner",
+      "type": "backend",
+      "label": "分块与缓存调度",
+      "sublabel": "650 码点 · 仅推理缺失层",
+      "pos": [
+        560,
+        220
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "agent/agent.js",
+          "line": 47,
+          "end_line": 94
+        }
+      ]
+    },
+    {
+      "id": "cache",
+      "type": "database",
+      "label": "本地成功层缓存",
+      "sublabel": "端点/模型/规则/文本隔离",
+      "pos": [
+        560,
+        20
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "agent/provider.js",
+          "line": 10,
+          "end_line": 12
+        },
+        {
+          "path": "agent/provider.js",
+          "line": 58,
+          "end_line": 58
+        },
+        {
+          "path": "agent/agent.js",
+          "line": 57,
+          "end_line": 91
+        }
+      ]
+    },
+    {
+      "id": "runner",
+      "type": "backend",
+      "label": "多任务合并推理",
+      "sublabel": "固定前缀 · 紧凑候选",
+      "pos": [
+        820,
+        220
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "agent/agent.js",
+          "line": 67,
+          "end_line": 92
+        },
+        {
+          "path": "agent/prompts.js",
+          "line": 1,
+          "end_line": 15
+        }
+      ]
+    },
+    {
+      "id": "provider",
+      "type": "cloud",
+      "label": "所选兼容模型",
+      "sublabel": "明确同意后 HTTPS",
+      "pos": [
+        1080,
+        220
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "agent/provider.js",
+          "line": 27,
+          "end_line": 58
+        },
+        {
+          "path": "agent/bridge.mjs",
+          "line": 12,
+          "end_line": 17
+        }
+      ]
+    },
+    {
+      "id": "logs",
+      "type": "database",
+      "label": "本地调用元数据",
+      "sublabel": "耗时 · usage · 脱敏错误",
+      "pos": [
+        1080,
+        20
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "agent/provider.js",
+          "line": 29,
+          "end_line": 35
+        },
+        {
+          "path": "agent/provider.js",
+          "line": 45,
+          "end_line": 55
+        }
+      ]
+    },
+    {
+      "id": "guard",
+      "type": "security",
+      "label": "原文定位与合并",
+      "sublabel": "完整覆盖 · 角色来源 · POS",
+      "pos": [
+        820,
+        430
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "agent/grounding.js",
+          "line": 1,
+          "end_line": 29
+        },
+        {
+          "path": "agent/contract.js",
+          "line": 43,
+          "end_line": 110
+        },
+        {
+          "path": "agent/agent.js",
+          "line": 94,
+          "end_line": 109
+        }
+      ]
+    },
+    {
+      "id": "result",
+      "type": "backend",
+      "label": "十一层候选回执",
+      "sublabel": "成功/失败 · 身份与尝试",
+      "pos": [
+        560,
+        430
+      ],
+      "size": [
+        190,
+        72
+      ],
+      "sources": [
+        {
+          "path": "agent/agent.js",
+          "line": 110,
+          "end_line": 112
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "caller-input",
+      "from": "caller",
+      "to": "input",
+      "label": "JSON",
+      "variant": "emphasis"
+    },
+    {
+      "id": "input-planner",
+      "from": "input",
+      "to": "planner",
+      "label": "任务依赖",
+      "variant": "emphasis"
+    },
+    {
+      "id": "planner-cache",
+      "from": "planner",
+      "to": "cache",
+      "label": "按层读写",
+      "variant": "default"
+    },
+    {
+      "id": "planner-runner",
+      "from": "planner",
+      "to": "runner",
+      "label": "未命中",
+      "variant": "emphasis"
+    },
+    {
+      "id": "runner-provider",
+      "from": "runner",
+      "to": "provider",
+      "label": "HTTPS",
+      "variant": "security"
+    },
+    {
+      "id": "provider-logs",
+      "from": "provider",
+      "to": "logs",
+      "label": "调用元数据",
+      "variant": "default"
+    },
+    {
+      "id": "provider-guard",
+      "from": "provider",
+      "to": "guard",
+      "label": "候选",
+      "variant": "default"
+    },
+    {
+      "id": "planner-guard",
+      "from": "planner",
+      "to": "guard",
+      "label": "缓存命中",
+      "variant": "default"
+    },
+    {
+      "id": "guard-result",
+      "from": "guard",
+      "to": "result",
+      "label": "校验",
+      "variant": "emphasis"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "成本与恢复",
+      "items": [
+        "每块合并所选任务；成功层可复用，失败不隐式重发",
+        "缓存重新建立本次修订/结果身份；实际 usage 与本地复用分开记录"
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "能力边界",
+      "items": [
+        "分词/关键词/词性/实体 + 分段/关系/事件/情感/意图/语义/错误",
+        "原文不改写；跨块关系和歧义角色需校对，本轮百炼只测试合成文本"
+      ]
+    }
+  ]
+}

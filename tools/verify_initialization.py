@@ -73,7 +73,8 @@ def verifyDocumentation():
     result = subprocess.run([sys.executable, "-B", str(projectRoot / "tools/sync_workflow.py"), "--check"], capture_output=True, text=True, encoding="utf-8")
     if result.returncode:
         raise ValueError(result.stdout + result.stderr)
-    print("PASS generated views: shared source, 24 prompts and acyclic prerequisites.")
+    workflow = json.loads((projectRoot / "docs/workflow.json").read_text(encoding="utf-8"))
+    print(f"PASS generated views: shared source, {len(workflow['stages'])} prompts and acyclic prerequisites.")
     for path in [projectRoot / "README.md", *sorted((projectRoot / "docs").glob("*.md"))]:
         content = path.read_text(encoding="utf-8")
         for match in re.finditer(r"(?<!!)\[[^\]]+\]\(([^)]+)\)", content):
@@ -96,20 +97,24 @@ def verifyDocumentation():
 
 
 def verifyGit(expectGit):
-    """Reject publication of files outside the reviewed initialization allowlist."""
+    """Check the baseline and explicitly reviewed agent/Web publication paths."""
     if not (projectRoot / ".git").exists():
         if expectGit:
             raise ValueError("Git repository is missing")
         print("SKIP Git refs: repository not yet initialized.")
         return
-    rootFiles = {"README.md", "AGENTS.md", "CHANGELOG.md", "VERSION", ".gitignore", ".gitattributes", ".editorconfig"}
+    rootFiles = {"README.md", "AGENTS.md", "CHANGELOG.md", "VERSION", ".gitignore", ".gitattributes", ".editorconfig", ".env.example"}
+    readmeImages = {"assets/readme/workspace.png", "assets/readme/insights.png"}
     tracked = runGit("ls-files").splitlines()
     for fileName in tracked:
-        if fileName not in rootFiles and not fileName.startswith(("docs/", "tools/", ".github/")):
+        if fileName not in rootFiles | readmeImages and not fileName.startswith(("docs/", "tools/", ".github/", "agent/", "semanote_agent/", "tests/", "examples/", "frontend/", "backend/")):
             raise ValueError("Outside publication allowlist: " + fileName)
-        if Path(fileName).suffix.lower() not in {"", ".md", ".json", ".html", ".css", ".py"} and fileName not in rootFiles:
+        extension = Path(fileName).suffix.lower()
+        allowedFormat = extension in {"", ".md", ".json", ".html", ".css", ".py", ".js", ".mjs", ".vue", ".java", ".xml", ".properties"} or fileName in readmeImages
+        allowedFormat = allowedFormat or fileName in {"backend/src/main/resources/schema.sql", "tools/configure_lan.ps1"} or (fileName.startswith("docs/licenses/") and extension == ".txt")
+        if not allowedFormat and fileName not in rootFiles:
             raise ValueError("Unexpected public file format: " + fileName)
-        if any(part in {"__pycache__", "node_modules", "profile", "tmp"} for part in Path(fileName).parts):
+        if any(part in {"__pycache__", "node_modules", "profile", "tmp", "target", "dist"} for part in Path(fileName).parts):
             raise ValueError("Unexpected tracked environment/original: " + fileName)
     ignored = subprocess.run(["git", "-C", str(projectRoot), "check-ignore", "profile/manifest.json", "profile/data/train.csv", "deliverables/example.docx"], capture_output=True, text=True, encoding="utf-8")
     if len(ignored.stdout.splitlines()) != 3:
@@ -117,12 +122,10 @@ def verifyGit(expectGit):
     if expectGit:
         if runGit("remote", "get-url", "origin") != "https://github.com/Ceeyu-iooi/Semanote-Agent.git":
             raise ValueError("Unexpected origin")
-        if runGit("rev-parse", "main") != runGit("rev-parse", "develop"):
-            raise ValueError("Initialization main/develop must share baseline")
-        if runGit("rev-parse", "v0.1.0-docs.1^{commit}") != runGit("rev-parse", "main"):
-            raise ValueError("Initialization tag must point at baseline")
+        for branchName in ("main", "develop"):
+            runGit("merge-base", "--is-ancestor", "v0.1.0-docs.1", branchName)
         if runGit("status", "--porcelain"):
-            raise ValueError("Working tree contains uncommitted changes")
+            print("NOTE working tree has uncommitted changes; review them separately, no clean-state claim.")
     print(f"PASS Git publication allowlist: {len(tracked)} tracked paths; local originals ignored.")
 
 

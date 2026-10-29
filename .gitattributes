@@ -6,3 +6,6 @@
 *.pdf binary
 *.docx binary
 *.csv binary
+
+# Preserve Archify Viewer bytes and its artifact-bound verification receipts.
+docs/diagrams/*.html -whitespace

@@ -1,0 +1,223 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Semanote · Vue 前端框架",
+    "locale": "zh-CN",
+    "output": "docs/diagrams/frontend-architecture.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/Ceeyu-iooi/Semanote-Agent.git",
+      "revision": "46d81c19c10180f35e5a2d68a191bca9132056c4",
+      "link_mode": "local-only"
+    }
+  },
+  "components": [
+    {
+      "id": "app",
+      "type": "frontend",
+      "label": "Vue 应用状态",
+      "sublabel": "十一层工作台 · 逐篇统计",
+      "pos": [
+        40,
+        220
+      ],
+      "size": [
+        200,
+        96
+      ],
+      "sources": [
+        {
+          "path": "frontend/src/App.vue",
+          "line": 8,
+          "end_line": 51
+        },
+        {
+          "path": "frontend/src/components/DocumentInsights.vue",
+          "line": 1,
+          "end_line": 23
+        },
+        {
+          "path": "frontend/src/App.vue",
+          "line": 359,
+          "end_line": 373
+        }
+      ]
+    },
+    {
+      "id": "canvas",
+      "type": "frontend",
+      "label": "AnnotationCanvas",
+      "sublabel": "码点选区 · 重叠高亮",
+      "pos": [
+        420,
+        40
+      ],
+      "size": [
+        200,
+        72
+      ],
+      "sources": [
+        {
+          "path": "frontend/src/components/AnnotationCanvas.vue",
+          "line": 1,
+          "end_line": 29
+        },
+        {
+          "path": "frontend/src/annotationPresentation.js",
+          "line": 20,
+          "end_line": 31
+        },
+        {
+          "path": "frontend/src/components/PointerTip.vue",
+          "line": 1,
+          "end_line": 11
+        }
+      ]
+    },
+    {
+      "id": "client",
+      "type": "frontend",
+      "label": "API 客户端",
+      "sublabel": "fetch · 错误与请求边界",
+      "pos": [
+        420,
+        220
+      ],
+      "size": [
+        200,
+        72
+      ],
+      "sources": [
+        {
+          "path": "frontend/src/api.js",
+          "line": 1,
+          "end_line": 14
+        }
+      ]
+    },
+    {
+      "id": "developer",
+      "type": "frontend",
+      "label": "DeveloperCenter",
+      "sublabel": "规范与 Archify 资料导航",
+      "pos": [
+        420,
+        400
+      ],
+      "size": [
+        200,
+        72
+      ],
+      "sources": [
+        {
+          "path": "frontend/src/components/DeveloperCenter.vue",
+          "line": 1,
+          "end_line": 23
+        }
+      ]
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "Spring REST",
+      "sublabel": "同源 /api/v1",
+      "pos": [
+        800,
+        220
+      ],
+      "size": [
+        200,
+        72
+      ],
+      "sources": [
+        {
+          "path": "backend/src/main/java/io/semanote/api/WorkspaceController.java",
+          "line": 15,
+          "end_line": 47
+        }
+      ]
+    },
+    {
+      "id": "tokens",
+      "type": "frontend",
+      "label": "共享设计变量",
+      "sublabel": "Apple 来源 · Bootstrap 覆盖",
+      "pos": [
+        800,
+        400
+      ],
+      "size": [
+        200,
+        72
+      ],
+      "sources": [
+        {
+          "path": "frontend/src/main.js",
+          "line": 1,
+          "end_line": 7
+        },
+        {
+          "path": "docs/design/tokens.css",
+          "line": 1,
+          "end_line": 56
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "app-canvas",
+      "from": "app",
+      "to": "canvas",
+      "label": "原文与条目",
+      "variant": "default"
+    },
+    {
+      "id": "app-client",
+      "from": "app",
+      "to": "client",
+      "label": "用户操作",
+      "variant": "emphasis"
+    },
+    {
+      "id": "app-developer",
+      "from": "app",
+      "to": "developer",
+      "label": "独立 /developer",
+      "variant": "default"
+    },
+    {
+      "id": "client-api",
+      "from": "client",
+      "to": "api",
+      "label": "HTTP JSON",
+      "variant": "emphasis"
+    },
+    {
+      "id": "developer-tokens",
+      "from": "developer",
+      "to": "tokens",
+      "label": "同一规范",
+      "variant": "default"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "数据流",
+      "items": [
+        "保存回包绑定文档与编辑会话；冲突保留草稿并可载入最新版本",
+        "逐篇统计区分候选/草稿/保存快照；关系/事件卡片返回原文"
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "视觉与选区",
+      "items": [
+        "业务页、独立开发者页、preview 共用 tokens.css；十一层独立叠加",
+        "浏览器 UTF-16 选区显式转 Unicode 码点；原文用文本节点渲染"
+      ]
+    }
+  ]
+}
