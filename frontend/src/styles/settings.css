@@ -1,0 +1,271 @@
+/* Settings is the one surface that intentionally retains a side navigation. */
+.settings-dialog {
+  width: min(1160px, calc(100vw - 48px));
+  max-width: 1160px;
+}
+.settings-dialog > form {
+  max-height: calc(100dvh - 64px);
+}
+.settings-body {
+  display: grid;
+  grid-template-columns: 170px minmax(0, 1fr);
+  padding: 0;
+  min-height: 320px;
+}
+.settings-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0;
+  padding: 24px 12px;
+  background: var(--color-page);
+  border-right: 1px solid var(--color-border);
+  align-self: stretch;
+}
+.settings-tabs button {
+  border: 0;
+  background: none;
+  border-radius: 8px;
+  padding: 12px 14px;
+  text-align: left;
+  color: var(--color-secondary);
+  font-size: 13px;
+  min-height: 44px;
+}
+.settings-tabs button.selected {
+  background: var(--color-canvas);
+  color: var(--color-primary);
+}
+.settings-content {
+  padding: 24px;
+  min-width: 0;
+}
+.settings-content > .settings-fields {
+  max-width: none;
+}
+.provider-settings {
+  display: grid;
+  grid-template-columns: 170px minmax(0, 1fr);
+  gap: 24px;
+}
+.provider-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-self: start;
+  min-width: 0;
+}
+.provider-list > button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  padding: 12px 10px;
+  text-align: left;
+  min-height: 48px;
+  font-size: 13px;
+  color: var(--color-secondary);
+}
+.provider-list > button.selected {
+  background: var(--color-page);
+  color: var(--color-ink);
+}
+.provider-list button > span:not(.provider-icon) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.provider-icon {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  border: 1px solid var(--color-border);
+  background: var(--color-canvas);
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.provider-state-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-border);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.provider-state-dot.configured {
+  background: var(--annotation-positive);
+}
+.provider-detail {
+  min-width: 0;
+}
+.provider-detail-header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 20px;
+}
+.provider-detail-header .provider-icon {
+  width: 44px;
+  height: 44px;
+  font-size: 19px;
+}
+.provider-detail-header h3 {
+  font-size: 24px;
+  margin: 0 0 5px;
+}
+.provider-detail-header p {
+  margin: 0;
+  font-size: 11px;
+  color: var(--color-muted);
+}
+.provider-credentials {
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+}
+.provider-credentials > header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding-bottom: 16px;
+}
+.provider-credentials > header strong {
+  font-size: 14px;
+}
+.provider-credentials > header .quiet-badge {
+  font-size: 10px;
+}
+.provider-fields {
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+.provider-fields > label {
+  font-size: 12px;
+}
+.provider-fields .form-control,
+.provider-fields .form-select {
+  font-size: 13px;
+}
+.provider-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding-top: 17px;
+}
+.provider-default {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+}
+.provider-settings-note {
+  font-size: 11px;
+  color: var(--color-muted);
+  line-height: 1.7;
+  margin: 17px 0 0;
+}
+.provider-add {
+  margin-top: 8px;
+  border: 1px dashed var(--color-border) !important;
+}
+.provider-usage-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  font-size: 11px;
+  color: var(--color-primary);
+}
+@media (max-width: 1068px) {
+  .provider-settings {
+    grid-template-columns: 145px minmax(0, 1fr);
+    gap: 17px;
+  }
+  .settings-body {
+    grid-template-columns: 140px minmax(0, 1fr);
+  }
+  .settings-content {
+    padding: 20px;
+  }
+  .provider-credentials {
+    padding: 17px;
+  }
+}
+@media (max-width: 833px) {
+  .settings-dialog {
+    width: calc(100vw - 24px);
+  }
+  .settings-body {
+    grid-template-columns: 112px minmax(0, 1fr);
+  }
+  .settings-tabs {
+    padding: 17px 8px;
+  }
+  .settings-tabs button {
+    font-size: 11px;
+    padding: 10px;
+  }
+  .settings-content {
+    padding: 17px;
+  }
+  .provider-settings {
+    grid-template-columns: 1fr;
+  }
+  .provider-list {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  .provider-list > button {
+    font-size: 11px;
+    min-height: 40px;
+    padding: 7px 10px;
+  }
+  .provider-list .provider-icon {
+    width: 20px;
+    height: 20px;
+    font-size: 10px;
+  }
+  .provider-detail-header h3 {
+    font-size: 21px;
+  }
+}
+@media (max-width: 419px) {
+  .settings-body {
+    grid-template-columns: 88px minmax(0, 1fr);
+  }
+  .settings-tabs {
+    padding-inline: 5px;
+  }
+  .settings-tabs button {
+    padding-inline: 7px;
+    font-size: 10px;
+  }
+  .settings-content {
+    padding: 12px;
+  }
+  .provider-credentials {
+    padding: 12px;
+  }
+  .provider-detail-header {
+    gap: 8px;
+  }
+  .provider-detail-header .provider-icon {
+    width: 32px;
+    height: 32px;
+  }
+  .provider-detail-header h3 {
+    font-size: 17px;
+  }
+}

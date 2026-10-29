@@ -1,0 +1,775 @@
+/* Application navigation and source-centred extraction workspace. */
+.product-navigation {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  min-height: 76px;
+  padding: 12px 32px;
+  background: var(--color-canvas);
+  border-bottom: 1px solid var(--color-border);
+}
+.product-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-ink);
+  font-weight: 600;
+  white-space: nowrap;
+  line-height: 1.15;
+}
+.product-brand small {
+  display: block;
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 1.6px;
+  color: var(--color-muted);
+  margin-top: 5px;
+}
+.product-monogram {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 36px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  color: var(--color-primary);
+  font-size: 24px;
+  font-weight: 500;
+}
+.top-navigation {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: auto;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.top-navigation button,
+.navigation-utilities button,
+.navigation-utilities a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 15px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-secondary);
+  white-space: nowrap;
+  font-size: 13px;
+}
+.top-navigation button.active {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+.top-navigation button:hover,
+.navigation-utilities button:hover,
+.navigation-utilities a:hover {
+  background: var(--color-page);
+}
+.top-navigation small {
+  font-size: 10px;
+  color: var(--color-muted);
+}
+.navigation-utilities {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.navigation-utilities a {
+  color: var(--color-secondary);
+}
+.app-layout {
+  display: block;
+  max-width: none;
+  min-height: calc(100dvh - 76px);
+}
+.main-content {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 40px 48px 64px;
+  min-width: 0;
+}
+.main-content.workspace-content {
+  max-width: 1840px;
+  padding: 32px 32px 64px;
+}
+.workspace-heading {
+  margin-bottom: 24px;
+}
+.workspace-heading h1 {
+  font-size: 28px;
+  max-width: 960px;
+}
+.workspace-heading .text-action {
+  min-height: 32px;
+}
+.workspace-meta {
+  font-size: 11px;
+  gap: 12px;
+}
+.workspace-meta .quiet-badge {
+  background: var(--color-canvas);
+}
+.immersive-workspace {
+  display: grid;
+  grid-template-columns: minmax(190px, 240px) minmax(460px, 1fr) minmax(
+      210px,
+      260px
+    );
+  gap: 24px;
+  align-items: start;
+}
+.immersive-workspace > .editor-surface {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: var(--radius-card);
+}
+.immersive-workspace .document-page {
+  min-height: 440px;
+  padding: 32px 32px 48px;
+}
+.immersive-workspace .annotation-canvas {
+  overflow-wrap: anywhere;
+}
+.immersive-workspace .document-page-label {
+  font-size: 9px;
+  letter-spacing: 1.8px;
+  margin-bottom: 28px;
+}
+.immersive-workspace .editor-toolbar {
+  padding: 12px 17px;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.immersive-workspace .layer-toolbar {
+  padding: 12px 17px;
+  gap: 5px;
+}
+.immersive-workspace .layer-toggle {
+  font-size: 10px;
+  min-height: 30px;
+  padding: 5px 9px;
+  gap: 5px;
+}
+.immersive-workspace .editor-statusbar {
+  font-size: 10px;
+  padding: 10px 17px;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.immersive-workspace .editor-statusbar .button-row {
+  margin-left: auto;
+}
+.immersive-workspace .editor-statusbar .btn {
+  font-size: 12px;
+  padding: 8px 14px;
+}
+.extraction-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.rail-left {
+  grid-column: 1;
+  grid-row: 1/3;
+}
+.rail-right {
+  grid-column: 3;
+  grid-row: 1/3;
+}
+.extraction-rail > header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 2px 8px;
+}
+.extraction-rail > header h2 {
+  font-size: 13px;
+  margin: 0;
+  letter-spacing: 0;
+}
+.extraction-rail > header small {
+  display: block;
+  flex-basis: 100%;
+  font-size: 10px;
+  color: var(--color-muted);
+  padding-left: 15px;
+}
+.rail-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-primary);
+}
+.extraction-card {
+  position: relative;
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-canvas);
+  padding: 13px 14px;
+  transition:
+    border-color var(--motion-fast),
+    background-color var(--motion-fast);
+}
+.extraction-card.selected {
+  border-color: var(--color-primary);
+}
+.extraction-card::after {
+  content: "";
+  position: absolute;
+  top: 26px;
+  height: 1px;
+  width: 24px;
+  background: var(--color-border);
+  pointer-events: none;
+}
+.rail-left .extraction-card::after {
+  right: -25px;
+}
+.rail-right .extraction-card::after {
+  left: -25px;
+}
+.extraction-card.selected::after {
+  background: var(--color-primary);
+}
+.extraction-card-heading {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  color: var(--color-ink);
+}
+.extraction-card-heading strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+.extraction-kind-mark {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 7px;
+  font-size: 11px;
+  background: var(--color-page);
+  color: var(--color-primary);
+}
+.extraction-count {
+  margin-left: auto;
+  color: var(--color-muted);
+  font: 500 12px/1 var(--font-body);
+  font-variant-numeric: tabular-nums;
+}
+.extraction-card.selected .extraction-count {
+  color: var(--color-primary);
+}
+.extraction-card-content {
+  margin-top: 10px;
+  min-width: 0;
+}
+.extraction-chips {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.extraction-chip {
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--color-page);
+  padding: 5px 7px;
+  text-align: left;
+  font-size: 11px;
+  color: var(--color-secondary);
+}
+.extraction-chip > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 135px;
+}
+.extraction-chip small {
+  font-size: 8px;
+  white-space: nowrap;
+  opacity: 0.8;
+}
+.extraction-chip:hover {
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+.extraction-more {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 30px;
+  margin-top: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 10px;
+  color: var(--color-primary);
+}
+.extraction-empty,
+.extraction-error {
+  font-size: 10px;
+  line-height: 1.6;
+  margin: 0;
+  color: var(--color-muted);
+}
+.extraction-error {
+  color: var(--color-danger);
+}
+.chip-POSITIVE {
+  color: var(--annotation-positive);
+}
+.chip-NEGATIVE {
+  color: var(--annotation-negative);
+}
+.chip-PERSON {
+  color: var(--annotation-person);
+}
+.chip-LOCATION {
+  color: var(--annotation-location);
+}
+.extraction-waiting {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+}
+.extraction-waiting > span {
+  height: 5px;
+  width: 20px;
+  background: var(--color-border);
+  border-radius: 4px;
+  animation: extraction-pulse 1.5s ease-in-out infinite;
+}
+.extraction-waiting > span:nth-child(2) {
+  width: 38px;
+  animation-delay: 150ms;
+}
+.extraction-waiting small {
+  font-size: 9px;
+  color: var(--color-muted);
+  margin-left: auto;
+}
+.extract-enter-active {
+  animation: extract-in var(--motion-extract) var(--motion-extract-ease) both;
+  animation-delay: var(--card-delay);
+}
+.extract-leave-active {
+  transition: opacity 100ms;
+}
+.extract-leave-to {
+  opacity: 0;
+}
+.rail-left {
+  --extract-origin: 24px;
+}
+.rail-right {
+  --extract-origin: -24px;
+}
+@keyframes extract-in {
+  0% {
+    opacity: 0;
+    transform: translate(var(--extract-origin), 12px) scale(0.96);
+  }
+  72% {
+    opacity: 1;
+    transform: translate(-1px, -2px) scale(1.005);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes extraction-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+.immersive-workspace > .document-insights {
+  grid-column: 2;
+  grid-row: 2;
+  margin-top: 8px;
+}
+.immersive-workspace > .annotation-inspector {
+  grid-column: 1/-1;
+  grid-row: 3;
+  position: static;
+  max-height: none;
+  min-width: 0;
+  border-radius: var(--radius-card);
+}
+.immersive-workspace .inspector-controls {
+  min-width: 0;
+}
+.immersive-workspace .inspector-tabs {
+  display: flex;
+  flex-wrap: wrap;
+}
+.immersive-workspace .inspector-tabs button {
+  flex: initial;
+  min-width: 64px;
+}
+.immersive-workspace .annotation-items {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  max-height: 420px;
+  overflow-y: auto;
+  align-content: start;
+}
+.immersive-workspace .annotation-item {
+  border-right: 1px solid var(--color-border);
+}
+.immersive-workspace .inspector-filters {
+  max-width: 640px;
+  gap: 12px;
+}
+.immersive-workspace .extra-layer-editor {
+  max-width: 920px;
+}
+.immersive-workspace .extra-layer-editor label {
+  max-width: 100%;
+}
+.immersive-workspace .pos-editor-row {
+  max-width: 600px;
+}
+.inference-progress {
+  max-width: none;
+}
+.progress-heading {
+  flex-wrap: wrap;
+}
+@media (min-width: 1600px) {
+  .immersive-workspace {
+    grid-template-columns: 250px minmax(560px, 1fr) 280px;
+    gap: 32px;
+  }
+  .extraction-card::after {
+    width: 32px;
+  }
+  .rail-left .extraction-card::after {
+    right: -33px;
+  }
+  .rail-right .extraction-card::after {
+    left: -33px;
+  }
+  .immersive-workspace .document-page {
+    padding-inline: 48px;
+  }
+}
+@media (max-width: 1200px) {
+  .product-navigation {
+    gap: 17px;
+    padding-inline: 24px;
+  }
+  .navigation-utilities span {
+    display: none;
+  }
+  .navigation-utilities button,
+  .navigation-utilities a {
+    padding-inline: 12px;
+  }
+  .top-navigation button {
+    padding-inline: 12px;
+  }
+  .immersive-workspace {
+    grid-template-columns: 180px minmax(360px, 1fr) 200px;
+    gap: 17px;
+  }
+  .extraction-card {
+    padding: 11px;
+  }
+  .extraction-card::after {
+    width: 17px;
+  }
+  .rail-left .extraction-card::after {
+    right: -18px;
+  }
+  .rail-right .extraction-card::after {
+    left: -18px;
+  }
+  .main-content.workspace-content {
+    padding-inline: 24px;
+  }
+  .immersive-workspace .document-page {
+    padding-inline: 24px;
+  }
+}
+@media (max-width: 1068px) {
+  .product-brand small {
+    display: none;
+  }
+  .top-navigation svg {
+    display: none;
+  }
+  .product-navigation {
+    gap: 12px;
+    min-height: 68px;
+  }
+  .main-content {
+    padding: 32px 24px 48px;
+  }
+  .immersive-workspace {
+    grid-template-columns: 180px minmax(0, 1fr);
+  }
+  .rail-right {
+    grid-column: 1/-1;
+    grid-row: 3;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .rail-right > header {
+    grid-column: 1/-1;
+  }
+  .rail-right .extraction-card::after {
+    display: none;
+  }
+  .rail-left {
+    grid-row: 1/3;
+  }
+  .immersive-workspace > .document-insights {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .immersive-workspace > .annotation-inspector {
+    grid-row: 4;
+  }
+  .immersive-workspace .annotation-items {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 833px) {
+  .product-navigation {
+    flex-wrap: wrap;
+    padding: 10px 17px;
+    gap: 8px;
+    min-height: 0;
+  }
+  .product-brand {
+    font-size: 15px;
+  }
+  .product-monogram {
+    width: 26px;
+    height: 30px;
+    font-size: 20px;
+  }
+  .navigation-utilities {
+    margin-left: auto;
+  }
+  .top-navigation {
+    order: 3;
+    flex-basis: 100%;
+    margin: 0;
+    justify-content: space-between;
+    gap: 2px;
+  }
+  .top-navigation button {
+    min-height: 36px;
+    font-size: 11px;
+    padding: 8px 12px;
+  }
+  .top-navigation small {
+    display: none;
+  }
+  .main-content,
+  .main-content.workspace-content {
+    padding: 24px 17px 40px;
+  }
+  .workspace-heading {
+    align-items: start;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .workspace-heading h1 {
+    font-size: 24px;
+  }
+  .workspace-heading .button-row {
+    margin-left: 0;
+  }
+  .immersive-workspace {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 17px;
+  }
+  .immersive-workspace > .editor-surface {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .rail-left,
+  .rail-right {
+    grid-column: 1;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .rail-left {
+    grid-row: 3;
+  }
+  .rail-right {
+    grid-row: 4;
+  }
+  .extraction-rail > header {
+    grid-column: 1/-1;
+    padding-bottom: 0;
+  }
+  .extraction-rail > header small {
+    flex-basis: auto;
+    padding-left: 0;
+    margin-left: auto;
+  }
+  .extraction-card::after {
+    display: none;
+  }
+  .immersive-workspace > .document-insights {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .immersive-workspace > .annotation-inspector {
+    grid-row: 5;
+  }
+  .immersive-workspace .document-page {
+    min-height: 340px;
+    padding: 24px;
+  }
+  .immersive-workspace .annotation-canvas {
+    font-size: 17px;
+  }
+  .immersive-workspace .annotation-items {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .extract-enter-active {
+    animation-duration: 320ms;
+    animation-delay: 0ms;
+  }
+  .rail-left,
+  .rail-right {
+    --extract-origin: 0px;
+  }
+}
+@media (max-width: 640px) {
+  .top-navigation {
+    justify-content: flex-start;
+  }
+  .top-navigation button {
+    font-size: 10px;
+    flex: 0 0 auto;
+    padding-inline: 11px;
+  }
+  .navigation-utilities a,
+  .navigation-utilities button {
+    min-height: 36px;
+    padding: 6px 10px;
+  }
+  .main-content,
+  .main-content.workspace-content {
+    padding: 20px 12px 32px;
+  }
+  .workspace-heading h1 {
+    font-size: 21px;
+  }
+  .workspace-heading .button-row {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .workspace-meta {
+    font-size: 10px;
+  }
+  .immersive-workspace .document-page {
+    padding: 24px 20px;
+    min-height: 300px;
+  }
+  .rail-left,
+  .rail-right {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .extraction-card-heading strong {
+    font-size: 11px;
+  }
+  .extraction-chip > span {
+    max-width: 120px;
+  }
+  .immersive-workspace .annotation-items {
+    grid-template-columns: 1fr;
+  }
+  .extraction-card {
+    padding: 11px;
+  }
+  .immersive-workspace .editor-statusbar {
+    align-items: flex-start;
+  }
+  .immersive-workspace .editor-statusbar .button-row {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .immersive-workspace .inspector-tabs button {
+    font-size: 11px;
+    min-width: 54px;
+  }
+  .immersive-workspace .insights-heading h2 {
+    font-size: 21px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .extract-enter-active,
+  .extraction-waiting > span {
+    animation: none;
+  }
+  .extract-leave-active {
+    transition: none;
+  }
+}
+[data-motion="reduced"] .extract-enter-active,
+[data-motion="reduced"] .extraction-waiting > span {
+  animation: none;
+}
+[data-motion="reduced"] .extract-leave-active {
+  transition: none;
+}
+
+.immersive-workspace.source-editing {
+  grid-template-columns: minmax(0, 960px);
+  justify-content: center;
+}
+.immersive-workspace.source-editing > .editor-surface {
+  grid-column: 1;
+}
+.immersive-workspace .inspector-controls {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+}
+
+@media (max-width: 833px) {
+  .top-navigation button,
+  .extraction-card-heading,
+  .extraction-chip,
+  .extraction-more,
+  .immersive-workspace .layer-toggle {
+    min-height: 44px;
+  }
+}

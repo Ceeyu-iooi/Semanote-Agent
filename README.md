@@ -1,121 +1,112 @@
 # Semanote-Agent
 
-**把原始文本变成可检查、可修正、可追溯的标注。**
+**以原文为中心，完成可检查、可修正、可追溯的中文文本标注。**
 
-Vue + JavaScript + Bootstrap 工作台 · Java / Spring Boot 后端 · JavaScript 智能体 · MySQL
+Vue 3 · JavaScript · Bootstrap 5 ｜ Java 21 · Spring Boot ｜ JavaScript Agent · MySQL
 
-[开始使用](#开始使用) · [支持的标注](#支持的标注) · [架构与设计](#架构与设计) · [验证记录](docs/0.1.1-report.md)
+[开始使用](#开始使用) · [标注能力](#标注能力) · [架构与设计](#架构与设计) · [验证与边界](#验证与边界)
 
-> **版本 0.1.1**：[发布记录与源码](https://github.com/Ceeyu-iooi/Semanote-Agent/releases/tag/0.1.1)。本版提供十一层标注与完整 Web 工作流；课程验收及语义质量评估单独记录。历史初始化标签 `v0.1.0-docs.1` 继续保留。
+![实际工作区：中央原文、两侧标注卡片与正文后的交互图表，内容为原创合成文本](assets/readme/workspace.png)
 
-![Semanote 实际工作台：原创合成文本的多层标注、分类详情和编辑工具](assets/readme/workspace.png)
+从导入到审阅，在同一份原文上完成十一层标注。顶部导航切换文本库、工作台、任务和调用日志；进入工作台后，原文居中，抽取卡片随真实结果返回，图表紧随正文。
 
-## 从一段文字开始
+~~~text
+导入 / 输入 → AI 候选 → 审阅与人工修正 → 保存快照 → 统计与导出
+              JavaScript Agent          Java / MySQL
+~~~
 
-导入或输入文本，选择标注任务，审阅自动候选，再按需要人工修正。保存后形成不可变快照：正文、标注、统计与导出始终对应同一修订。
-
-```text
-原文 → 自动标注 → 审阅 / 人工修正 → 保存快照 → 统计与导出
-       JavaScript 智能体              Java / MySQL
-```
-
-- **看得清**：分词边界、关键词波浪线、词性色彩和实体底色可以叠加；悬停提示、类别筛选和频次排序帮助定位细节。
-- **改得准**：原文编辑与标注编辑分开；选区使用 Unicode 码点，兼容 emoji、重复片段及重叠标注。冲突保留本地输入，旧标注留在历史修订。
-- **有依据**：每篇正文后都有当前展示版本的柱图、雷达图、实体环图及关系/事件卡片；明确区分候选、草稿与已保存快照。
-- **少重复**：同一原文块合并推理，成功层可缓存复用；调用日志记录实际请求、耗时和 token，失败由用户显式重试。
-
-![逐篇实体统计和事件角色卡片：可选择事件并回到原文证据](assets/readme/insights.png)
-
-<a id="支持的标注"></a>
-
-## 支持的标注
-
-| 标注 | 得到什么 |
-|---|---|
-| 分词 / 词性 | 完整原文词项及对应 UD 17 类词性 |
-| 关键词 / 命名实体 | 原文关键词、全部精确出现位置；人名、地点、机构、时间、金额 |
-| 原文分段 / 语义 | 无损分段、主题与列举分点；视觉换行不会重写原文 |
-| 关系 / 事件 | 主客体、事件角色和原文证据；有明确日期的事件可查看时间轴 |
-| 情感 / 意图 | 句子正面、负面、中性判断，以及陈述、请求、提问等意图 |
-| 错误 | 语法、用词、错别字、标点候选及修改建议；建议不会直接改写正文 |
-
-支持 DOCX、UTF-8 TXT、Markdown、三列 CSV 导入，以及 JSON / TXT / Markdown 快照导出。单文本最多 10,000 码点，文件 5 MiB，常规导入或批量操作最多 500 份文本。
+- **逐字有据**：分词边界、关键词波浪线、词性色彩、实体底色可叠加；点击卡片、词项或图表回到原文证据。
+- **修改可恢复**：自动候选显式保存，人工结果独立成版；原文改动生成新修订，历史标注保留在对应版本。
+- **每篇看清楚**：柱图、雷达图、实体环图、关系卡片及事件时间轴呈现当前展示版本，候选、草稿与快照分别标明。
+- **减少重复调用**：同一文本块合并推理，成功层缓存复用，失败显式重试。调用日志区分实际请求、已知 token 与未知用量。
 
 <a id="开始使用"></a>
-
 ## 开始使用
 
-运行环境：**Windows、Java 21、Node.js 24、Python 3.12**。Node 负责活动智能体，Python 负责启动、构建与维护工具。便携 MySQL / Maven 放在本地 `profile/tools`。
+运行环境：**Windows、Java 21、Node.js 24**。首次源码构建需要 npm、Maven 和便携 MySQL；工具只放在本项目 profile/tools，不全局安装。整个当前项目不依赖 Python。
 
-已有构建产物时，在项目根目录运行：
+~~~powershell
+# 项目根目录，首次从源码准备与构建
+node tools/download-web-tools.mjs
+node tools/build-web.mjs
+node tools/local-web.mjs start
+~~~
 
-```powershell
-python -X utf8 -B tools/local_web.py start
-```
+已有构建产物时，只需最后一条启动命令。打开 [本地工作台](http://127.0.0.1:8080/)：
 
-打开 [文本工作台](http://127.0.0.1:8080/) → 左下角「设置」→「模型」，填写自己的供应商地址、模型和密钥。预置 DeepSeek 与阿里云百炼，也可添加其他 OpenAI 兼容接口；密钥只写入本机配置，读取接口不回显。
+1. 顶部「设置」→「模型供应商」，配置自己的地址、模型和密钥。预置 DeepSeek、阿里云百炼，可自定义 OpenAI 兼容服务。
+2. 新建一段原创文本或导入文件，打开文本后选择「自动标注」。仅向已获授权的服务发送有权外发的内容。
+3. 检查两侧卡片和正文图层，按需人工修正，保存后导出 JSON、TXT 或 Markdown。
 
-首次从源码构建：
+密钥只保存在本机受忽略配置，读取时不回显。无模型也可进行人工标注与本地无损分段。
 
-```powershell
-python -X utf8 -B tools/download_web_tools.py
-python -X utf8 -B tools/build_web.py
-python -X utf8 -B tools/local_web.py start
-```
+[完整运行 / 局域网 / 备份 / 离线构建](docs/web-usage.md) · [独立智能体 / 缓存 / 显式重试](docs/agent-usage.md)
 
-[完整操作、局域网、备份与恢复](docs/web-usage.md) · [智能体调用与缓存](docs/agent-usage.md)
+<a id="标注能力"></a>
+## 标注能力
 
-局域网共享使用 `tools/local_web.py lan`，再由管理员运行 `tools/configure_lan.ps1`。同网段访问者共享一个工作空间；当前没有登录与权限分配，MySQL 保持回环监听。
+| 标注层 | 结果与交互 |
+|---|---|
+| 分词、词性 | 原文词项与 UD 17 类词性；词性固定引用同修订分词 |
+| 关键词、命名实体 | 关键词频次与全部精确位置；人名、地点、机构、时间、金额按语境定位 |
+| 分段、语义 | 无损分段、主题、解释及列举分点；视觉换行保持原文内容与顺序 |
+| 关系、事件 | 主客体、主体/客体/时间/地点/原因/结果角色及原文依据；明确日期进入事件时间轴 |
+| 情感、意图 | 正面/负面/中性，以及陈述/请求/提问等；自动结果完整覆盖非空白原文 |
+| 错误 | 语法、用词、错别字、标点候选及建议；不会直接改写正文 |
+
+导入支持 DOCX、UTF-8 TXT、Markdown、三列 CSV。单文本最多 10,000 码点、单文件 5 MiB、单批 500 文本。TXT/MD/DOCX 每文件一份正文，CSV 每格独立，保留来源行列；空白跳过并报告。
+
+![逐篇图谱：当前快照统计与可定位原文的事件角色](assets/readme/insights.png)
 
 <a id="架构与设计"></a>
-
 ## 架构与设计
 
 | 层 | 实现与职责 |
 |---|---|
-| 浏览器 | Vue 3 / JavaScript / Bootstrap 5：文本编辑、交互标注、逐篇可视化 |
-| Web 后端 | Java 21 / Spring Boot 3.5 / JDBC：接口、任务、修订、快照、导入与导出 |
-| 智能体 | Node.js 24 原生 JavaScript：多任务合并推理、分块、原文定位、缓存与校验 |
-| 持久化 | MySQL 8.4 保存不可变业务版本；本地文件保存受限配置、调用元数据和推理缓存 |
+| 浏览器 | Vue / JavaScript / Bootstrap：沉浸工作区、人工编辑、逐篇图谱 |
+| Web 服务 | Java / Spring Boot / JDBC：REST、任务、修订、快照、导入导出、并发保护 |
+| 智能体 | Node.js 原生 JavaScript：合并推理、分块、原文定位、依赖校验、缓存与脱敏日志 |
+| 存储 | MySQL 8.4 业务版本；本机文件保存配置、推理缓存与调用元数据 |
 
-[开发者中心](http://127.0.0.1:8080/developer) 是独立页面，提供 Apple 来源设计 preview、六份 Archify 图、实际 Git 历史/代码差异、调用日志和 Changelog。
+[独立开发者中心](http://127.0.0.1:8080/developer) 使用顶部导航：共享设计 preview、六份 Archify 图、真实 Git 父关系/分支颜色/时间定位、逐文件代码差异、调用日志和 Changelog。系统图节点可进入对应前端、后端、智能体及数据库框架。
 
-[系统 Archify](docs/diagrams/system-architecture.html) · [智能体 Archify](docs/diagrams/agent-architecture.html) · [共享设计规范](docs/design/README.md) · [Web 契约](docs/web-contract.md) · [标注契约](docs/annotation-contract.md)
+[系统 Archify](docs/diagrams/system-architecture.html) · [智能体 Archify](docs/diagrams/agent-architecture.html) · [Apple 来源设计规范](docs/design/README.md) · [Web 契约](docs/web-contract.md) · [标注契约](docs/annotation-contract.md)
 
+<a id="验证与边界"></a>
 ## 验证与边界
 
-0.1.1 的八组迭代、真实调用/离线回放区别、同文成本对照、保存恢复及桌面/窄屏检查，见 [验证记录](docs/0.1.1-report.md)。模型结构校验和字符覆盖不能替代语言学准确率评估，CSV 未提供标准答案。
+已发布基线为 [0.1.1](https://github.com/Ceeyu-iooi/Semanote-Agent/releases/tag/0.1.1)；当前沉浸工作区改造的实施与验证单独记录，未创建新版本标签。[0.1.1 验证](docs/0.1.1-report.md) · [本轮实现与验证](docs/immersive-report.md) · [本轮需求](docs/immersive-requirements.md) · [20 篇 README 提炼](docs/readme-research.md)
 
-- 自动结果始终是待审阅候选；跨块的长距离关系和歧义指代需要人工检查。
-- 目前是单人工作流，多用户任务分配保留扩展设计。
-- `profile` 存放本地原件、受限语料、配置、数据库、备份与验证回执，整个目录不进入公开仓库。首次没有课程原件时，系统仍可用原创文本运行。
-- 真实语料外发按服务和范围授权；本轮百炼验证只使用原创合成文本。
-- 公开可见不代表授予开源许可：项目尚未选择开源许可证，第三方许可见 [许可证资料](docs/licenses)。
+- 自动结果为待审阅候选。格式与字符覆盖检查不等于语言学准确率；CSV 没有标准答案，跨块关系和歧义指代仍需人工检查。
+- 当前为单人工作流。局域网访问者共享同一空间，无独立账户、角色权限或任务分配。
+- profile 存放原件、受限语料、配置、数据库、备份和回执，整个目录忽略。课程 CSV 不随公开仓库分发；本机存在时可幂等导入初始语料。
+- 真实语料外发按服务和范围授权，本轮百炼只验证原创合成文本。
+- 项目尚未选择整体开源许可证；公开可见不等于已授予复用许可。[第三方许可证](docs/licenses)
 
 <details>
-<summary>目录、开发恢复与课程文档</summary>
+<summary>开发、目录与课程资料</summary>
 
-```text
-frontend/         Vue 工作台、独立开发者页面
-backend/          Java 后端、数据库结构与测试
-agent/            活动 JavaScript 智能体，无第三方运行依赖
-semanote_agent/   P03 历史 Python 交付兼容
-examples/         可公开原创合成样例
-docs/             契约、设计、Archify、决策与验收
-tools/            构建、启动、验证、备份和文档同步
-profile/          本机数据与凭据，Git 忽略
-```
+~~~text
+frontend/   Vue 界面与共享交互
+backend/    Java Web 服务、SQL 与测试
+agent/      JavaScript 智能体与独立 CLI
+examples/   原创合成请求和评估案例
+docs/       契约、设计、Archify、决策与验收
+tools/      Node 构建、运行、验证、备份与同步
+profile/    本机数据与凭据，不公开
+~~~
 
-前端 Vue/Bootstrap 已打包进 `frontend/dist`，运行成品不需要 `frontend/node_modules`；活动智能体仍需 Node.js。恢复开发依赖使用 `npm ci --prefix frontend`。Windows 重建前先执行 `tools/local_web.py stop`，再运行 `tools/build_web.py`，通过后重新 start，避免运行中的 JAR 被锁定。
+Vue/Bootstrap 已编译进 frontend/dist，成品运行无需 node_modules。恢复开发依赖：npm ci --prefix frontend。重建前先 node tools/local-web.mjs stop，构建通过再 start；离线依赖复用方式见运行说明。
 
-[工作规范](AGENTS.md) · [开发流程](docs/workflow.md) · [需求映射](docs/requirements.md) · [PRD](docs/PRD.md) · [数据库设计](docs/database.md) · [决策](docs/decisions.md) · [验收](docs/acceptance.md) · [课程提交清单](docs/submission-checklist.md) · [GitFlow](docs/git-workflow.md) · [Changelog](CHANGELOG.md)
+~~~powershell
+node --test agent/*.test.js frontend/tests/*.test.js tools/tests/*.test.mjs
+node tools/verify-web.mjs
+node tools/sync-workflow.mjs --check
+node tools/verify-initialization.mjs --audit-data --expect-git
+~~~
 
-流程状态只编辑 `docs/workflow.json`，再执行：
+流程仅编辑 docs/workflow.json，再运行 node tools/sync-workflow.mjs。历史 Python 实现可在0.1.1标签查看；初始化标签 v0.1.0-docs.1 保持不变。
 
-```powershell
-python tools/sync_workflow.py
-python tools/sync_workflow.py --check
-python tools/verify_initialization.py
-```
+[工作规范](AGENTS.md) · [五步流程](docs/workflow.md) · [需求](docs/requirements.md) · [PRD](docs/PRD.md) · [数据库](docs/database.md) · [决策](docs/decisions.md) · [验收](docs/acceptance.md) · [课程清单](docs/submission-checklist.md) · [GitFlow](docs/git-workflow.md) · [Changelog](CHANGELOG.md)
 
 </details>

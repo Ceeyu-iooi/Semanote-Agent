@@ -41,11 +41,11 @@ JavaScript 入口：`node agent/bridge.mjs`，stdin 接收 action/envelope，std
 
 推荐词性集合为 `ADJ`、`ADP`、`ADV`、`AUX`、`CCONJ`、`DET`、`INTJ`、`NOUN`、`NUM`、`PART`、`PRON`、`PROPN`、`PUNCT`、`SCONJ`、`SYM`、`VERB`、`X`。`X` 仅表示不能归入其他类的词项，不用于隐瞒模型调用或校验失败。中文映射解释在冻结时逐项补齐。
 
-关键词上限 10 是规则参数，不是质量指标。精确查找迭代枚举所有位置，不能只用第一次匹配；抽取式关键词必须至少出现一次。UD 标签依据见 [UD 官方定义](https://universaldependencies.org/u/pos/)，17 类及中文解释也可从 `semanote_agent.rules.posLabels` 获取。
+关键词上限 10 是规则参数，不是质量指标。精确查找迭代枚举所有位置，不能只用第一次匹配；抽取式关键词必须至少出现一次。UD 标签依据见 [UD 官方定义](https://universaldependencies.org/u/pos/)，17 类及中文解释也可从 `agent/contract.js 的 posLabels` 获取。
 
 ## 2. 已冻结的输入输出和身份
 
-本节是 TBD[D14] 中已经确认的独立模块契约；代码入口为 `semanote_agent.AnnotationAgent`。Web 路径、物理数据库结构及产品导出格式仍由 P04 确认。
+本节是 TBD[D14] 中已经确认的独立模块契约；本节保留原始 1.0.0 四层字段说明；当前活动入口为 agent/agent.js，十一层扩展契约见下文 0.1.1 扩展。Web 与存储已在 web-contract.md 冻结。
 
 - 输入携带请求身份、文本修订身份、完整原文和非空任务集合；四类任务分别为分词、关键词、词性、实体。
 - 输出保留请求/修订身份、原文精确摘要、规则版本、自动来源、供应商/模型声明身份及逐层执行结果；每次实际尝试和成功结果均有独立身份。
@@ -69,9 +69,9 @@ JavaScript 入口：`node agent/bridge.mjs`，stdin 接收 action/envelope，std
 
 响应 `layers` 固定列出四类；顶层 `status` 为 `success`、`partialFailure`、`failed`。顶层输入错误抛出明确的输入错误；命令行给出脱敏诊断并以非零状态退出，不发请求。依赖失败的 POS 可无实际供应商尝试，但有依赖错误；其他失败层保留真实尝试。
 
-独立入口为 Python `AnnotationAgent.annotate(request)` 和 `python -m semanote_agent annotate --input <request.json>`；可选 `--output <result.json>`，输出文件已存在时拒绝覆盖。输入/输出文件只是显式调用资料，不构成数据库或 Web 服务。批量保存、快照与正式导出仍属 P04。
+当前独立入口为 annotate(request, config, options) 和 node agent/cli.mjs；输出已存在时拒绝覆盖。详见 agent-usage.md。
 
-显式恢复入口为 `AnnotationAgent.retryFailed(request, previousResponse)` 或 CLI `--retry-from`。先校验原文摘要、修订、规则、已成功条目和依赖，再仅重试失败层，保留成功结果和旧尝试。即使 `python -O` 也执行校验。同一请求身份的跨进程去重由 P04 管理，P03 无持久化注册表，不声称重复运行 CLI 只计费一次。
+显式恢复使用 annotate 的 previousResponse 选项或 CLI --previous。先校验原文摘要、修订、成功层及依赖，再仅重试失败层。Web 请求去重由 Java 管理，不声称重复独立 CLI 跨进程只计费一次。
 
 TBD[D13] 中已确认的 P03 关联：修订和结果不可变，结果固定到输入修订；文本摘要不符拒绝混用；重新推理追加新结果；POS 固定引用其分词结果；显示、统计和导出由后续服务显式选择相同快照。P03 只冻结这些必要关联，草稿、归档、保留期和数据库并发仍由 P04/P05 确认。
 
@@ -97,3 +97,7 @@ TBD[D13] 中已确认的 P03 关联：修订和结果不可变，结果固定到
 模型不直接生成可信区间或系统身份：分词返回按序 `itemText`，本地顺序扫描且检查非空白覆盖；词性返回 `tokenIndex` 与 `label`；关键词返回原文词条，本地枚举全部出现；实体返回 `itemText`、`label` 和 0 起始 `occurrence`，本地定位所指定出现。实体位置合法不代表模型的实体语义判断必然正确。
 
 适配器只接受完整 JSON 对象，不剥除 Markdown 围栏或默默截取片段；重复键、NaN、截断、空内容和非法候选均失败。最终公共条目由本地转换器建立；模型选择错误不会被包装为已经人工确认的标注。
+
+## 自动完整性与界面呈现补充
+
+适配/提示词 2.1.0；模块契约仍为 1.1.0，产品导出仍为 1.0.0。自动情感、意图、语义必须有序、不交叠、覆盖全部非空白原文；人工局部标注允许不完整覆盖。空白模型词项只跳过词项表示，不能更改原文或区间。实体允许第三项 occurrence 指定本块出现语境；旧两项形式继续按全部精确位置解释。进度只来自真实块/层检查点；抽取动画重播不表示新增模型请求。
