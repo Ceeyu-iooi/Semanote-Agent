@@ -6,7 +6,7 @@ Vue + JavaScript + Bootstrap 工作台 · Java / Spring Boot 后端 · JavaScrip
 
 [开始使用](#开始使用) · [支持的标注](#支持的标注) · [架构与设计](#架构与设计) · [验证记录](docs/0.1.1-report.md)
 
-> **0.1.1 开发候选**：功能与发布准备在 `feature/0.1.1`，尚未创建正式发布标签。已发布基线仍为 `0.1.0-docs.1`；课程验收单独记录。
+> **版本 0.1.1**：[发布记录与源码](https://github.com/Ceeyu-iooi/Semanote-Agent/releases/tag/0.1.1)。本版提供十一层标注与完整 Web 工作流；课程验收及语义质量评估单独记录。历史初始化标签 `v0.1.0-docs.1` 继续保留。
 
 ![Semanote 实际工作台：原创合成文本的多层标注、分类详情和编辑工具](assets/readme/workspace.png)
 

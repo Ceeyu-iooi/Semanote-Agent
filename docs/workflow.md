@@ -1,8 +1,8 @@
-<!-- Generated from workflow.json; SHA-256: f8b29b54cb63577125ecd758c12dba9fb1a61b1843d51380d4c8f5cb618329e1. Do not edit this generated file. -->
+<!-- Generated from workflow.json; SHA-256: c17549a7cc1015da00a0e6c5eb5dad5ae6b1584bc54be955fea736d02ad65e7a. Do not edit this generated file. -->
 
 # 五步开发流程
 
-保持数据库设计 → 需求文档 → 智能体 → 后端 → 前端五步。2026-10-28 用户已授权 P04/P05，后端验证后联调前端；本地交付不自动代表用户验收。
+保持数据库设计 → 需求文档 → 智能体 → 后端 → 前端五步。2026-10-28 用户授权 P04/P05；2026-10-29 用户在收到 0.1.1 候选后明确授权合并并发布。发布授权不替代课程整体验收或 D10 金标准评估。
 
 唯一编辑源为 workflow.json。初始化已交付；当前状态：P01 用户已验收；P02 用户已验收；P03 用户已验收；P04 产物待验收；P05 产物待验收。浏览或复制不会执行开发或改变验收状态。技术选型等未决项保持 TBD，分别在相关步骤实现前确认。
 

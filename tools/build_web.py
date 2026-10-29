@@ -24,4 +24,4 @@ if __name__ == "__main__":
     run([sys.executable, "-X", "utf8", "-B", "tools/sync_reference.py"], projectRoot)
     maven = projectRoot / "profile/tools/maven/bin/mvn.cmd"
     run([str(maven), "-f", "backend/pom.xml", "-Dmaven.repo.local=" + str(projectRoot / "profile/maven-repository"), "package", "-q"], projectRoot)
-    print("Built frontend/dist and backend/target/semanote-web-0.1.1-SNAPSHOT.jar")
+    print("Built frontend/dist and backend/target/semanote-web-0.1.1.jar")
