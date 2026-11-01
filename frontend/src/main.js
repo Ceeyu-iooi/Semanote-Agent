@@ -8,6 +8,8 @@ import "./styles/developer.css";
 import "./styles/git.css";
 import App from "./App.vue";
 import DeveloperCenter from "./components/DeveloperCenter.vue";
+import { reveal } from "./motion.js";
+import "./styles/interaction.css";
 
 try {
   const preferences = JSON.parse(
@@ -22,4 +24,4 @@ try {
 
 createApp(
   location.pathname.startsWith("/developer") ? DeveloperCenter : App,
-).mount("#app");
+).directive("reveal", reveal).mount("#app");

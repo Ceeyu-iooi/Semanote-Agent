@@ -4,7 +4,7 @@ import { isIP } from "node:net";
 import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
 import { hash, requireValue } from "./contract.js";
-import { systemPrompt, promptVersion } from "./prompts.js";
+import { systemPrompt, promptVersion, promptForTasks } from "./prompts.js";
 import { parseStrictJson } from "./json.js";
 
 export const runtimeRoot = resolve(
@@ -127,7 +127,7 @@ export async function generate(config, text, tasks, context = {}) {
     const body = {
       model: config.model,
       messages: [
-        { role: "system", content: systemPrompt },
+        { role: "system", content: promptForTasks(tasks) },
         {
           role: "user",
           content: JSON.stringify({

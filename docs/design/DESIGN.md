@@ -1,5 +1,5 @@
 ---
-version: 1.3.0
+version: 1.4.0
 name: Semanote-Apple-design-system
 description: A photography-first interface that turns marketing into a museum gallery. Edge-to-edge product tiles alternate light and dark canvases, framed by SF Pro Display headlines with negative letter-spacing and a single Action Blue (#0066cc) interactive color. UI chrome recedes so the product can speak — no decorative gradients, no shadows on chrome, only the one signature drop-shadow under product imagery resting on a surface.
 
@@ -493,7 +493,7 @@ Git history is horizontal, older left and newer right. Place the slider below th
 
 ### Motion
 
-- Extract returned content from the source-facing edge: 24px offset, 480ms, cubic-bezier(.16,1,.3,1.08), staggered by card. A small settling overshoot ends at the original geometry.
+- Reveal cards from above with a small 14px offset and staggered opacity. Content stays complete and interactive during entry; reduced-motion settings show the final state immediately.
 - Loading placeholders reflect actual unfinished tasks. Animation never invents completed words or inference progress. System and user reduced-motion preferences remove transforms and animation.
 
 ### Evidence Navigation

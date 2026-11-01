@@ -4,8 +4,39 @@ import { request } from "../api.js";
 import {
   buildGitGraph,
   gitGroups,
+  gitRefGroup,
   parseUnifiedDiff,
 } from "../gitPresentation.js";
+function refColor(name) {
+  const group = gitRefGroup(name);
+  return gitGroups[group].color;
+}
+const laneLabels = computed(() =>
+  [...new Set(graph.value.nodes.map((node) => node.lane))].map((lane) => {
+    const nodes = graph.value.nodes.filter((node) => node.lane === lane);
+    const names = [
+      ...new Set(
+        nodes.flatMap((node) =>
+          node.refs
+            .split(",")
+            .map((name) =>
+              name
+                .trim()
+                .replace(/^HEAD -> /, "")
+                .replace(/^origin\//, ""),
+            )
+            .filter(
+              (name) => name && name !== "HEAD" && !name.startsWith("tag:"),
+            ),
+        ),
+      ),
+    ];
+    return {
+      lane,
+      names: names.length ? names : ["并行路径 · 无现存分支引用"],
+    };
+  }),
+);
 const data = ref(null),
   index = ref(0),
   detail = ref(null),
@@ -15,8 +46,7 @@ const data = ref(null),
   track = ref(null),
   branch = ref("all"),
   fileQuery = ref(""),
-  selectedFile = ref(""),
-  mode = ref("files");
+  selectedFile = ref("");
 const rows = computed(() => data.value?.commits || []),
   selected = computed(() => rows.value[index.value]);
 const branches = computed(() =>
@@ -109,17 +139,15 @@ async function loadDetail() {
   }
   await nextTick();
   if (current !== sequence || selected.value?.id !== id) return;
-  track.value
-    ?.querySelector(`[data-commit="${id}"]`)
-    ?.scrollIntoView({
-      block: "nearest",
-      inline: "center",
-      behavior:
-        document.documentElement.dataset.motion === "reduced" ||
-        matchMedia("(prefers-reduced-motion: reduce)").matches
-          ? "instant"
-          : "smooth",
-    });
+  track.value?.querySelector(`[data-commit="${id}"]`)?.scrollIntoView({
+    block: "nearest",
+    inline: "center",
+    behavior:
+      document.documentElement.dataset.motion === "reduced" ||
+      matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "instant"
+        : "smooth",
+  });
 }
 function selectCommit(id) {
   const found = rows.value.findIndex((row) => row.id === id);
@@ -133,7 +161,6 @@ function selectBranch() {
 }
 function chooseFile(file) {
   selectedFile.value = file.path;
-  mode.value = "diff";
 }
 watch(() => selected.value?.id, loadDetail);
 onMounted(load);
@@ -185,6 +212,26 @@ onMounted(load);
             :height="graph.height"
             aria-label="实际父关系和当前时间位置"
           >
+            <g class="git-lane-labels">
+              <g v-for="lane in laneLabels" :key="lane.lane">
+                <rect
+                  :x="Math.max(0, (selectedNode?.x || 124) - 116)"
+                  :y="lane.lane * 28 + 1"
+                  width="240"
+                  height="18"
+                  fill="var(--color-canvas)"
+                  opacity=".92"
+                />
+                <text
+                  :x="Math.max(4, (selectedNode?.x || 124) - 110)"
+                  :y="lane.lane * 28 + 14"
+                  font-size="10"
+                  fill="var(--color-secondary)"
+                >
+                  {{ lane.names.join(" / ") }}
+                </text>
+              </g>
+            </g>
             <defs>
               <clipPath id="gitCompleted">
                 <rect
@@ -265,7 +312,15 @@ onMounted(load);
               ><small
                 >{{ commit.id.slice(0, 7)
                 }}{{ commit.parents.length > 1 ? " · 合并" : "" }}</small
-              ><em v-if="commit.refs">{{ commit.refs }}</em>
+              ><span v-if="commit.refs" class="git-ref-badges"
+                ><span
+                  v-for="refName in commit.refs.split(', ')"
+                  :key="refName"
+                  class="badge rounded-pill"
+                  :style="{ background: refColor(refName) }"
+                  >{{ refName }}</span
+                ></span
+              >
             </button>
           </div>
         </div>
@@ -308,29 +363,13 @@ onMounted(load);
               <span class="diff-delete-count">－{{ totals.deleted }}</span>
             </p>
           </div>
-          <div class="segmented-control">
-            <button
-              :class="{ selected: mode === 'files' }"
-              @click="mode = 'files'"
-            >
-              文件变更</button
-            ><button
-              :class="{ selected: mode === 'diff' }"
-              @click="mode = 'diff'"
-            >
-              代码差异
-            </button>
-          </div>
         </header>
         <div v-if="detailBusy" class="empty-state">正在读取提交…</div>
         <template v-else-if="detail"
           ><p v-if="detail.patchTruncated" class="feedback">
             代码差异超过展示上限；当前为前 1 MiB，文件统计完整。
           </p>
-          <div
-            class="git-file-workspace"
-            :class="{ 'diff-mode': mode === 'diff' }"
-          >
+          <div class="git-file-workspace diff-mode">
             <section class="git-file-list">
               <label class="git-file-search"
                 ><input
@@ -348,7 +387,7 @@ onMounted(load);
                 :key="file.path"
                 class="git-file-row"
                 :class="{
-                  selected: mode === 'diff' && chosenFile?.path === file.path,
+                  selected: chosenFile?.path === file.path,
                 }"
                 @click="chooseFile(file)"
               >
@@ -365,7 +404,7 @@ onMounted(load);
                 >
               </button>
             </section>
-            <section v-if="mode === 'diff'" class="git-code-view">
+            <section class="git-code-view">
               <header>
                 <strong>{{ chosenFile?.path || "选择文件" }}</strong
                 ><span>原行 / 新行</span>

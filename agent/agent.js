@@ -228,6 +228,7 @@ export async function annotate(
   const startedAt = new Date().toISOString(),
     start = performance.now(),
     textChunks = chunks(request.text);
+  onProgress({ event: "progress", taskType: "joint", status: "running", layer: null, phase: "cache", completedChunks: 0, totalChunks: remoteTasks.length ? textChunks.length : 0 });
   for (const chunk of textChunks) {
     if (!remoteTasks.length) break;
     counters.chunks++;
@@ -299,6 +300,7 @@ export async function annotate(
         event: "progress",
         taskType: "joint",
         status: "running",
+        phase: "inference",
         layer: null,
         completedChunks: counters.chunks - 1,
         totalChunks: textChunks.length,
@@ -387,11 +389,13 @@ export async function annotate(
       event: "progress",
       taskType: "joint",
       status: "running",
+      phase: "chunks",
       layer: null,
       completedChunks: counters.chunks,
       totalChunks: textChunks.length,
     });
   }
+  onProgress({ event: "progress", taskType: "joint", status: "running", layer: null, phase: "validating", completedChunks: counters.chunks, totalChunks: remoteTasks.length ? textChunks.length : 0 });
   for (const task of pending) {
     let items;
     try {
@@ -465,6 +469,7 @@ export async function annotate(
       taskType: task,
       status: layers[task].status,
       layer: layers[task],
+      phase: "validating",
     });
   }
   const successful = effectiveTasks.filter(

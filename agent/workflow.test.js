@@ -36,6 +36,22 @@ const tokens = [
   ["。", "PUNCT"],
 ];
 
+test("progress reports real chunks and validation phase, preserves failures and never repeats a failed call", async () => {
+  const events = []; let calls = 0;
+  const response = await annotate(input(["ner", "keywords"], "林晓。".repeat(240)), config, {
+    useCache:false,
+    onProgress:event=>events.push(structuredClone(event)),
+    providerCall: async () => { calls++; throw Object.assign(new Error("fixture"), {code:"providerUnavailable"}); },
+  });
+  assert.equal(calls,response.execution.chunks);
+  const checkpoints=events.filter(event=>Number.isInteger(event.completedChunks));
+  assert.equal(checkpoints[0].completedChunks,0);
+  assert.equal(checkpoints.at(-1).completedChunks,calls);
+  assert.ok(checkpoints.every((event,index)=>index === 0 || event.completedChunks >= checkpoints[index-1].completedChunks));
+  assert.equal(events.at(-1).phase,"validating");
+  assert.equal(events.filter(event=>event.status === "failed").length,2);
+});
+
 test("empty automatic intent, sentiment and semantic layers cannot claim success", async () => {
   for (const task of ["intent", "sentiment", "semantic"]) {
     const request = input([task]),

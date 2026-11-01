@@ -16,7 +16,20 @@ const emit = defineEmits(["select", "focus"]);
 const canvas = ref(null),
   tip = ref(null);
 const segments = computed(() =>
-  buildSegments(props.text, props.items, props.breaks),
+  buildSegments(props.text, props.items, props.breaks).flatMap((segment) =>
+    props.revealKey && !props.selectable
+      ? Array.from(segment.text).map((text, index, chars) => ({
+          ...segment,
+          text,
+          sourceText: segment.text,
+          firstCharacter: index === 0,
+          start: segment.start + index,
+          end: segment.start + index + 1,
+          breakBefore: index === 0 && segment.breakBefore,
+          tokenEnd: index === chars.length - 1 && segment.tokenEnd,
+        }))
+      : [segment],
+  ),
 );
 function selectText() {
   if (!props.selectable) return;
@@ -46,6 +59,7 @@ function showTip(segment, event) {
   const rectangle = event.currentTarget.getBoundingClientRect();
   tip.value = {
     ...segment,
+    text: segment.sourceText || segment.text,
     x: event.clientX ?? rectangle.left,
     y: event.clientY ?? rectangle.bottom,
     height: Math.min(450, 100 + segment.matches.length * 32),
@@ -70,6 +84,7 @@ function showTip(segment, event) {
     <span
       v-for="(segment, index) in segments"
       :key="`${revealKey}-${segment.start}`"
+      :data-start="segment.start"
       :class="[
         segment.classes,
         {
@@ -81,8 +96,14 @@ function showTip(segment, event) {
           ),
         },
       ]"
-      :style="{ '--reveal-delay': `${Math.min(index * 12, 1200)}ms` }"
-      :tabindex="segment.matches.length ? 0 : undefined"
+      :style="{
+        '--reveal-delay': `${(index / Math.max(1, segments.length)) * Math.min(1600, segments.length * 18)}ms`,
+      }"
+      :tabindex="
+        segment.matches.length && segment.firstCharacter !== false
+          ? 0
+          : undefined
+      "
       :aria-label="
         segment.matches.length
           ? segment.matches

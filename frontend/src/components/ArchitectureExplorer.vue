@@ -57,20 +57,6 @@ function connect() {
           : "独立框架 · 可缩放与查看源码"
       }}</span>
     </div>
-    <nav
-      v-if="view.id === 'system'"
-      aria-label="进入子框架"
-      class="architecture-destinations"
-    >
-      <button
-        v-for="(name, id) in names"
-        :key="id"
-        @click="$emit('navigate', id)"
-      >
-        <span>{{ name }}</span
-        ><span>↗</span>
-      </button>
-    </nav>
     <Transition name="architecture-zoom" mode="out-in"
       ><iframe
         ref="frame"

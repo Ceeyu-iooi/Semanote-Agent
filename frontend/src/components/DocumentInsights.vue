@@ -1,17 +1,16 @@
 <script setup>
 import { computed, ref, watch } from "vue";
-import { taskNames, entityNames, labelNames } from "../api.js";
+import { taskNames, entityNames } from "../api.js";
 import PointerTip from "./PointerTip.vue";
+import RelationshipExplorer from "./RelationshipExplorer.vue";
 const props = defineProps({
   layers: { type: Object, default: () => ({}) },
   source: String,
+  text: String,
 });
 const emit = defineEmits(["focus"]);
 const tip = ref(null),
-  chart = ref("bar"),
-  graph = ref("relations"),
-  selected = ref(null),
-  scale = ref(1);
+  chart = ref("bar");
 const items = (task) =>
   props.layers[task]?.status === "success"
     ? props.layers[task].result.items
@@ -64,42 +63,6 @@ const radar = computed(() =>
     };
   }),
 );
-const graphItems = computed(() => items(graph.value));
-const active = computed(
-  () =>
-    graphItems.value.find((item) => item.itemId === selected.value) ||
-    graphItems.value[0],
-);
-const roleNames = {
-  subject: "主体",
-  object: "客体",
-  time: "时间",
-  location: "地点",
-  cause: "原因",
-  result: "结果",
-};
-function eventDate(item) {
-  const value = (item.roles?.time || [])
-    .map((entry) => entry.itemText)
-    .join("");
-  const match = value.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
-  if (!match) return null;
-  const year = +match[1],
-    month = +match[2],
-    day = +match[3],
-    date = new Date(Date.UTC(year, month - 1, day));
-  return date.getUTCFullYear() === year &&
-    date.getUTCMonth() === month - 1 &&
-    date.getUTCDate() === day
-    ? date.getTime()
-    : null;
-}
-const dated = computed(() =>
-  items("events")
-    .map((item) => ({ item, time: eventDate(item) }))
-    .filter((entry) => entry.time !== null)
-    .sort((a, b) => a.time - b.time),
-);
 function show(event, label, count) {
   const rect = event.currentTarget.getBoundingClientRect();
   tip.value = {
@@ -110,14 +73,9 @@ function show(event, label, count) {
     count,
   };
 }
-function focus(task, item) {
-  selected.value = item.itemId;
-  emit("focus", { task, itemId: item.itemId });
-}
 watch(
   () => props.layers,
   () => {
-    selected.value = null;
     tip.value = null;
   },
 );
@@ -283,139 +241,11 @@ watch(
         </div>
       </div>
     </div>
-    <section
-      v-if="items('relations').length || items('events').length"
-      class="surface relationship-panel"
-    >
-      <div class="panel-toolbar">
-        <div>
-          <p class="eyebrow">CONNECTIONS IN CONTEXT</p>
-          <h3>关系与事件</h3>
-        </div>
-        <div class="segmented-control">
-          <button
-            :class="{ selected: graph === 'relations' }"
-            @click="
-              graph = 'relations';
-              selected = null;
-            "
-          >
-            关系图</button
-          ><button
-            :class="{ selected: graph === 'events' }"
-            @click="
-              graph = 'events';
-              selected = null;
-            "
-          >
-            事件图
-          </button>
-        </div>
-      </div>
-      <div class="graph-tools">
-        <label
-          >选择{{ graph === "events" ? "事件" : "关系"
-          }}<select v-model="selected" class="form-select">
-            <option :value="null">首项</option>
-            <option
-              v-for="item in graphItems"
-              :key="item.itemId"
-              :value="item.itemId"
-            >
-              {{ item.label }} · {{ item.itemText }}
-            </option>
-          </select></label
-        ><label
-          >缩放<input
-            v-model.number="scale"
-            type="range"
-            min="0.8"
-            max="1.4"
-            step="0.1"
-            aria-label="关系图缩放"
-        /></label>
-      </div>
-      <p v-if="!active" class="empty-state">
-        当前没有{{ graph === "events" ? "事件" : "关系" }}。
-      </p>
-      <template v-else
-        ><div class="relationship-scroll">
-          <div
-            v-if="graph === 'relations'"
-            class="relation-cards"
-            :style="{ '--graph-scale': scale }"
-          >
-            <button
-              class="graph-card subject-card"
-              @click="focus(graph, active)"
-            >
-              <small>主体</small
-              ><strong>{{ active.subject?.itemText }}</strong></button
-            ><button class="relation-edge" @click="focus(graph, active)">
-              <span>{{ active.label }}</span
-              ><svg viewBox="0 0 160 24">
-                <path
-                  d="M0 12H150M140 3L151 12 140 21"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-              </svg></button
-            ><button
-              class="graph-card object-card"
-              @click="focus(graph, active)"
-            >
-              <small>客体</small><strong>{{ active.object?.itemText }}</strong>
-            </button>
-          </div>
-          <div v-else class="event-map" :style="{ '--graph-scale': scale }">
-            <button class="graph-card event-core" @click="focus(graph, active)">
-              <small>事件</small><strong>{{ active.label }}</strong>
-            </button>
-            <div class="event-roles">
-              <template v-for="(name, role) in roleNames" :key="role"
-                ><button
-                  v-for="entry in active.roles?.[role] || []"
-                  :key="role + entry.itemText"
-                  class="graph-card"
-                  :class="`role-${role}`"
-                  @click="focus(graph, active)"
-                >
-                  <small>{{ name }}</small
-                  ><strong>{{ entry.itemText }}</strong>
-                </button></template
-              >
-            </div>
-          </div>
-        </div>
-        <button class="source-evidence" @click="focus(graph, active)">
-          原文依据：{{ active.itemText }} ↗
-        </button></template
-      >
-      <div v-if="dated.length" class="event-timeline">
-        <h4>事件时间轴 <small class="caption muted">仅列明确年月日</small></h4>
-        <div class="event-timeline-track">
-          <button
-            v-for="entry in dated"
-            :key="entry.item.itemId"
-            @click="
-              graph = 'events';
-              focus('events', entry.item);
-            "
-          >
-            <time>{{
-              new Date(entry.time).toLocaleDateString("zh-CN", {
-                timeZone: "UTC",
-              })
-            }}</time
-            ><i></i><strong>{{ entry.item.label }}</strong
-            ><small>{{
-              entry.item.roles.time.map((role) => role.itemText).join("、")
-            }}</small>
-          </button>
-        </div>
-      </div>
-    </section>
+    <RelationshipExplorer
+      :layers="layers"
+      :text="text"
+      @focus="emit('focus', $event)"
+    />
     <PointerTip :anchor="tip"
       ><strong>{{ tip?.label }}</strong>
       <p>

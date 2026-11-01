@@ -1,6 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildGitGraph, parseUnifiedDiff } from "../src/gitPresentation.js";
+import { buildGitGraph, parseUnifiedDiff, gitRefGroup } from "../src/gitPresentation.js";
+
+test("ref badges classify complete branch names rather than substrings", () => {
+  assert.equal(gitRefGroup("HEAD -> feature/developer-center"), "feature");
+  assert.equal(gitRefGroup("origin/feature/domain-model"), "feature");
+  assert.equal(gitRefGroup("origin/develop"), "develop");
+  assert.equal(gitRefGroup("main"), "main");
+  assert.equal(gitRefGroup("tag: 0.1.1"), "release");
+});
 test("actual parent links derive known main/develop and parallel paths without inventing branch names", () => {
   const rows = [
     {

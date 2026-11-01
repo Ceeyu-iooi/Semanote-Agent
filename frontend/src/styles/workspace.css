@@ -376,7 +376,7 @@
   margin-left: auto;
 }
 .extract-enter-active {
-  animation: extract-in var(--motion-extract) var(--motion-extract-ease) both;
+  animation: extract-in var(--motion-extract) var(--motion-ease) both;
   animation-delay: var(--card-delay);
 }
 .extract-leave-active {
@@ -385,20 +385,10 @@
 .extract-leave-to {
   opacity: 0;
 }
-.rail-left {
-  --extract-origin: 24px;
-}
-.rail-right {
-  --extract-origin: -24px;
-}
 @keyframes extract-in {
   0% {
     opacity: 0;
-    transform: translate(var(--extract-origin), 12px) scale(0.96);
-  }
-  72% {
-    opacity: 1;
-    transform: translate(-1px, -2px) scale(1.005);
+    transform: translateY(-14px);
   }
   100% {
     opacity: 1;

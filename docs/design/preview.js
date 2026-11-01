@@ -1,4 +1,14 @@
 document.querySelectorAll('[data-demo]').forEach(button=>button.addEventListener('click',()=>{document.querySelector('#demoStatus').textContent=button.dataset.demo;}));
+
+// Scroll reveals never control data or interaction availability.
+const revealObserver = new IntersectionObserver(entries => {
+  for (const entry of entries) if (entry.isIntersecting) {
+    entry.target.classList.add('scroll-visible'); revealObserver.unobserve(entry.target);
+  }
+}, { threshold: 0.06 });
+for (const card of document.querySelectorAll('.demo-card, .utility-card, .spec-extract')) {
+  card.classList.add('scroll-reveal'); revealObserver.observe(card);
+}
 document.querySelectorAll('[data-reading]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-reading]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));document.querySelector('#readingStatus').textContent=`当前选择：${button.dataset.reading}`;}));
 document.querySelector('#previewSearch').addEventListener('input',event=>{document.querySelector('#searchStatus').textContent=event.target.value?`正在查找：“${event.target.value}”`:'输入内容体验搜索反馈';});
 document.querySelectorAll('[data-width]').forEach(button=>button.addEventListener('click',()=>{const width=Number(button.dataset.width);document.querySelectorAll('[data-width]').forEach(item=>item.classList.toggle('selected',item===button));const demo=document.querySelector('#responsiveDemo');demo.style.maxWidth=`${width}px`;demo.classList.toggle('narrow',width<=833);document.querySelector('#responsiveStatus').textContent=`布局示例：${width}px`;}));

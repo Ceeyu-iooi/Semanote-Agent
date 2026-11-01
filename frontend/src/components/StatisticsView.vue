@@ -2,6 +2,7 @@
 import { computed, ref, watch } from "vue";
 import { entityNames, taskNames } from "../api.js";
 import PointerTip from "./PointerTip.vue";
+import AnimatedNumber from "./AnimatedNumber.vue";
 const tip = ref(null);
 function showTip(event, label, count) {
   const rectangle = event.currentTarget.getBoundingClientRect();
@@ -38,7 +39,9 @@ watch(
   },
 );
 const entityRows = computed(() =>
-    Object.entries(props.statistics?.entityLabels || {}),
+    Object.entries(props.statistics?.entityLabels || {}).sort(
+      (a, b) => b[1] - a[1],
+    ),
   ),
   posRows = computed(() =>
     Object.entries(props.statistics?.posLabels || {}).sort(
@@ -88,32 +91,79 @@ const percentage = (count, total) =>
     </button>
   </section>
   <template v-if="statistics"
-    ><div class="metric-grid">
-      <article class="metric-card">
-        <p class="muted">文本总数</p>
-        <strong>{{ statistics.documentCount.toLocaleString() }}</strong
-        ><span>{{ statistics.savedCount }} 份已保存标注</span>
-      </article>
-      <article
-        v-for="(name, task) in taskNames"
-        :key="task"
-        class="metric-card"
-      >
-        <p class="muted">{{ name }}条目</p>
-        <strong>{{
-          (statistics.itemCounts[task] || 0).toLocaleString()
-        }}</strong
-        ><span>覆盖 {{ statistics.coverage[task] }} 份文本</span>
-      </article>
-    </div>
+    ><section class="statistics-hero row g-0" v-reveal>
+      <div class="col-lg-6 statistics-lead">
+        <p class="eyebrow">SAVED ANNOTATIONS</p>
+        <h2>从标注，到全貌。</h2>
+        <div class="hero-number">
+          <AnimatedNumber :value="statistics.savedCount" /><small
+            >份已保存标注</small
+          >
+        </div>
+        <p class="caption">
+          共 {{ statistics.documentCount.toLocaleString() }} 份文本 ·
+          自动候选和人工草稿不计入
+        </p>
+        <div
+          class="progress"
+          role="progressbar"
+          aria-label="已保存文本占比"
+          :aria-valuenow="statistics.savedCount"
+          aria-valuemin="0"
+          :aria-valuemax="Math.max(1, statistics.documentCount)"
+        >
+          <div
+            class="progress-bar"
+            :style="{
+              width: percentage(
+                statistics.savedCount,
+                statistics.documentCount,
+              ),
+            }"
+          ></div>
+        </div>
+        <span class="caption"
+          >保存覆盖
+          {{
+            percentage(statistics.savedCount, statistics.documentCount)
+          }}</span
+        >
+      </div>
+      <div class="col-lg-6 statistics-highlights">
+        <div>
+          <span>实体出现</span
+          ><strong><AnimatedNumber :value="totalEntities" /></strong
+          ><small>按出现位置统计</small>
+        </div>
+        <div>
+          <span>标注条目</span
+          ><strong
+            ><AnimatedNumber
+              :value="
+                Object.values(statistics.itemCounts || {}).reduce(
+                  (sum, n) => sum + n,
+                  0,
+                )
+              " /></strong
+          ><small>十一层保存结果</small>
+        </div>
+      </div>
+    </section>
     <div v-if="!statistics.savedCount" class="empty-state surface">
       <h2>保存第一份标注，发现更多信息。</h2>
       <p class="muted">自动候选和人工草稿不计入统计。</p>
     </div>
     <div v-else class="statistics-grid" @pointerleave="tip = null">
-      <article class="surface chart-panel">
+      <article class="surface chart-panel" v-reveal>
         <p class="eyebrow">ENTITY DISTRIBUTION</p>
         <h2>实体构成</h2>
+        <p class="caption muted chart-selection">
+          {{
+            selectedEntity
+              ? `${entityNames[selectedEntity[0]]} · ${selectedEntity[1]} 次 · ${percentage(selectedEntity[1], totalEntities)}`
+              : "悬停图环或选择类别，查看构成"
+          }}
+        </p>
         <div v-if="!entityRows.length" class="empty-state caption">
           当前保存结果中没有实体。
         </div>
@@ -228,11 +278,19 @@ const percentage = (count, total) =>
       <article class="surface chart-panel">
         <p class="eyebrow">PARTS OF SPEECH</p>
         <h2>词性分布</h2>
+        <p class="caption muted chart-selection">
+          {{
+            activePos
+              ? `${activePos[0]} · ${activePos[1]} 次`
+              : "选择柱条查看词性数量"
+          }}
+        </p>
         <p v-if="!posRows.length" class="muted caption">暂无保存的词性结果。</p>
         <button
           v-for="[label, count] in posRows"
           :key="label"
           class="bar-row"
+          :class="{ active: activePos?.[0] === label }"
           @pointermove="
             activePos = [label, count];
             showTip($event, label, count);
@@ -261,6 +319,7 @@ const percentage = (count, total) =>
           >
             <button
               class="keyword-chart-button"
+              :class="{ active: activeKeyword?.itemText === keyword.itemText }"
               @pointermove="
                 activeKeyword = keyword;
                 showTip($event, keyword.itemText, keyword.count);
@@ -275,7 +334,29 @@ const percentage = (count, total) =>
           </li>
         </ol>
       </article>
-    </div></template
+    </div>
+    <details class="statistics-layer-details">
+      <summary>各标注层的详细数量与覆盖</summary>
+      <div class="metric-grid secondary-metrics">
+        <article class="metric-card">
+          <p class="muted">文本总数</p>
+          <strong><AnimatedNumber :value="statistics.documentCount" /></strong
+          ><span>{{ statistics.savedCount }} 份已保存标注</span>
+        </article>
+        <article
+          v-for="(name, task) in taskNames"
+          v-reveal
+          :key="task"
+          class="metric-card"
+        >
+          <p class="muted">{{ name }}条目</p>
+          <strong
+            ><AnimatedNumber
+              :value="statistics.itemCounts[task] || 0" /></strong
+          ><span>覆盖 {{ statistics.coverage[task] }} 份文本</span>
+        </article>
+      </div>
+    </details></template
   ><PointerTip :anchor="tip"
     ><strong>{{ tip?.label }}</strong>
     <p>{{ tip?.count }} 次</p></PointerTip

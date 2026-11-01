@@ -16,7 +16,7 @@ const entries = [
 ];
 </script>
 <template>
-  <header class="product-navigation">
+  <header class="product-navigation navbar">
     <a
       href="/"
       class="product-brand"
@@ -24,7 +24,7 @@ const entries = [
       ><span class="product-monogram">S</span
       ><span>Semanote<small>TEXT ANNOTATION</small></span></a
     >
-    <nav aria-label="主导航" class="top-navigation">
+    <nav aria-label="主导航" class="top-navigation nav nav-pills">
       <button
         v-for="[id, name, icon] in entries"
         :key="id"

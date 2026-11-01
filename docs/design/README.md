@@ -2,7 +2,7 @@
 
 来源：[Apple DESIGN.md](https://github.com/VoltAgent/awesome-design-md/tree/main/design-md/apple) 与 [官方 preview](https://getdesign.md/design-md/apple/preview)。本地上游快照、许可和摘要见 apple/；这是 VoltAgent 对公开模式的独立分析，不是 Apple 官方规范或品牌授权。
 
-当前项目规范 1.3，2026-10-29。[项目 DESIGN.md](DESIGN.md) 保持上游 YAML 和 Markdown 章节格式；[HTML 展示页](preview.html) 沿用上游 01–12 展示顺序，追加用户要求的交互标注扩展。[六轮迭代](iterations.md) 记录实际变化。业务前端和开发者中心共同引用 [tokens.css](tokens.css)，不能各自形成第二套主题。
+当前项目规范 1.4，2026-11-01。[项目 DESIGN.md](DESIGN.md) 保持上游 YAML 和 Markdown 章节格式；[HTML 展示页](preview.html) 沿用上游 01–12 展示顺序，追加用户要求的交互标注扩展。[六轮迭代](iterations.md) 记录历史变化，本轮见 [交互验证](../interaction-report.md)。业务前端和开发者中心共同引用 [tokens.css](tokens.css)，不能各自形成第二套主题。
 
 | 角色 | 规则与来源 |
 |---|---|
@@ -45,6 +45,17 @@
 
 - 主界面与开发者中心使用顶部导航；设置保留侧边导航，供应商采用左侧列表、右侧详情。
 - 桌面中央正文、左侧词项证据、右侧语义上下文，图表直接接在中央正文之后；≤833px 正文、图表、抽取卡片、编辑详情顺序。
-- 结果卡片仅在已返回状态变化时，从靠近正文一侧偏移24px淡入，480ms轻微回弹；低动效模式无位移/淡入，不改变数据。
+- 结果卡片仅在进入界面或已返回状态变化时，从上方偏移14px错峰淡入；低动效模式无位移/淡入，不改变数据。
 - Git语义色区分main/develop/release/feature，配合文字图例；图、卡片、时间游标联动。差异采用文件列表、旧/新行号与增删色，截断明确提示。
 - 系统架构节点可下钻，面包屑返回；缩放过渡不阻断键盘访问。
+
+## 交互规范 1.4
+
+来源为 2026-11-01 用户请求，组件语义参照 [Bootstrap 手风琴](https://getbootstrap.com/docs/5.3/components/accordion/) 与 [进度条](https://getbootstrap.com/docs/5.3/components/progress/)。适用于产品和开发者页面，兼容既有主题和十一层数据契约。
+
+- Vue 维护手风琴的单一展开状态；Bootstrap 提供 accordion/collapse/nav/progress/badge 和响应式栅格结构。共享浅蓝 `--color-primary-soft` 为选中面，修复原来缺失的变量引用；交互仍只有一个蓝色。
+- 只读详情按词面与类别聚合频次，保留逐个出现位置与错误建议；编辑仍按原条目保存。事件原文就是介绍，缺失角色明确空缺；关系卡片不推断身份或人物履历。
+- 事件从时间轴进入要素；关系端点为可拖动卡片、方向连线与可选证据，悬停/焦点灰化其余卡片。自动排布避让标签，手动布局可恢复。
+- 进入动效只作用透明度与小位移；正文完整文本即时存在，逐字揭示不改变码点和选区。数字只播放真实统计值，系统/用户减少动效直接呈现结果。
+- 设置采用稳定宽高与唯一内容滚动区，窄屏操作区仍固定可见。页面导航返回顶部，局部展开不抢滚动位置。
+- 设计 preview 的卡片用 IntersectionObserver 触发淡入，父页面减少动效同步到 iframe，资源按规范修订更新缓存。

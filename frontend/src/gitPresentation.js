@@ -6,6 +6,15 @@ export const gitGroups = {
   feature: { name: "并行功能", color: "var(--git-feature)" },
   hotfix: { name: "修复分支", color: "var(--git-hotfix)" },
 };
+/** Normalize actual refs before classifying; substrings inside feature names are not mainlines. */
+export function gitRefGroup(reference) {
+  const value = reference.trim().replace(/^HEAD -> /, "").replace(/^origin\//, "");
+  if (value.startsWith("tag:")) return "release";
+  if (value === "main" || value === "develop") return value;
+  if (value.startsWith("hotfix/")) return "hotfix";
+  if (value.startsWith("release/")) return "release";
+  return "feature";
+}
 export function buildGitGraph(commits) {
   const byId = new Map(commits.map((commit) => [commit.id, commit]));
   const refs = (commit) =>

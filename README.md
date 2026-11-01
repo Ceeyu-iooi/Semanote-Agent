@@ -77,6 +77,8 @@ node tools/local-web.mjs start
 
 已发布基线为 [0.1.1](https://github.com/Ceeyu-iooi/Semanote-Agent/releases/tag/0.1.1)；当前沉浸工作区改造的实施与验证单独记录，未创建新版本标签。[0.1.1 验证](docs/0.1.1-report.md) · [本轮实现与验证](docs/immersive-report.md) · [本轮需求](docs/immersive-requirements.md) · [20 篇 README 提炼](docs/readme-research.md)
 
+2026-11-01 继续优化 Bootstrap 手风琴、频次详情、人物关系图、事件时间轴、统计层级、统一动效和真实任务进度。[优化需求](docs/interaction-requirements.md) · [十五轮交互验证与恢复](docs/interaction-report.md)
+
 - 自动结果为待审阅候选。格式与字符覆盖检查不等于语言学准确率；CSV 没有标准答案，跨块关系和歧义指代仍需人工检查。
 - 当前为单人工作流。局域网访问者共享同一空间，无独立账户、角色权限或任务分配。
 - profile 存放原件、受限语料、配置、数据库、备份和回执，整个目录忽略。课程 CSV 不随公开仓库分发；本机存在时可幂等导入初始语料。

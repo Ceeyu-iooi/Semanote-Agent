@@ -18,6 +18,7 @@ import ModelProviders from "./components/ModelProviders.vue";
 import ExtraLayerEditor from "./components/ExtraLayerEditor.vue";
 import TopNavigation from "./components/TopNavigation.vue";
 import ExtractionRail from "./components/ExtractionRail.vue";
+import FrequencyDetails from "./components/FrequencyDetails.vue";
 import {
   request,
   send,
@@ -46,6 +47,13 @@ const query = ref(""),
   showArchived = ref(false),
   selectedIds = ref([]),
   current = ref(null);
+watch(
+  () => [page.value, current.value?.id],
+  async () => {
+    await nextTick();
+    window.scrollTo({ top: 0, behavior: "instant" });
+  },
+);
 const candidate = ref(null),
   historicalSnapshot = ref(null),
   history = ref(null),
@@ -87,7 +95,7 @@ const modelTargets = ref([]),
   retryTarget = ref(null);
 const selectedTasks = ref(Object.keys(taskNames));
 const detailCategory = ref(""),
-  detailSort = ref("position");
+  detailSort = ref("frequency");
 const extraEditIndices = reactive({}),
   pendingExtraForms = reactive(new Set());
 const extraEditIndex = computed({
@@ -96,6 +104,19 @@ const extraEditIndex = computed({
     extraEditIndices[activeLayer.value] = value;
   },
 });
+const detailTaskNames = computed(() =>
+  Object.fromEntries(
+    Object.entries(taskNames).filter(
+      ([task]) =>
+        editing.value ||
+        !["paragraphs", "relations", "events", "semantic"].includes(task),
+    ),
+  ),
+);
+const detailAllowed = computed(
+  () =>
+    editing.value || Object.hasOwn(detailTaskNames.value, activeLayer.value),
+);
 const detailCategories = computed(() => [
   ...new Set(displayItems.value.map((item) => item.label).filter(Boolean)),
 ]);
@@ -1001,6 +1022,19 @@ const effectiveTasks = computed(() => {
     ...new Set([...tasks, ...(tasks.includes("pos") ? ["segmentation"] : [])]),
   ];
 });
+const settledLayers = computed(
+  () =>
+    effectiveTasks.value.filter((task) =>
+      ["success", "failed"].includes(visibleLayers.value[task]?.status),
+    ).length,
+);
+const chunkProgress = computed(() => {
+  const p = candidate.value?.progress,
+    execution = candidate.value?.response?.execution;
+  if (p?.totalChunks)
+    return Math.min(100, ((p.completedChunks || 0) / p.totalChunks) * 100);
+  return execution?.chunks ? 100 : 0;
+});
 const totalLayers = computed(
   () => effectiveTasks.value.length || Object.keys(taskNames).length,
 );
@@ -1025,7 +1059,7 @@ const visualBreaks = computed(() => [
       ),
   ),
 ]);
-function revealAnnotation(task, itemId) {
+function revealAnnotation(task, itemId, start = null) {
   const documentId = current.value?.id;
   if (itemId && !enabledLayers.value.includes(task))
     enabledLayers.value.push(task);
@@ -1037,7 +1071,11 @@ function revealAnnotation(task, itemId) {
       return;
     document
       .querySelector(
-        itemId ? ".annotation-canvas .focused-text" : ".annotation-inspector",
+        start !== null
+          ? `.annotation-canvas [data-start="${start}"]`
+          : itemId
+            ? ".annotation-canvas .focused-text"
+            : ".annotation-inspector",
       )
       ?.scrollIntoView({
         block: "center",
@@ -1056,12 +1094,12 @@ function focusInsight({ task, itemId }) {
   revealAnnotation(task, itemId);
 }
 function focusInspector(item) {
-  if (focusedIds.value.includes(item.itemId)) {
+  if (focusedIds.value.includes(item.itemId) && item.focusStart === undefined) {
     focusedIds.value = [];
     return;
   }
   focusedIds.value = [item.itemId];
-  revealAnnotation(activeLayer.value, item.itemId);
+  revealAnnotation(activeLayer.value, item.itemId, item.focusStart ?? null);
 }
 function addExtra(item) {
   if (!draftLayers.value[activeLayer.value])
@@ -1088,11 +1126,6 @@ function removeExtra(index) {
   extraEditIndex.value = null;
   focusedIds.value = [];
 }
-const revealKey = computed(() =>
-  Object.values(visibleLayers.value)
-    .map((layer) => layer.result?.resultId || "")
-    .join("-"),
-);
 const focusItems = computed(() =>
   displayItems.value.filter(
     (item) =>
@@ -1250,7 +1283,8 @@ watch(detailCategories, (values) => {
     />
     <div class="app-layout">
       <main
-        class="main-content"
+        class="main-content page-arrival"
+        :key="page"
         :class="{ 'workspace-content': page === 'workspace' }"
       >
         <div v-if="loadError" role="alert" class="feedback error-feedback">
@@ -1385,6 +1419,7 @@ watch(detailCategories, (values) => {
                 v-for="document in pagedDocuments"
                 :key="document.id"
                 class="document-row"
+                v-reveal
               >
                 <label v-if="!showArchived" class="document-select"
                   ><input
@@ -1543,6 +1578,81 @@ watch(detailCategories, (values) => {
                 {{ candidate.progress.totalChunks }} 个文本块</small
               >
             </div>
+            <div class="inference-phases row g-3">
+              <div class="col-md-6">
+                <div class="d-flex justify-content-between caption">
+                  <span>文本块处理</span
+                  ><b
+                    >{{
+                      candidate.progress?.completedChunks ??
+                      candidate.response?.execution?.chunks ??
+                      0
+                    }}
+                    /
+                    {{
+                      candidate.progress?.totalChunks ??
+                      candidate.response?.execution?.chunks ??
+                      "—"
+                    }}</b
+                  >
+                </div>
+                <div
+                  class="progress"
+                  role="progressbar"
+                  aria-label="文本块处理进度"
+                  :aria-valuenow="
+                    candidate.progress?.completedChunks ??
+                    candidate.response?.execution?.chunks ??
+                    0
+                  "
+                  :aria-valuemax="
+                    candidate.progress?.totalChunks ??
+                    candidate.response?.execution?.chunks ??
+                    1
+                  "
+                  aria-valuemin="0"
+                >
+                  <div
+                    class="progress-bar"
+                    :style="{ width: chunkProgress + '%' }"
+                  ></div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="d-flex justify-content-between caption">
+                  <span>标注层校验</span
+                  ><b
+                    >{{ settledLayers }} / {{ totalLayers }} · 成功
+                    {{ completedLayers }}</b
+                  >
+                </div>
+                <div
+                  class="progress"
+                  role="progressbar"
+                  aria-label="标注层校验进度"
+                  :aria-valuenow="settledLayers"
+                  :aria-valuemax="Math.max(1, totalLayers)"
+                  aria-valuemin="0"
+                >
+                  <div
+                    class="progress-bar"
+                    :style="{
+                      width:
+                        (settledLayers / Math.max(1, totalLayers)) * 100 + '%',
+                    }"
+                  ></div>
+                </div>
+              </div>
+            </div>
+            <p v-if="processing" class="caption muted mt-3">
+              {{
+                candidate.state === "queued"
+                  ? "等待前序任务结束"
+                  : candidate.progress?.phase === "validating"
+                    ? "已收到模型回包，正在核对原文与区间"
+                    : "联合分析当前文本块；模型返回前进度保持不变"
+              }}。成功层复用缓存，失败只在显式重试后调用。
+            </p>
             <div class="stage-list">
               <div
                 v-for="(name, task) in taskNames"
@@ -1596,6 +1706,7 @@ watch(detailCategories, (values) => {
               :tasks="['ner', 'keywords', 'pos', 'segmentation', 'paragraphs']"
               :layers="insightLayers"
               side="left"
+              @activate="activeLayer = $event"
               :active-task="activeLayer"
               :processing="Boolean(processing)"
               :selected-tasks="effectiveTasks"
@@ -1768,7 +1879,11 @@ watch(detailCategories, (values) => {
                   :selectable="editing && !saving"
                   :focused-item="focusedIds[0]"
                   :preferences="preferences"
-                  :reveal-key="preferences.reduceMotion ? '' : revealKey"
+                  :reveal-key="
+                    preferences.reduceMotion
+                      ? ''
+                      : `${current.id}-${displayRevisionId}`
+                  "
                   @select="selectAnnotationRange"
                   @focus="focusAnnotations"
                 />
@@ -1887,6 +2002,7 @@ watch(detailCategories, (values) => {
               ]"
               :layers="insightLayers"
               side="right"
+              @activate="activeLayer = $event"
               :active-task="activeLayer"
               :processing="Boolean(processing)"
               :selected-tasks="effectiveTasks"
@@ -1897,6 +2013,7 @@ watch(detailCategories, (values) => {
               v-if="!sourceEditing"
               :layers="insightLayers"
               :source="currentState"
+              :text="displayText"
               @focus="focusInsight"
             />
             <aside v-if="!sourceEditing" class="annotation-inspector">
@@ -1913,7 +2030,7 @@ watch(detailCategories, (values) => {
                   aria-label="编辑图层"
                 >
                   <button
-                    v-for="(name, task) in taskNames"
+                    v-for="(name, task) in detailTaskNames"
                     :key="task"
                     role="tab"
                     :aria-selected="activeLayer === task"
@@ -1927,7 +2044,10 @@ watch(detailCategories, (values) => {
                     {{ name }}
                   </button>
                 </div>
-                <div class="inspector-filters">
+                <p v-if="!detailAllowed" class="caption muted p-3">
+                  此层请在原文叠加层或关系与事件图谱中查看；人工标注仍可编辑。
+                </p>
+                <div v-if="detailAllowed" class="inspector-filters">
                   <label
                     >类别<select v-model="detailCategory" class="form-select">
                       <option value="">全部类别</option>
@@ -2045,7 +2165,14 @@ watch(detailCategories, (values) => {
                   >
                     没有匹配的类别。
                   </p>
-                  <div class="annotation-items">
+                  <FrequencyDetails
+                    v-if="!editing && detailAllowed"
+                    :rows="detailRows"
+                    :task="activeLayer"
+                    :focused-ids="focusedIds"
+                    @focus="focusInspector"
+                  />
+                  <div v-if="editing" class="annotation-items">
                     <article
                       v-for="{ item, index } in detailRows"
                       :key="item.itemId"

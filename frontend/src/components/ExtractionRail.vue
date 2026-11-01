@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from "vue";
+import { computed, ref, watch } from "vue";
 import { taskNames, entityNames, labelNames } from "../api.js";
 const props = defineProps({
   tasks: Array,
@@ -10,7 +10,21 @@ const props = defineProps({
   source: String,
   selectedTasks: Array,
 });
-const emit = defineEmits(["focus"]);
+const emit = defineEmits(["focus", "activate"]);
+const opened = ref(
+  props.tasks?.includes(props.activeTask) ? props.activeTask : props.tasks?.[0],
+);
+watch(
+  () => props.activeTask,
+  (task) => {
+    if (props.tasks.includes(task)) opened.value = task;
+  },
+);
+function toggle(card) {
+  const next = opened.value === card.task ? null : card.task;
+  if (next) emit("activate", card.task);
+  opened.value = next;
+}
 const cards = computed(() =>
   props.tasks.map((task, index) => {
     const layer = props.layers?.[task],
@@ -36,7 +50,7 @@ function choose(card, item = null) {
 </script>
 <template>
   <aside
-    class="extraction-rail"
+    class="extraction-rail accordion"
     :class="`rail-${side}`"
     :aria-label="titles[side]"
   >
@@ -48,7 +62,7 @@ function choose(card, item = null) {
     <article
       v-for="card in cards"
       :key="card.task"
-      class="extraction-card"
+      class="extraction-card accordion-item"
       :class="[
         {
           selected: activeTask === card.task,
@@ -58,59 +72,76 @@ function choose(card, item = null) {
       ]"
       :style="{ '--card-delay': `${card.index * 45}ms` }"
     >
-      <button class="extraction-card-heading" @click="choose(card)">
-        <span class="extraction-kind-mark" :class="card.task">{{
-          taskNames[card.task].slice(0, 1)
-        }}</span
-        ><strong>{{ taskNames[card.task] }}</strong
-        ><span class="extraction-count">{{
-          card.status === "success"
-            ? card.items.length
-            : card.status === "failed"
-              ? "!"
-              : "—"
-        }}</span>
-      </button>
-      <Transition name="extract" mode="out-in"
-        ><div :key="card.key" class="extraction-card-content">
-          <template v-if="card.status === 'success'"
-            ><div v-if="card.items.length" class="extraction-chips">
+      <h3 class="accordion-header">
+        <button
+          class="extraction-card-heading accordion-button"
+          :class="{ collapsed: opened !== card.task }"
+          :id="`rail-${side}-${card.task}-heading`"
+          :aria-expanded="opened === card.task"
+          :aria-controls="`rail-${side}-${card.task}`"
+          @click="toggle(card)"
+        >
+          <span class="extraction-kind-mark" :class="card.task">{{
+            taskNames[card.task].slice(0, 1)
+          }}</span
+          ><strong>{{ taskNames[card.task] }}</strong
+          ><span class="extraction-count">{{
+            card.status === "success"
+              ? card.items.length
+              : card.status === "failed"
+                ? "!"
+                : "—"
+          }}</span>
+        </button>
+      </h3>
+      <div
+        :id="`rail-${side}-${card.task}`"
+        class="accordion-collapse collapse"
+        :class="{ show: opened === card.task }"
+        role="region"
+        :aria-labelledby="`rail-${side}-${card.task}-heading`"
+      >
+        <Transition name="extract" mode="out-in"
+          ><div :key="card.key" class="extraction-card-content">
+            <template v-if="card.status === 'success'"
+              ><div v-if="card.items.length" class="extraction-chips">
+                <button
+                  v-for="item in card.items.slice(0, 3)"
+                  :key="item.itemId"
+                  class="extraction-chip"
+                  :class="`chip-${item.label || card.task}`"
+                  @click="choose(card, item)"
+                >
+                  <span>{{ item.itemText }}</span
+                  ><small v-if="label(item)">{{ label(item) }}</small>
+                </button>
+              </div>
+              <p v-else class="extraction-empty">
+                本篇未发现{{ taskNames[card.task] }}
+              </p>
               <button
-                v-for="item in card.items.slice(0, 3)"
-                :key="item.itemId"
-                class="extraction-chip"
-                :class="`chip-${item.label || card.task}`"
-                @click="choose(card, item)"
+                v-if="card.items.length > 3"
+                class="extraction-more"
+                @click="choose(card)"
               >
-                <span>{{ item.itemText }}</span
-                ><small v-if="label(item)">{{ label(item) }}</small>
-              </button>
+                查看全部 {{ card.items.length }} 项 <span>↗</span>
+              </button></template
+            >
+            <p v-else-if="card.status === 'failed'" class="extraction-error">
+              该层未通过校验，可查看详情后重试。
+            </p>
+            <div
+              v-else-if="processing && card.requested"
+              class="extraction-waiting"
+            >
+              <span></span><span></span><small>等待真实结果</small>
             </div>
             <p v-else class="extraction-empty">
-              本篇未发现{{ taskNames[card.task] }}
+              {{ card.requested ? "等待标注" : "尚未选择此层" }}
             </p>
-            <button
-              v-if="card.items.length > 3"
-              class="extraction-more"
-              @click="choose(card)"
-            >
-              查看全部 {{ card.items.length }} 项 <span>↗</span>
-            </button></template
-          >
-          <p v-else-if="card.status === 'failed'" class="extraction-error">
-            该层未通过校验，可查看详情后重试。
-          </p>
-          <div
-            v-else-if="processing && card.requested"
-            class="extraction-waiting"
-          >
-            <span></span><span></span><small>等待真实结果</small>
-          </div>
-          <p v-else class="extraction-empty">
-            {{ card.requested ? "等待标注" : "尚未选择此层" }}
-          </p>
-        </div></Transition
-      >
+          </div></Transition
+        >
+      </div>
     </article>
   </aside>
 </template>
