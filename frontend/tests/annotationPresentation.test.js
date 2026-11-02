@@ -1,10 +1,46 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { frequencyGroups } from "../src/annotationPresentation.js";
 import {
   resolveDisplayLayers,
   buildSegments,
   sourcePositions,
 } from "../src/annotationPresentation.js";
+
+test("frequency categories retain all exact occurrences and ignore duplicated positions", () => {
+  const items = [
+    {
+      itemId: "1",
+      itemText: "林晓",
+      label: "PROPN",
+      spans: [{ start: 0, end: 2 }],
+    },
+    {
+      itemId: "2",
+      itemText: "周宁",
+      label: "PROPN",
+      spans: [{ start: 3, end: 5 }],
+    },
+    {
+      itemId: "3",
+      itemText: "林晓",
+      label: "PROPN",
+      spans: [{ start: 6, end: 8 }],
+    },
+    {
+      itemId: "4",
+      itemText: "林晓",
+      label: "PROPN",
+      spans: [{ start: 6, end: 8 }],
+    },
+  ];
+  assert.equal(frequencyGroups(items, "label")[0].count, 3);
+  assert.equal(
+    frequencyGroups(items, "term").find((group) => group.text === "林晓").count,
+    2,
+  );
+  assert.equal(frequencyGroups(items, "label")[0].items.length, 4);
+});
 
 test("new pending inference never reports saved layers as returned progress", () => {
   const saved = {

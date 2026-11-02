@@ -46,6 +46,17 @@ export function chunks(text, limit = 650) {
 }
 function candidate(task, payload) {
   const value = payload[task];
+  const evidence = (reference) => {
+    if (typeof reference === "string") return reference;
+    requireValue(
+      Number.isSafeInteger(reference) &&
+        reference >= 0 &&
+        Array.isArray(payload.evidence) &&
+        typeof payload.evidence[reference] === "string",
+      "invalidEvidenceReference",
+    );
+    return payload.evidence[reference];
+  };
   if (task === "segmentation")
     return (payload.tokens || []).map((tuple) => ({ itemText: tuple[0] }));
   if (task === "pos")
@@ -70,9 +81,14 @@ function candidate(task, payload) {
     }));
   if (["sentiment", "intent", "semantic"].includes(task))
     return value.map((tuple) => ({
-      itemText: tuple[0],
+      itemText: evidence(tuple[0]),
       label: tuple[1],
       occurrence: tuple[2] ?? 0,
+    }));
+  if (["relations", "events"].includes(task))
+    return value.map((item) => ({
+      ...item,
+      itemText: evidence(item.itemText),
     }));
   return value;
 }
@@ -110,11 +126,9 @@ function paragraphs(text, semantic = []) {
         boundaries.add(end);
       }
   const points = [...boundaries].sort((a, b) => a - b);
-  return points
-    .slice(0, -1)
-    .map((start, index) => ({
-      itemText: chars.slice(start, points[index + 1]).join(""),
-    }));
+  return points.slice(0, -1).map((start, index) => ({
+    itemText: chars.slice(start, points[index + 1]).join(""),
+  }));
 }
 function mergeItems(task, parts, text) {
   if (task === "keywords") {
@@ -228,7 +242,15 @@ export async function annotate(
   const startedAt = new Date().toISOString(),
     start = performance.now(),
     textChunks = chunks(request.text);
-  onProgress({ event: "progress", taskType: "joint", status: "running", layer: null, phase: "cache", completedChunks: 0, totalChunks: remoteTasks.length ? textChunks.length : 0 });
+  onProgress({
+    event: "progress",
+    taskType: "joint",
+    status: "running",
+    layer: null,
+    phase: "cache",
+    completedChunks: 0,
+    totalChunks: remoteTasks.length ? textChunks.length : 0,
+  });
   for (const chunk of textChunks) {
     if (!remoteTasks.length) break;
     counters.chunks++;
@@ -296,6 +318,7 @@ export async function annotate(
         : valid.segmentation?.map((item) => item.itemText);
     let reply = null;
     if (modelTasks.length) {
+      counters.networkCalls++;
       onProgress({
         event: "progress",
         taskType: "joint",
@@ -304,9 +327,10 @@ export async function annotate(
         layer: null,
         completedChunks: counters.chunks - 1,
         totalChunks: textChunks.length,
+        networkCalls: counters.networkCalls,
+        localCacheHits: counters.localCacheHits,
       });
       try {
-        counters.networkCalls++;
         reply = await providerCall(config, chunk.text, modelTasks, {
           jobId: request.requestId,
           ...(missing.includes("pos") && retainedTokens?.length
@@ -390,12 +414,22 @@ export async function annotate(
       taskType: "joint",
       status: "running",
       phase: "chunks",
+      networkCalls: counters.networkCalls,
+      localCacheHits: counters.localCacheHits,
       layer: null,
       completedChunks: counters.chunks,
       totalChunks: textChunks.length,
     });
   }
-  onProgress({ event: "progress", taskType: "joint", status: "running", layer: null, phase: "validating", completedChunks: counters.chunks, totalChunks: remoteTasks.length ? textChunks.length : 0 });
+  onProgress({
+    event: "progress",
+    taskType: "joint",
+    status: "running",
+    layer: null,
+    phase: "validating",
+    completedChunks: counters.chunks,
+    totalChunks: remoteTasks.length ? textChunks.length : 0,
+  });
   for (const task of pending) {
     let items;
     try {

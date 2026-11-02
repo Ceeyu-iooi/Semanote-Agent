@@ -121,7 +121,7 @@ public class JobService {
                 checkpoint.put("taskType", event.path("taskType").asText()); checkpoint.put("status", event.path("status").asText());
                 checkpoint.set("layers", layers);
                 // Layer events retain the last real chunk checkpoint; polling must not reset progress.
-                for (String field : List.of("completedChunks", "totalChunks", "phase")) {
+                for (String field : List.of("completedChunks", "totalChunks", "phase", "networkCalls", "localCacheHits")) {
                     if (event.has(field)) checkpoint.set(field, event.get(field));
                     else if (previous != null && previous.has(field)) checkpoint.set(field, previous.get(field));
                 }

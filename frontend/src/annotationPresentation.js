@@ -25,6 +25,32 @@ export function sourcePositions(text, word) {
   return found;
 }
 
+/** Aggregate exact annotation occurrences, keeping every original item available for evidence navigation. */
+export function frequencyGroups(items, groupBy = "term") {
+  const groups = new Map();
+  for (const item of items) {
+    const key =
+      groupBy === "label"
+        ? item.label || "UNLABELLED"
+        : JSON.stringify([item.itemText, item.label]);
+    if (!groups.has(key))
+      groups.set(key, {
+        key,
+        text: groupBy === "label" ? item.label || "未分类" : item.itemText,
+        label: item.label,
+        items: [],
+        positions: new Map(),
+        count: 0,
+      });
+    const group = groups.get(key);
+    group.items.push(item);
+    for (const span of item.spans || [])
+      group.positions.set(`${span.start}:${span.end}`, { item, span });
+    group.count = group.positions.size;
+  }
+  return [...groups.values()];
+}
+
 /** Sweep annotation boundaries once, instead of scanning every item for every text fragment. */
 export function buildSegments(text, items, breaks = []) {
   const chars = Array.from(text),

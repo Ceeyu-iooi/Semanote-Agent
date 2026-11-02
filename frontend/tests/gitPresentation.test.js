@@ -1,6 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildGitGraph, parseUnifiedDiff, gitRefGroup } from "../src/gitPresentation.js";
+import {
+  buildGitGraph,
+  parseUnifiedDiff,
+  gitRefGroup,
+} from "../src/gitPresentation.js";
 
 test("ref badges classify complete branch names rather than substrings", () => {
   assert.equal(gitRefGroup("HEAD -> feature/developer-center"), "feature");
@@ -39,6 +43,18 @@ test("actual parent links derive known main/develop and parallel paths without i
       graph.nodes.find((node) => node.id === "d").x,
   );
   assert.equal(graph.edges.length, 8);
+  assert.notEqual(
+    graph.nodes.find((node) => node.id === "m").lane,
+    graph.nodes.find((node) => node.id === "d").lane,
+  );
+  assert.ok(
+    graph.lanes.find((lane) => lane.group === "main").names.includes("main"),
+  );
+  assert.ok(
+    graph.lanes
+      .find((lane) => lane.group === "develop")
+      .names.includes("develop"),
+  );
 });
 test("unified diff keeps file boundaries, source text and independent old/new line numbers", () => {
   const patch =

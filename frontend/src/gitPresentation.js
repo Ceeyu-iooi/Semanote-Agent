@@ -8,7 +8,10 @@ export const gitGroups = {
 };
 /** Normalize actual refs before classifying; substrings inside feature names are not mainlines. */
 export function gitRefGroup(reference) {
-  const value = reference.trim().replace(/^HEAD -> /, "").replace(/^origin\//, "");
+  const value = reference
+    .trim()
+    .replace(/^HEAD -> /, "")
+    .replace(/^origin\//, "");
   if (value.startsWith("tag:")) return "release";
   if (value === "main" || value === "develop") return value;
   if (value.startsWith("hotfix/")) return "hotfix";
@@ -18,12 +21,15 @@ export function gitRefGroup(reference) {
 export function buildGitGraph(commits) {
   const byId = new Map(commits.map((commit) => [commit.id, commit]));
   const refs = (commit) =>
-    commit.refs.split(",").map((value) =>
-      value
-        .trim()
-        .replace(/^HEAD -> /, "")
-        .replace(/^origin\//, ""),
-    );
+    commit.refs
+      .split(",")
+      .filter((value) => value.trim())
+      .map((value) =>
+        value
+          .trim()
+          .replace(/^HEAD -> /, "")
+          .replace(/^origin\//, ""),
+      );
   function firstParents(start, stop = new Set()) {
     const found = new Set();
     let id = start;
@@ -58,16 +64,9 @@ export function buildGitGraph(commits) {
         for (const item of firstParents(parent, developPath))
           releasePath.add(item);
   }
-  const lanes = [],
-    nodes = [],
+  const nodes = [],
     positions = new Map();
   commits.forEach((commit, index) => {
-    let lane = lanes.indexOf(commit.id);
-    if (lane < 0) {
-      lane = lanes.indexOf(null);
-      if (lane < 0) lane = lanes.length;
-      lanes[lane] = commit.id;
-    }
     const group = hotfixPath.has(commit.id)
       ? "hotfix"
       : mainPath.has(commit.id)
@@ -79,21 +78,41 @@ export function buildGitGraph(commits) {
             : "feature";
     const node = {
       ...commit,
-      lane,
       group,
       x: (commits.length - 1 - index) * 248 + 124,
-      y: 24 + lane * 28,
     };
     nodes.push(node);
     positions.set(commit.id, node);
-    lanes[lane] = commit.parents[0] || null;
-    for (const parent of commit.parents.slice(1))
-      if (!lanes.includes(parent)) {
-        let free = lanes.indexOf(null);
-        if (free < 0) free = lanes.length;
-        lanes[free] = parent;
-      }
   });
+  // Main and integration paths retain separate labelled tracks instead of reusing a row over time.
+  const groups = ["main", "develop", "release", "feature", "hotfix"].filter(
+    (group) => nodes.some((node) => node.group === group),
+  );
+  const lanes = groups.map((group, lane) => {
+    const names = [
+      ...new Set(
+        nodes
+          .filter((node) => node.group === group)
+          .flatMap((node) =>
+            refs(node).filter(
+              (name) =>
+                name !== "HEAD" &&
+                !name.startsWith("tag:") &&
+                gitRefGroup(name) === group,
+            ),
+          ),
+      ),
+    ];
+    return {
+      group,
+      lane,
+      names: names.length ? names : [`${group} · 历史路径（名称未知）`],
+    };
+  });
+  for (const node of nodes) {
+    node.lane = groups.indexOf(node.group);
+    node.y = 30 + node.lane * 44;
+  }
   const edges = nodes.flatMap((node) =>
     node.parents
       .map((id) => positions.get(id))
@@ -107,6 +126,7 @@ export function buildGitGraph(commits) {
   return {
     nodes,
     edges,
+    lanes,
     width: Math.max(248, commits.length * 248),
     height: Math.max(80, ...nodes.map((node) => node.y + 28)),
     groups: [...new Set(nodes.map((node) => node.group))],

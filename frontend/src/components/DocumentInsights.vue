@@ -7,6 +7,8 @@ const props = defineProps({
   layers: { type: Object, default: () => ({}) },
   source: String,
   text: String,
+  activeTask: String,
+  graphFocus: Object,
 });
 const emit = defineEmits(["focus"]);
 const tip = ref(null),
@@ -242,8 +244,10 @@ watch(
       </div>
     </div>
     <RelationshipExplorer
+      :graph-focus="graphFocus"
       :layers="layers"
       :text="text"
+      :active-task="activeTask"
       @focus="emit('focus', $event)"
     />
     <PointerTip :anchor="tip"

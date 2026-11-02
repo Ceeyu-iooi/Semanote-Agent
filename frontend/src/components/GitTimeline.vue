@@ -7,36 +7,14 @@ import {
   gitRefGroup,
   parseUnifiedDiff,
 } from "../gitPresentation.js";
-function refColor(name) {
-  const group = gitRefGroup(name);
+function refColor(name, fallback) {
+  const group =
+    name.trim().replace(/^origin\//, "") === "HEAD"
+      ? fallback
+      : gitRefGroup(name);
   return gitGroups[group].color;
 }
-const laneLabels = computed(() =>
-  [...new Set(graph.value.nodes.map((node) => node.lane))].map((lane) => {
-    const nodes = graph.value.nodes.filter((node) => node.lane === lane);
-    const names = [
-      ...new Set(
-        nodes.flatMap((node) =>
-          node.refs
-            .split(",")
-            .map((name) =>
-              name
-                .trim()
-                .replace(/^HEAD -> /, "")
-                .replace(/^origin\//, ""),
-            )
-            .filter(
-              (name) => name && name !== "HEAD" && !name.startsWith("tag:"),
-            ),
-        ),
-      ),
-    ];
-    return {
-      lane,
-      names: names.length ? names : ["并行路径 · 无现存分支引用"],
-    };
-  }),
-);
+const laneLabels = computed(() => graph.value.lanes || []);
 const data = ref(null),
   index = ref(0),
   detail = ref(null),
@@ -200,128 +178,128 @@ onMounted(load);
           </select></label
         >
       </div>
-      <div
-        ref="track"
-        class="git-map-scroll"
-        tabindex="0"
-        aria-label="Git 历史：左侧较早，右侧较新"
-      >
-        <div class="git-map" :style="{ width: `${graph.width}px` }">
-          <svg
-            :width="graph.width"
-            :height="graph.height"
-            aria-label="实际父关系和当前时间位置"
+      <div class="git-history-board">
+        <aside class="git-track-labels" aria-label="Git 分支路径名称">
+          <div
+            v-for="lane in laneLabels"
+            :key="lane.lane"
+            :style="{
+              top: `${lane.lane * 44 + 30}px`,
+              color: gitGroups[lane.group].color,
+            }"
+            :title="lane.names.join(' / ')"
           >
-            <g class="git-lane-labels">
-              <g v-for="lane in laneLabels" :key="lane.lane">
-                <rect
-                  :x="Math.max(0, (selectedNode?.x || 124) - 116)"
-                  :y="lane.lane * 28 + 1"
-                  width="240"
-                  height="18"
-                  fill="var(--color-canvas)"
-                  opacity=".92"
+            <strong>{{ lane.group }}</strong
+            ><small>{{
+              lane.names.length === 1 && lane.names[0] === lane.group
+                ? gitGroups[lane.group].name
+                : lane.names.join(" / ")
+            }}</small>
+          </div>
+        </aside>
+        <div
+          ref="track"
+          class="git-map-scroll"
+          tabindex="0"
+          aria-label="Git 历史：左侧较早，右侧较新"
+        >
+          <div class="git-map" :style="{ width: `${graph.width}px` }">
+            <svg
+              :width="graph.width"
+              :height="graph.height"
+              aria-label="实际父关系和当前时间位置"
+            >
+              <defs>
+                <clipPath id="gitCompleted">
+                  <rect
+                    x="0"
+                    y="0"
+                    :width="selectedNode?.x || 0"
+                    :height="graph.height"
+                  />
+                </clipPath>
+              </defs>
+              <g opacity=".25">
+                <path
+                  v-for="edge in graph.edges"
+                  :key="edge.id"
+                  :d="edge.d"
+                  fill="none"
+                  :stroke="gitGroups[edge.group].color"
+                  stroke-width="2"
                 />
-                <text
-                  :x="Math.max(4, (selectedNode?.x || 124) - 110)"
-                  :y="lane.lane * 28 + 14"
-                  font-size="10"
-                  fill="var(--color-secondary)"
-                >
-                  {{ lane.names.join(" / ") }}
-                </text>
               </g>
-            </g>
-            <defs>
-              <clipPath id="gitCompleted">
-                <rect
-                  x="0"
-                  y="0"
-                  :width="selectedNode?.x || 0"
-                  :height="graph.height"
+              <g clip-path="url(#gitCompleted)">
+                <path
+                  v-for="edge in graph.edges"
+                  :key="edge.id"
+                  :d="edge.d"
+                  fill="none"
+                  :stroke="gitGroups[edge.group].color"
+                  stroke-width="3"
                 />
-              </clipPath>
-            </defs>
-            <g opacity=".25">
-              <path
-                v-for="edge in graph.edges"
-                :key="edge.id"
-                :d="edge.d"
-                fill="none"
-                :stroke="gitGroups[edge.group].color"
-                stroke-width="2"
+              </g>
+              <line
+                v-if="selectedNode"
+                :x1="selectedNode.x"
+                :x2="selectedNode.x"
+                y1="0"
+                :y2="graph.height"
+                stroke="var(--color-primary)"
+                stroke-dasharray="4 4"
               />
-            </g>
-            <g clip-path="url(#gitCompleted)">
-              <path
-                v-for="edge in graph.edges"
-                :key="edge.id"
-                :d="edge.d"
-                fill="none"
-                :stroke="gitGroups[edge.group].color"
-                stroke-width="3"
-              />
-            </g>
-            <line
-              v-if="selectedNode"
-              :x1="selectedNode.x"
-              :x2="selectedNode.x"
-              y1="0"
-              :y2="graph.height"
-              stroke="var(--color-primary)"
-              stroke-dasharray="4 4"
-            />
-            <circle
-              v-for="node in graph.nodes"
-              :key="node.id"
-              :cx="node.x"
-              :cy="node.y"
-              :r="selected?.id === node.id ? 7 : 4"
-              :fill="gitGroups[node.group].color"
-              :opacity="node.x <= (selectedNode?.x || 0) ? 1 : 0.35"
-              tabindex="0"
-              role="button"
-              :aria-label="`选择提交 ${node.subject}`"
-              @click="selectCommit(node.id)"
-              @keydown.enter="selectCommit(node.id)"
-            >
-              <title>
-                {{ gitGroups[node.group].name }} · {{ node.subject }} ·
-                {{ node.id.slice(0, 7) }}
-              </title>
-            </circle>
-          </svg>
-          <div class="git-commit-cards">
-            <button
-              v-for="commit in ordered"
-              :key="commit.id"
-              :data-commit="commit.id"
-              class="git-commit-card"
-              :class="{
-                selected: commit.id === selected?.id,
-                upcoming: commit.x > (selectedNode?.x || 0),
-              }"
-              :style="{ '--branch-color': gitGroups[commit.group].color }"
-              :aria-pressed="commit.id === selected?.id"
-              @click="selectCommit(commit.id)"
-            >
-              <span class="git-card-kind"
-                >{{ gitGroups[commit.group].name }}
-                <time>{{ commit.date.slice(0, 10) }}</time></span
-              ><strong>{{ commit.subject }}</strong
-              ><small
-                >{{ commit.id.slice(0, 7)
-                }}{{ commit.parents.length > 1 ? " · 合并" : "" }}</small
-              ><span v-if="commit.refs" class="git-ref-badges"
-                ><span
-                  v-for="refName in commit.refs.split(', ')"
-                  :key="refName"
-                  class="badge rounded-pill"
-                  :style="{ background: refColor(refName) }"
-                  >{{ refName }}</span
-                ></span
+              <circle
+                v-for="node in graph.nodes"
+                :key="node.id"
+                :cx="node.x"
+                :cy="node.y"
+                :r="selected?.id === node.id ? 7 : 4"
+                :fill="gitGroups[node.group].color"
+                :opacity="node.x <= (selectedNode?.x || 0) ? 1 : 0.35"
+                tabindex="0"
+                role="button"
+                :aria-label="`选择提交 ${node.subject}`"
+                @click="selectCommit(node.id)"
+                @keydown.enter="selectCommit(node.id)"
               >
-            </button>
+                <title>
+                  {{ gitGroups[node.group].name }} · {{ node.subject }} ·
+                  {{ node.id.slice(0, 7) }}
+                </title>
+              </circle>
+            </svg>
+            <div class="git-commit-cards">
+              <button
+                v-for="commit in ordered"
+                :key="commit.id"
+                :data-commit="commit.id"
+                class="git-commit-card"
+                :class="{
+                  selected: commit.id === selected?.id,
+                  upcoming: commit.x > (selectedNode?.x || 0),
+                }"
+                :style="{ '--branch-color': gitGroups[commit.group].color }"
+                :aria-pressed="commit.id === selected?.id"
+                @click="selectCommit(commit.id)"
+              >
+                <span class="git-card-kind"
+                  >{{ gitGroups[commit.group].name }}
+                  <time>{{ commit.date.slice(0, 10) }}</time></span
+                ><strong>{{ commit.subject }}</strong
+                ><small
+                  >{{ commit.id.slice(0, 7)
+                  }}{{ commit.parents.length > 1 ? " · 合并" : "" }}</small
+                ><span v-if="commit.refs" class="git-ref-badges"
+                  ><span
+                    v-for="refName in commit.refs.split(', ')"
+                    :key="refName"
+                    class="badge rounded-pill"
+                    :style="{ background: refColor(refName, commit.group) }"
+                    >{{ refName }}</span
+                  ></span
+                >
+              </button>
+            </div>
           </div>
         </div>
       </div>

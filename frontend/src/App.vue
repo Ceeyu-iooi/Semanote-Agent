@@ -58,6 +58,7 @@ const candidate = ref(null),
   historicalSnapshot = ref(null),
   history = ref(null),
   showHistory = ref(false);
+const graphFocus = ref(null);
 const activeLayer = ref("ner"),
   focusedIds = ref([]),
   editing = ref(false),
@@ -883,8 +884,9 @@ function returnCurrent() {
   candidate.value = null;
 }
 async function pollJobs() {
+  progressNow.value = Date.now();
   try {
-    if (!runningJobs.value.length && !candidate.value) return;
+    if (!runningJobs.value.length && !processing.value) return;
     jobs.value = await request("/jobs");
     if (
       candidate.value &&
@@ -924,13 +926,7 @@ const libraryPage = ref(1),
   settingsError = ref(""),
   settingsBusy = ref(false),
   settingsLoading = ref(false);
-const enabledLayers = ref([
-    "segmentation",
-    "keywords",
-    "pos",
-    "ner",
-    "paragraphs",
-  ]),
+const enabledLayers = ref(["keywords", "ner", "paragraphs"]),
   exportFormat = ref("json");
 const defaultPreferences = {
   fontFamily: "system-ui, sans-serif",
@@ -1006,6 +1002,17 @@ const processing = computed(
   () =>
     candidate.value && ["queued", "running"].includes(candidate.value.state),
 );
+const progressNow = ref(Date.now());
+const jobElapsed = computed(() =>
+  Math.max(
+    0,
+    Math.floor(
+      (progressNow.value -
+        Date.parse(candidate.value?.createdAt || new Date().toISOString())) /
+        1000,
+    ),
+  ),
+);
 const draftLayerCount = computed(() => Object.keys(draftLayers.value).length);
 const completedLayers = computed(
   () =>
@@ -1075,6 +1082,10 @@ function revealAnnotation(task, itemId, start = null) {
           ? `.annotation-canvas [data-start="${start}"]`
           : itemId
             ? ".annotation-canvas .focused-text"
+            : ["relations", "events"].includes(task)
+              ? ".evidence-explorer"
+              : ["paragraphs", "semantic"].includes(task)
+                ? ".annotation-canvas"
             : ".annotation-inspector",
       )
       ?.scrollIntoView({
@@ -1088,6 +1099,8 @@ function revealAnnotation(task, itemId, start = null) {
   });
 }
 function focusInsight({ task, itemId }) {
+  if (["relations", "events"].includes(task))
+    graphFocus.value = { task, itemId };
   activeLayer.value = task;
   detailCategory.value = "";
   focusedIds.value = itemId ? [itemId] : [];
@@ -1282,8 +1295,9 @@ watch(detailCategories, (values) => {
       @settings="openSettings"
     />
     <div class="app-layout">
-      <main
-        class="main-content page-arrival"
+      <Transition name="page" mode="out-in" appear
+        ><main
+          class="main-content"
         :key="page"
         :class="{ 'workspace-content': page === 'workspace' }"
       >
@@ -1416,10 +1430,10 @@ watch(detailCategories, (values) => {
             </div>
             <div v-else class="document-list">
               <article
-                v-for="document in pagedDocuments"
+                  v-for="(document, rowIndex) in pagedDocuments"
                 :key="document.id"
                 class="document-row"
-                v-reveal
+                  v-reveal="rowIndex"
               >
                 <label v-if="!showArchived" class="document-select"
                   ><input
@@ -1472,7 +1486,9 @@ watch(detailCategories, (values) => {
               </article>
             </div>
             <footer class="list-footer">
-              <span>{{ sourceDocuments.length.toLocaleString() }} 份文本</span>
+                <span
+                  >{{ sourceDocuments.length.toLocaleString() }} 份文本</span
+                >
               <div class="pagination-controls">
                 <button
                   class="utility-button"
@@ -1495,7 +1511,10 @@ watch(detailCategories, (values) => {
         <template v-else-if="page === 'workspace' && current">
           <section class="workspace-heading">
             <div>
-              <button class="text-action caption" @click="navigate('library')">
+                <button
+                  class="text-action caption"
+                  @click="navigate('library')"
+                >
                 ← 文本库
               </button>
               <h1>{{ current.title }}</h1>
@@ -1531,7 +1550,10 @@ watch(detailCategories, (values) => {
               恢复文本
             </button>
           </div>
-          <section v-if="showHistory && history" class="surface history-panel">
+            <section
+              v-if="showHistory && history"
+              class="surface history-panel"
+            >
             <h2>版本历史</h2>
             <div class="history-revisions">
               <button
@@ -1638,7 +1660,8 @@ watch(detailCategories, (values) => {
                     class="progress-bar"
                     :style="{
                       width:
-                        (settledLayers / Math.max(1, totalLayers)) * 100 + '%',
+                          (settledLayers / Math.max(1, totalLayers)) * 100 +
+                          '%',
                     }"
                   ></div>
                 </div>
@@ -1653,18 +1676,51 @@ watch(detailCategories, (values) => {
                     : "联合分析当前文本块；模型返回前进度保持不变"
               }}。成功层复用缓存，失败只在显式重试后调用。
             </p>
+              <div class="inference-telemetry d-flex flex-wrap gap-3">
+                <span v-if="processing"
+                  >任务已用时 <b>{{ jobElapsed }} 秒</b></span
+                ><span
+                  >实际请求
+                  <b>{{
+                    candidate.progress?.networkCalls ??
+                    candidate.response?.execution?.networkCalls ??
+                    0
+                  }}</b></span
+                ><span
+                  >本地缓存命中
+                  <b>{{
+                    candidate.progress?.localCacheHits ??
+                    candidate.response?.execution?.localCacheHits ??
+                    0
+                  }}</b></span
+                ><span v-if="candidate.response?.execution"
+                  >输入
+                  <b>{{
+                    candidate.response.execution.promptTokens ?? "未知"
+                  }}</b>
+                  / 输出
+                  <b>{{
+                    candidate.response.execution.completionTokens ?? "未知"
+                  }}</b>
+                  tokens</span
+                >
+              </div>
             <div class="stage-list">
               <div
                 v-for="(name, task) in taskNames"
                 :key="task"
                 :class="{
                   done: visibleLayers[task]?.status === 'success',
-                  running: candidate.progress?.taskType === task && processing,
+                    failed: visibleLayers[task]?.status === 'failed',
+                    running:
+                      candidate.progress?.taskType === task && processing,
                 }"
               >
                 <span>{{
                   visibleLayers[task]?.status === "success"
                     ? "✓"
+                      : visibleLayers[task]?.status === "failed"
+                        ? "!"
                     : candidate.progress?.taskType === task && processing
                       ? "◌"
                       : "○"
@@ -1703,7 +1759,13 @@ watch(detailCategories, (values) => {
           >
             <ExtractionRail
               v-if="!sourceEditing"
-              :tasks="['ner', 'keywords', 'pos', 'segmentation', 'paragraphs']"
+                :tasks="[
+                  'ner',
+                  'keywords',
+                  'pos',
+                  'segmentation',
+                  'paragraphs',
+                ]"
               :layers="insightLayers"
               side="left"
               @activate="activeLayer = $event"
@@ -1714,14 +1776,17 @@ watch(detailCategories, (values) => {
               @focus="focusInsight"
             />
             <section
-              class="editor-surface"
-              :class="{ 'paper-parchment': preferences.paper === 'parchment' }"
+                class="editor-surface card"
+                :class="{
+                  'paper-parchment': preferences.paper === 'parchment',
+                }"
             >
               <div class="editor-toolbar">
                 <div class="tool-group">
                   <label class="sr-only" for="readingFont">字体</label
                   ><select
                     id="readingFont"
+                      class="form-select form-select-sm"
                     v-model="preferences.fontFamily"
                     aria-label="字体"
                   >
@@ -1732,6 +1797,7 @@ watch(detailCategories, (values) => {
                   ><label class="sr-only" for="readingSize">字号</label
                   ><select
                     id="readingSize"
+                      class="form-select form-select-sm"
                     v-model.number="preferences.fontSize"
                     aria-label="字号"
                   >
@@ -1762,7 +1828,10 @@ watch(detailCategories, (values) => {
                     v-if="!sourceEditing"
                     class="tool-button"
                     :disabled="
-                      editing || processing || isHistorical || current.archived
+                        editing ||
+                        processing ||
+                        isHistorical ||
+                        current.archived
                     "
                     @click="startSourceEditing"
                   >
@@ -1961,7 +2030,9 @@ watch(detailCategories, (values) => {
                     v-else-if="
                       candidate &&
                       !processing &&
-                      ['success', 'partialFailure'].includes(candidate.state) &&
+                        ['success', 'partialFailure'].includes(
+                          candidate.state,
+                        ) &&
                       !isHistorical
                     "
                     ><label
@@ -2010,18 +2081,24 @@ watch(detailCategories, (values) => {
               @focus="focusInsight"
             />
             <DocumentInsights
+                :graph-focus="graphFocus"
               v-if="!sourceEditing"
               :layers="insightLayers"
               :source="currentState"
               :text="displayText"
+                :active-task="activeLayer"
               @focus="focusInsight"
             />
-            <aside v-if="!sourceEditing" class="annotation-inspector">
+              <aside
+                v-if="!sourceEditing && (editing || detailAllowed)"
+                class="annotation-inspector"
+              >
               <fieldset :disabled="saving" class="inspector-controls">
                 <header>
                   <p class="eyebrow">ANNOTATIONS</p>
                   <h2>
-                    标注详情<span>{{ displayItems.length }}</span>
+                      {{ editing ? "人工标注编辑" : "标注详情"
+                      }}<span>{{ displayItems.length }}</span>
                   </h2>
                 </header>
                 <div
@@ -2169,6 +2246,7 @@ watch(detailCategories, (values) => {
                     v-if="!editing && detailAllowed"
                     :rows="detailRows"
                     :task="activeLayer"
+                      :sort="detailSort"
                     :focused-ids="focusedIds"
                     @focus="focusInspector"
                   />
@@ -2191,7 +2269,9 @@ watch(detailCategories, (values) => {
                             labelNames[item.label] ||
                             item.label
                           }}</small
-                          ><small>{{ itemFrequency(item) }} 次出现</small></span
+                            ><small
+                              >{{ itemFrequency(item) }} 次出现</small
+                            ></span
                         ><span
                           class="annotation-tag"
                           :class="`tag-${item.label || activeLayer}`"
@@ -2302,7 +2382,9 @@ watch(detailCategories, (values) => {
             <article v-for="job in jobs" :key="job.id" class="job-row">
               <span
                 class="job-state-icon"
-                :class="{ pulsing: ['queued', 'running'].includes(job.state) }"
+                  :class="{
+                    pulsing: ['queued', 'running'].includes(job.state),
+                  }"
                 >{{
                   job.state === "success"
                     ? "✓"
@@ -2327,8 +2409,8 @@ watch(detailCategories, (values) => {
           v-else-if="page === 'statistics'"
           :statistics="statistics"
           @refresh="refresh"
-        />
-      </main>
+          /></main
+      ></Transition>
     </div>
     <dialog
       ref="editorDialog"

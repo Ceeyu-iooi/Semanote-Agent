@@ -17,7 +17,8 @@ const props = defineProps({ statistics: Object });
 const emit = defineEmits(["refresh"]);
 const activeEntity = ref(null),
   activePos = ref(null),
-  activeKeyword = ref(null);
+  activeKeyword = ref(null),
+  activeCoverage = ref(null);
 watch(
   () => props.statistics,
   (current) => {
@@ -94,7 +95,7 @@ const percentage = (count, total) =>
     ><section class="statistics-hero row g-0" v-reveal>
       <div class="col-lg-6 statistics-lead">
         <p class="eyebrow">SAVED ANNOTATIONS</p>
-        <h2>从标注，到全貌。</h2>
+        <h2>已保存标注</h2>
         <div class="hero-number">
           <AnimatedNumber :value="statistics.savedCount" /><small
             >份已保存标注</small
@@ -250,14 +251,20 @@ const percentage = (count, total) =>
         </div>
         <p class="caption muted mt-3 mb-0">按出现位置计数，允许嵌套实体。</p>
       </article>
-      <article class="surface chart-panel">
+      <article class="surface chart-panel" v-reveal="1">
         <p class="eyebrow">LAYER COVERAGE</p>
         <h2>标注层覆盖</h2>
+        <p class="caption muted chart-selection">
+          以 {{ statistics.savedCount }} 份已保存文本为范围
+        </p>
         <button
           v-for="(name, task) in taskNames"
           :key="task"
           class="bar-row"
-          :title="`${name}已覆盖 ${statistics.coverage[task]} / ${statistics.documentCount} 份文本`"
+          :class="{ active: activeCoverage === task }"
+          :aria-pressed="activeCoverage === task"
+          @click="activeCoverage = task"
+          :title="`${name}已覆盖 ${statistics.coverage[task]} / ${statistics.savedCount} 份已保存文本`"
         >
           <span>{{ name }}</span
           ><span class="bar-track"
@@ -265,17 +272,27 @@ const percentage = (count, total) =>
               :style="{
                 width: percentage(
                   statistics.coverage[task],
-                  statistics.documentCount,
+                  statistics.savedCount,
                 ),
               }"
             ></span></span
-          ><strong>{{ statistics.coverage[task] }}</strong>
+          ><strong
+            >{{ statistics.coverage[task] }} / {{ statistics.savedCount
+            }}<small>{{
+              percentage(statistics.coverage[task], statistics.savedCount)
+            }}</small></strong
+          >
         </button>
         <p class="caption muted mt-3 mb-0">
-          缺层和成功零条目分别记录。覆盖率不表示准确率。
+          {{
+            activeCoverage
+              ? `${taskNames[activeCoverage]}覆盖 ${statistics.coverage[activeCoverage]} 份，另有 ${statistics.savedCount - (statistics.coverage[activeCoverage] || 0)} 份保存文本未覆盖该层。`
+              : "点击一层查看覆盖详情。"
+          }}
+          覆盖率不表示准确率。
         </p>
       </article>
-      <article class="surface chart-panel">
+      <article class="surface chart-panel" v-reveal="2">
         <p class="eyebrow">PARTS OF SPEECH</p>
         <h2>词性分布</h2>
         <p class="caption muted chart-selection">
@@ -306,7 +323,7 @@ const percentage = (count, total) =>
           ><strong>{{ count }}</strong>
         </button>
       </article>
-      <article class="surface chart-panel">
+      <article class="surface chart-panel" v-reveal="3">
         <p class="eyebrow">KEYWORDS IN CONTEXT</p>
         <h2>关键词频次</h2>
         <p v-if="!statistics.keywords.length" class="muted caption">
@@ -329,7 +346,14 @@ const percentage = (count, total) =>
             >
               <small>{{ String(index + 1).padStart(2, "0") }}</small
               ><span>{{ keyword.itemText }}</span
-              ><strong>{{ keyword.count }} <small>次</small></strong>
+              ><span class="keyword-meter"
+                ><i
+                  :style="{
+                    width: `${(keyword.count / Math.max(1, ...statistics.keywords.map((entry) => entry.count))) * 100}%`,
+                  }"
+                ></i
+              ></span>
+              <strong>{{ keyword.count }} <small>次</small></strong>
             </button>
           </li>
         </ol>

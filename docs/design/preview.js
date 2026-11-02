@@ -7,6 +7,8 @@ const revealObserver = new IntersectionObserver(entries => {
   }
 }, { threshold: 0.06 });
 for (const card of document.querySelectorAll('.demo-card, .utility-card, .spec-extract')) {
+  const siblings = [...card.parentElement.children];
+  card.style.setProperty('--scroll-delay', `${Math.min(siblings.indexOf(card),5)*55}ms`);
   card.classList.add('scroll-reveal'); revealObserver.observe(card);
 }
 document.querySelectorAll('[data-reading]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-reading]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));document.querySelector('#readingStatus').textContent=`当前选择：${button.dataset.reading}`;}));

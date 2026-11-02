@@ -36,20 +36,85 @@ const tokens = [
   ["。", "PUNCT"],
 ];
 
-test("progress reports real chunks and validation phase, preserves failures and never repeats a failed call", async () => {
-  const events = []; let calls = 0;
-  const response = await annotate(input(["ner", "keywords"], "林晓。".repeat(240)), config, {
-    useCache:false,
-    onProgress:event=>events.push(structuredClone(event)),
-    providerCall: async () => { calls++; throw Object.assign(new Error("fixture"), {code:"providerUnavailable"}); },
+test("shared evidence references preserve the same source and complete coverage across layers", async () => {
+  const request = input(
+    ["sentiment", "intent", "semantic", "relations", "events"],
+    "林晓在杭州阅读。",
+  );
+  const payload = {
+    evidence: [request.text],
+    sentiment: [[0, "NEUTRAL"]],
+    intent: [[0, "INFORM"]],
+    semantic: [[0, "TOPIC"]],
+    relations: [
+      { itemText: 0, label: "位于", subject: "林晓", object: "杭州" },
+    ],
+    events: [
+      {
+        itemText: 0,
+        label: "阅读",
+        roles: { subject: ["林晓"], location: ["杭州"] },
+      },
+    ],
+  };
+  const response = await annotate(request, config, {
+    useCache: false,
+    providerCall: async () => ({ payload, log: usage }),
   });
-  assert.equal(calls,response.execution.chunks);
-  const checkpoints=events.filter(event=>Number.isInteger(event.completedChunks));
-  assert.equal(checkpoints[0].completedChunks,0);
-  assert.equal(checkpoints.at(-1).completedChunks,calls);
-  assert.ok(checkpoints.every((event,index)=>index === 0 || event.completedChunks >= checkpoints[index-1].completedChunks));
-  assert.equal(events.at(-1).phase,"validating");
-  assert.equal(events.filter(event=>event.status === "failed").length,2);
+  assert.equal(response.status, "success");
+  for (const task of request.tasks)
+    assert.equal(response.layers[task].result.items[0].itemText, request.text);
+  validateResponse(request, response);
+});
+test("invalid shared evidence references fail without inventing text or retrying", async () => {
+  let calls = 0;
+  const request = input(["intent"]);
+  const response = await annotate(request, config, {
+    useCache: false,
+    providerCall: async () => {
+      calls++;
+      return {
+        payload: { evidence: [source], intent: [[2, "INFORM"]] },
+        log: usage,
+      };
+    },
+  });
+  assert.equal(response.layers.intent.status, "failed");
+  assert.equal(calls, 1);
+});
+
+test("progress reports real chunks and validation phase, preserves failures and never repeats a failed call", async () => {
+  const events = [];
+  let calls = 0;
+  const response = await annotate(
+    input(["ner", "keywords"], "林晓。".repeat(240)),
+    config,
+    {
+      useCache: false,
+      onProgress: (event) => events.push(structuredClone(event)),
+      providerCall: async () => {
+        calls++;
+        throw Object.assign(new Error("fixture"), {
+          code: "providerUnavailable",
+        });
+      },
+    },
+  );
+  assert.equal(calls, response.execution.chunks);
+  const checkpoints = events.filter((event) =>
+    Number.isInteger(event.completedChunks),
+  );
+  assert.equal(checkpoints[0].completedChunks, 0);
+  assert.equal(checkpoints.at(-1).completedChunks, calls);
+  assert.ok(
+    checkpoints.every(
+      (event, index) =>
+        index === 0 ||
+        event.completedChunks >= checkpoints[index - 1].completedChunks,
+    ),
+  );
+  assert.equal(events.at(-1).phase, "validating");
+  assert.equal(events.filter((event) => event.status === "failed").length, 2);
 });
 
 test("empty automatic intent, sentiment and semantic layers cannot claim success", async () => {

@@ -26,7 +26,7 @@ const entries = [
     id: "design",
     name: "设计规范",
     caption: "Foundations & components",
-    url: "/reference/design/preview.html?revision=1.4",
+    url: "/reference/design/preview.html?revision=1.5",
   },
   {
     id: "system",
@@ -97,6 +97,7 @@ function choose(id) {
         <button
           v-for="entry in navigationEntries"
           :key="entry.id"
+          class="nav-link"
           :class="{ selected: current.id === entry.id }"
           :aria-current="current.id === entry.id ? 'page' : undefined"
           @click="choose(entry.id)"
@@ -106,26 +107,27 @@ function choose(id) {
       </nav>
       <a href="/" class="developer-return">返回文本工作台 ↗</a>
     </header>
-    <main :key="current.id" class="developer-main page-arrival">
-      <GitTimeline v-if="current.id === 'git'" /><ModelLogs
-        v-else-if="current.id === 'logs'"
-      /><ArchitectureExplorer
-        v-else-if="
-          ['system', 'agent', 'frontend', 'backend', 'database'].includes(
-            current.id,
-          )
-        "
-        :view="current"
-        @navigate="choose"
-      /><iframe
-        v-else
-        ref="designFrame"
-        @load="syncFrameMotion"
-        :key="current.id"
-        :src="current.url"
-        :title="current.name"
-        class="developer-frame"
-      ></iframe>
-    </main>
+    <Transition name="page" mode="out-in" appear
+      ><main :key="current.id" class="developer-main">
+        <GitTimeline v-if="current.id === 'git'" /><ModelLogs
+          v-else-if="current.id === 'logs'"
+        /><ArchitectureExplorer
+          v-else-if="
+            ['system', 'agent', 'frontend', 'backend', 'database'].includes(
+              current.id,
+            )
+          "
+          :view="current"
+          @navigate="choose"
+        /><iframe
+          v-else
+          ref="designFrame"
+          @load="syncFrameMotion"
+          :key="current.id"
+          :src="current.url"
+          :title="current.name"
+          class="developer-frame"
+        ></iframe></main
+    ></Transition>
   </div>
 </template>

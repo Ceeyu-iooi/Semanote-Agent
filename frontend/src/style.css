@@ -1308,7 +1308,7 @@ b {
   font-family: var(--font-display);
   font-variant-numeric: tabular-nums;
 }
-.metric-card span {
+.metric-card > span {
   font-size: 10px;
   color: var(--color-muted);
 }

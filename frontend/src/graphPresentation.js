@@ -10,6 +10,7 @@ export function relationshipGraph(relations = [], entities = [], text = "") {
         label: entity?.label || "",
         evidence: [],
         count: 0,
+        facts: [],
       });
     const node = nodes.get(name);
     if (entity) {
@@ -41,6 +42,18 @@ export function relationshipGraph(relations = [], entities = [], text = "") {
         !nodes.get(name).evidence.includes(relation.itemText)
       )
         nodes.get(name).evidence.push(relation.itemText);
+    }
+    const subject = nodes.get(relation.subject?.itemText),
+      object = nodes.get(relation.object?.itemText);
+    if (subject && object) {
+      subject.facts.push({
+        text: `${relation.label} → ${relation.object.itemText}`,
+        itemId: relation.itemId,
+      });
+      object.facts.push({
+        text: `${relation.label} ← ${relation.subject.itemText}`,
+        itemId: relation.itemId,
+      });
     }
   }
   for (const item of entities.filter((item) => item.label !== "PERSON"))
@@ -74,6 +87,27 @@ export function eventTime(item) {
         ? date.getTime()
         : null,
   };
+}
+
+/** One neighbouring sentence on each side, sliced from original code points. */
+export function eventContext(text, item) {
+  const chars = Array.from(text || ""),
+    span = item.spans?.[0];
+  if (!span) return item.itemText;
+  let start = span.start,
+    end = span.end,
+    boundaries = 0;
+  while (start > 0 && boundaries < 2) {
+    start--;
+    if (/[。！？\n]/u.test(chars[start])) boundaries++;
+  }
+  if (boundaries === 2) start++;
+  boundaries = 0;
+  while (end < chars.length && boundaries < 2) {
+    if (/[。！？\n]/u.test(chars[end])) boundaries++;
+    end++;
+  }
+  return chars.slice(start, end).join("");
 }
 
 /** Try source-relative curve positions; choose the fewest card/label collisions. */

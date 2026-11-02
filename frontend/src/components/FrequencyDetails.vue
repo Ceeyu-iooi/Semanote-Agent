@@ -1,101 +1,164 @@
 <script setup>
 import { computed, ref, watch } from "vue";
 import { entityNames, labelNames } from "../api.js";
-const props = defineProps({ rows: Array, task: String, focusedIds: Array });
+import { frequencyGroups } from "../annotationPresentation.js";
+const props = defineProps({
+  rows: Array,
+  task: String,
+  focusedIds: Array,
+  sort: String,
+});
 const emit = defineEmits(["focus"]);
-const selectedKey = ref(null);
+const selectedKey = ref(null),
+  grouping = ref("term");
+watch(
+  () => props.task,
+  (task) => {
+    selectedKey.value = null;
+    grouping.value = ["pos", "sentiment", "intent", "errors"].includes(task)
+      ? "label"
+      : "term";
+  },
+  { immediate: true },
+);
 const groups = computed(() => {
-  const groups = new Map();
-  for (const { item } of props.rows || []) {
-    const key = JSON.stringify([item.itemText, item.label]);
-    if (!groups.has(key))
-      groups.set(key, {
-        key,
-        text: item.itemText,
-        label: item.label,
-        count: 0,
-        items: [],
-        spans: new Set(),
-      });
-    const group = groups.get(key);
-    group.items.push(item);
-    for (const span of item.spans || [])
-      group.spans.add(`${span.start}:${span.end}`);
-    group.count = group.spans.size;
-  }
-  return [...groups.values()];
+  const rows = frequencyGroups(
+    (props.rows || []).map((row) => row.item),
+    grouping.value,
+  );
+  return rows.sort((a, b) =>
+    props.sort === "position"
+      ? (a.items[0].spans[0]?.start || 0) - (b.items[0].spans[0]?.start || 0)
+      : b.count - a.count ||
+        (a.items[0].spans[0]?.start || 0) - (b.items[0].spans[0]?.start || 0),
+  );
 });
 const maximum = computed(() =>
   Math.max(1, ...groups.value.map((row) => row.count)),
 );
+const total = computed(() =>
+  groups.value.reduce((sum, row) => sum + row.count, 0),
+);
 const selected = computed(
   () =>
+    groups.value.find((row) => row.key === selectedKey.value) ||
     groups.value.find((row) =>
       row.items.some((item) => props.focusedIds?.includes(item.itemId)),
-    ) || groups.value.find((row) => row.key === selectedKey.value),
+    ),
 );
-function choose(row) {
-  selectedKey.value = row.key;
-  emit("focus", row.items[0]);
-}
-watch(
-  () => props.task,
-  () => (selectedKey.value = null),
-);
+const name = (row) =>
+  grouping.value === "label"
+    ? entityNames[row.text] || labelNames[row.text] || row.text
+    : row.text;
 </script>
 <template>
-  <div class="frequency-details">
+  <section class="frequency-details" :class="{ 'has-selection': selected }" aria-label="标注频次图">
+    <header class="frequency-summary">
+      <div>
+        <strong>{{ groups.length }}</strong
+        ><span
+          >{{ grouping === "label" ? "个类别" : "个不同词项"
+          }}<small>共 {{ total }} 次标注出现</small></span
+        >
+      </div>
+      <div
+        v-if="task !== 'segmentation' && task !== 'keywords'"
+        class="btn-group btn-group-sm"
+        role="group"
+        aria-label="频次聚合方式"
+      >
+        <button
+          class="btn btn-outline-primary"
+          :class="{ active: grouping === 'term' }"
+          :aria-pressed="grouping === 'term'"
+          @click="
+            grouping = 'term';
+            selectedKey = null;
+          "
+        >
+          按词项</button
+        ><button
+          class="btn btn-outline-primary"
+          :class="{ active: grouping === 'label' }"
+          :aria-pressed="grouping === 'label'"
+          @click="
+            grouping = 'label';
+            selectedKey = null;
+          "
+        >
+          按类别
+        </button>
+      </div>
+    </header>
     <div class="frequency-caption">
-      <span>词项 / 类别</span><span>原文出现次数</span>
+      <span>{{ grouping === "label" ? "类别分布" : "词项频次" }}</span
+      ><span>0 <i></i> {{ maximum }} 次</span>
     </div>
     <div class="frequency-rows">
       <button
-        v-for="row in groups"
+        v-for="(row, index) in groups"
         :key="row.key"
         class="frequency-row"
-        :class="{
-          selected: row.items.some((item) => focusedIds?.includes(item.itemId)),
-        }"
-        :aria-label="`${row.text}，${row.count} 次`"
-        @click="choose(row)"
+        :class="{ selected: selected?.key === row.key }"
+        :aria-pressed="selected?.key === row.key"
+        :aria-label="`${name(row)}，${row.count} 次`"
+        @click="selectedKey = row.key"
       >
         <span class="frequency-name"
-          ><strong>{{ row.text }}</strong
-          ><small v-if="row.label">{{
-            entityNames[row.label] || labelNames[row.label] || row.label
-          }}</small></span
+          ><small class="frequency-rank">{{
+            String(index + 1).padStart(2, "0")
+          }}</small
+          ><span
+            ><strong>{{ name(row) }}</strong
+            ><small v-if="grouping === 'term' && row.label">{{
+              entityNames[row.label] || labelNames[row.label] || row.label
+            }}</small></span
+          ></span
         ><span class="frequency-track"
           ><span
             :style="{ width: `${(row.count / maximum) * 100}%` }"
           ></span></span
-        ><b>{{ row.count }}</b>
+        ><b
+          >{{ row.count
+          }}<small
+            >{{ total ? ((row.count / total) * 100).toFixed(1) : 0 }}%</small
+          ></b
+        >
       </button>
     </div>
-    <div v-if="selected" class="frequency-evidence">
-      <strong>{{ selected.text }}</strong>
-      <div
-        v-for="item in selected.items.filter(
-          (item) => item.suggestion !== undefined,
-        )"
-        :key="item.itemId"
-        class="correction-detail"
-      >
-        建议：{{ item.suggestion || "删除"
-        }}<small>{{ item.explanation }}</small>
-      </div>
-      <span class="caption muted">点击位置回到原文</span>
-      <div class="d-flex flex-wrap gap-2">
-        <template v-for="item in selected.items" :key="item.itemId"
-          ><button
-            v-for="span in item.spans"
-            :key="span.start"
-            class="btn btn-outline-primary btn-sm"
+    <section v-if="selected" class="frequency-evidence">
+      <header>
+        <strong>{{ name(selected) }}</strong
+        ><span class="badge text-bg-light"
+          >{{ selected.count }} 次 · 原文证据</span
+        >
+      </header>
+      <p class="caption muted">
+        选择具体出现位置，定位到正文。区间使用 Unicode 码点。
+      </p>
+      <div class="frequency-occurrences">
+        <article
+          v-for="{ item, span } in [...selected.positions.values()].sort(
+            (a, b) => a.span.start - b.span.start,
+          )"
+          :key="`${item.itemId}-${span.start}`"
+        >
+          <button
+            class="evidence-occurrence"
             @click="emit('focus', { ...item, focusStart: span.start })"
           >
-            {{ span.start }}–{{ span.end }} ↗
-          </button></template
-        >
+            <span>{{ item.itemText }}</span
+            ><small>{{ span.start }}–{{ span.end }} ↗</small>
+          </button>
+          <p v-if="item.suggestion !== undefined" class="correction-detail">
+            建议：{{ item.suggestion || "删除"
+            }}<small>{{ item.explanation }}</small>
+          </p>
+        </article>
       </div>
-    </div>
-  </div>
+    </section>
+    <p v-else-if="groups.length" class="caption muted frequency-guide">
+      点击柱条展开对应的原文证据。
+    </p>
+  </section>
 </template>

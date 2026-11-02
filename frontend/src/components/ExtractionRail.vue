@@ -44,6 +44,13 @@ const titles = { left: "词项与证据", right: "语义与上下文" };
 function label(item) {
   return entityNames[item.label] || labelNames[item.label] || item.label || "";
 }
+function previewText(task, item) {
+  if (task === "relations")
+    return `${item.subject?.itemText || "主体"} → ${item.object?.itemText || "客体"}`;
+  if (task === "events")
+    return `${item.label} · ${(item.roles?.time || []).map((entry) => entry.itemText).join("、") || "时间未标明"}`;
+  return item.itemText;
+}
 function choose(card, item = null) {
   emit("focus", { task: card.task, itemId: item?.itemId || null });
 }
@@ -98,6 +105,8 @@ function choose(card, item = null) {
         :id="`rail-${side}-${card.task}`"
         class="accordion-collapse collapse"
         :class="{ show: opened === card.task }"
+        :inert="opened !== card.task"
+        :aria-hidden="opened !== card.task"
         role="region"
         :aria-labelledby="`rail-${side}-${card.task}-heading`"
       >
@@ -106,13 +115,13 @@ function choose(card, item = null) {
             <template v-if="card.status === 'success'"
               ><div v-if="card.items.length" class="extraction-chips">
                 <button
-                  v-for="item in card.items.slice(0, 3)"
+                  v-for="item in card.items.slice(0, 60)"
                   :key="item.itemId"
                   class="extraction-chip"
                   :class="`chip-${item.label || card.task}`"
                   @click="choose(card, item)"
                 >
-                  <span>{{ item.itemText }}</span
+                  <span>{{ previewText(card.task, item) }}</span
                   ><small v-if="label(item)">{{ label(item) }}</small>
                 </button>
               </div>
@@ -120,11 +129,18 @@ function choose(card, item = null) {
                 本篇未发现{{ taskNames[card.task] }}
               </p>
               <button
-                v-if="card.items.length > 3"
+                v-if="card.items.length"
                 class="extraction-more"
                 @click="choose(card)"
               >
-                查看全部 {{ card.items.length }} 项 <span>↗</span>
+                {{
+                  ["relations", "events"].includes(card.task)
+                    ? "打开交互图谱"
+                    : ["paragraphs", "semantic"].includes(card.task)
+                      ? "在正文查看此层"
+                      : `查看频次 · ${card.items.length} 项`
+                }}
+                <span>↗</span>
               </button></template
             >
             <p v-else-if="card.status === 'failed'" class="extraction-error">

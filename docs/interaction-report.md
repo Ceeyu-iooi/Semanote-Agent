@@ -1,5 +1,7 @@
 # 交互优化实施与验证
 
+> 历史实施记录：用户随后明确反馈全部需求仍需重做检查。本报告不代表用户验收；最新改动和重新复核见 [补验报告](interaction-rework-report.md)。
+
 2026-11-01，继续在 feature/immersive-workspace 上实现；基于 0.1.1 和既有沉浸工作区。本轮用户要求先通过 vibehub 整理表述，范围见 [需求](interaction-requirements.md)。未合并、未发布新版本，待用户验收。
 
 ## 实现与边界

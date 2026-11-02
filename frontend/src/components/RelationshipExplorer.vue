@@ -4,14 +4,23 @@ import { entityNames } from "../api.js";
 import {
   relationshipGraph,
   eventTime,
+  eventContext,
   routeRelations,
 } from "../graphPresentation.js";
-const props = defineProps({ layers: Object, text: String });
+const props = defineProps({
+  layers: Object,
+  text: String,
+  activeTask: String,
+  graphFocus: Object,
+});
 const emit = defineEmits(["focus"]);
 const tab = ref("events"),
   chosenEvent = ref(null),
   chosenEdge = ref(null),
+  chosenPerson = ref(null),
+  scope = ref("people"),
   hovered = ref(null),
+  focusedNode = ref(null),
   positions = ref({}),
   board = ref(null),
   zoom = ref(1);
@@ -19,8 +28,49 @@ const items = (task) =>
   props.layers?.[task]?.status === "success"
     ? props.layers[task].result.items
     : [];
-const graph = computed(() =>
+const fullGraph = computed(() =>
   relationshipGraph(items("relations"), items("ner"), props.text),
+);
+const graph = computed(() => {
+  const people = fullGraph.value.nodes.filter(
+    (node) => node.label === "PERSON",
+  );
+  if (scope.value !== "people" || !people.length) return fullGraph.value;
+  const names = new Set(people.map((node) => node.id));
+  return {
+    nodes: people,
+    edges: fullGraph.value.edges.filter(
+      (edge) =>
+        names.has(edge.subject.itemText) && names.has(edge.object.itemText),
+    ),
+  };
+});
+const activePerson = computed(() =>
+  fullGraph.value.nodes.find((node) => node.id === chosenPerson.value),
+);
+const spotlight = computed(() => hovered.value || focusedNode.value);
+watch(
+  () => props.activeTask,
+  (task) => {
+    if (task === "events" || task === "relations") tab.value = task;
+  },
+  { immediate: true },
+);
+// A repeated entry click is still a navigation intent even when the active layer did not change.
+watch(
+  () => props.graphFocus,
+  (focus) => {
+    if (!focus || !["events", "relations"].includes(focus.task)) return;
+    tab.value = focus.task;
+    if (!focus.itemId) return;
+    if (focus.task === "events") chosenEvent.value = focus.itemId;
+    else {
+      chosenEdge.value = focus.itemId;
+      chosenPerson.value = null;
+      if (!graph.value.edges.some((item) => item.itemId === focus.itemId))
+        scope.value = "all";
+    }
+  },
 );
 const events = computed(() =>
   items("events")
@@ -40,10 +90,10 @@ const activeEdge = computed(() =>
   graph.value.edges.find((item) => item.itemId === chosenEdge.value),
 );
 const width = computed(() =>
-  Math.max(820, Math.ceil(graph.value.nodes.length / 6) * 680),
+  Math.max(900, Math.ceil(graph.value.nodes.length / 6) * 680),
 );
 const height = computed(() =>
-  Math.max(510, Math.ceil(graph.value.nodes.length / 8) * 400),
+  Math.max(560, Math.ceil(graph.value.nodes.length / 8) * 400),
 );
 const nodes = computed(() =>
   graph.value.nodes.map((node, index, all) => {
@@ -73,8 +123,18 @@ const roleNames = {
   result: "结果",
 };
 let drag = null;
+let dragMoved = false;
+function choosePerson(node) {
+  if (dragMoved) {
+    dragMoved = false;
+    return;
+  }
+  chosenPerson.value = node.id;
+  chosenEdge.value = null;
+}
 function startDrag(event, node) {
   if (event.button !== 0) return;
+  dragMoved = false;
   event.currentTarget.setPointerCapture(event.pointerId);
   drag = {
     id: node.id,
@@ -86,6 +146,8 @@ function startDrag(event, node) {
 }
 function moveDrag(event) {
   if (!drag) return;
+  dragMoved ||=
+    Math.hypot(event.clientX - drag.clientX, event.clientY - drag.clientY) > 4;
   positions.value = {
     ...positions.value,
     [drag.id]: {
@@ -130,7 +192,9 @@ watch(
     positions.value = {};
     chosenEvent.value = null;
     chosenEdge.value = null;
+    chosenPerson.value = null;
     hovered.value = null;
+    focusedNode.value = null;
     drag = null;
   },
 );
@@ -206,6 +270,10 @@ watch(
               </dd>
             </div>
           </dl>
+          <details class="event-context" open>
+            <summary>上下文介绍 <small>来自原文相邻语句</small></summary>
+            <p>{{ eventContext(text, activeEvent) }}</p>
+          </details>
           <button
             class="btn btn-outline-primary btn-sm"
             @click="
@@ -219,6 +287,33 @@ watch(
     </template>
     <template v-else>
       <div class="graph-toolbar d-flex flex-wrap align-items-center gap-3">
+        <div
+          class="btn-group btn-group-sm"
+          role="group"
+          aria-label="关系图范围"
+        >
+          <button
+            class="btn btn-outline-primary"
+            :class="{ active: scope === 'people' }"
+            @click="
+              scope = 'people';
+              chosenPerson = null;
+              chosenEdge = null;
+            "
+          >
+            人物关系</button
+          ><button
+            class="btn btn-outline-primary"
+            :class="{ active: scope === 'all' }"
+            @click="
+              scope = 'all';
+              chosenPerson = null;
+              chosenEdge = null;
+            "
+          >
+            全部实体
+          </button>
+        </div>
         <p class="caption muted mb-0">
           拖动卡片整理布局 · 方向键移动 · 悬停或聚焦突出人物
         </p>
@@ -276,9 +371,9 @@ watch(
                 :class="{
                   active: chosenEdge === edge.itemId,
                   dimmed:
-                    hovered &&
-                    edge.subject.itemText !== hovered &&
-                    edge.object.itemText !== hovered,
+                    spotlight &&
+                    edge.subject.itemText !== spotlight &&
+                    edge.object.itemText !== spotlight,
                 }"
               >
                 <path :d="edge.d" marker-end="url(#relationArrow)" />
@@ -290,7 +385,10 @@ watch(
                   ><button
                     class="edge-label"
                     :aria-pressed="chosenEdge === edge.itemId"
-                    @click="chosenEdge = edge.itemId"
+                    @click="
+                      chosenEdge = edge.itemId;
+                      chosenPerson = null;
+                    "
                   >
                     {{ edge.label }} →
                   </button></foreignObject
@@ -302,8 +400,8 @@ watch(
               :key="node.id"
               class="person-node card"
               :class="{
-                dimmed: hovered && hovered !== node.id,
-                highlighted: hovered === node.id,
+                dimmed: spotlight && spotlight !== node.id,
+                highlighted: spotlight === node.id,
               }"
               :style="{ left: `${node.x}px`, top: `${node.y}px` }"
               @pointerdown="startDrag($event, node)"
@@ -313,13 +411,14 @@ watch(
               @lostpointercapture="drag = null"
               @pointerenter="hovered = node.id"
               @pointerleave="hovered = null"
-              @focus="hovered = node.id"
-              @blur="hovered = null"
+              @focus="focusedNode = node.id"
+              @blur="focusedNode = null"
               @keydown="moveKey($event, node)"
+              @click="choosePerson(node)"
             >
               <span class="person-heading"
                 ><span class="person-avatar">{{
-                  node.label === "PERSON" ? "人" : "实"
+                  node.label === "PERSON" ? Array.from(node.name)[0] : "实"
                 }}</span
                 ><span
                   ><strong>{{ node.name }}</strong
@@ -330,14 +429,67 @@ watch(
                     }}</small
                   ></span
                 ></span
-              ><span class="person-evidence">{{
+              ><span v-if="node.facts.length" class="person-facts"
+                ><small
+                  v-for="fact in node.facts.slice(0, 2)"
+                  :key="fact.itemId + fact.text"
+                  >{{ fact.text }}</small
+                ></span
+              ><span v-else class="person-evidence">{{
                 node.evidence[0] || "暂无附加原文信息"
-              }}</span>
+              }}</span
+              ><span class="person-scrim" aria-hidden="true"></span>
             </button>
           </div>
         </div>
       </div>
       <div class="network-evidence">
+        <section v-if="activePerson" class="person-dossier">
+          <header>
+            <span class="person-avatar">{{
+              Array.from(activePerson.name)[0]
+            }}</span>
+            <div>
+              <p class="eyebrow">人物信息与原文证据</p>
+              <h4>{{ activePerson.name }}</h4>
+            </div>
+            <button
+              class="btn btn-outline-primary btn-sm ms-auto"
+              @click="chosenPerson = null"
+            >
+              收起信息
+            </button>
+          </header>
+          <div class="row g-4">
+            <div class="col-md-4">
+              <h5>已标注的关系</h5>
+              <button
+                v-for="fact in activePerson.facts"
+                :key="fact.itemId + fact.text"
+                class="dossier-relation"
+                @click="
+                  chosenEdge = fact.itemId;
+                  chosenPerson = null;
+                  scope = 'all';
+                "
+              >
+                {{ fact.text }} ↗
+              </button>
+              <p v-if="!activePerson.facts.length" class="caption muted">
+                尚无明确关系标注
+              </p>
+            </div>
+            <div class="col-md-8">
+              <h5>原文中的人物信息</h5>
+              <blockquote
+                v-for="evidence in activePerson.evidence"
+                :key="evidence"
+              >
+                {{ evidence }}
+              </blockquote>
+            </div>
+          </div>
+        </section>
         <template v-if="activeEdge"
           ><span class="badge text-bg-primary">{{ activeEdge.label }}</span
           ><strong
@@ -354,7 +506,7 @@ watch(
             定位原文证据 ↗
           </button></template
         >
-        <p v-else class="caption muted mb-0">
+        <p v-else-if="!activePerson" class="caption muted mb-0">
           点击连线上的关系名称查看完整证据。{{ graph.edges.length }} 条关系 ·
           同名卡片仅按词面聚合，未进行身份消歧。
         </p>

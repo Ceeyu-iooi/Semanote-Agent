@@ -28,6 +28,7 @@ const entries = [
       <button
         v-for="[id, name, icon] in entries"
         :key="id"
+        class="nav-link"
         :class="{ active: page === id }"
         :aria-current="page === id ? 'page' : undefined"
         :disabled="id === 'workspace' && !hasDocument"
