@@ -29,4 +29,4 @@
 
 ## 独立复核
 
-`python tools/verify_initialization.py --audit-data` 将以流式 CSV 读取、按字段验证记录数，重算文本与行去重计数，并复核五个原件摘要；不会更改数据。公开克隆没有 profile 时，此项应明确跳过或报告缺少原件，不能冒充已通过本地数据审计。
+`node tools/verify-initialization.mjs --audit-data` 将以流式 CSV 读取、按字段验证记录数，重算文本与行去重计数，并复核五个原件摘要；不会更改数据。公开克隆没有 profile 时，此项应明确跳过或报告缺少原件，不能冒充已通过本地数据审计。

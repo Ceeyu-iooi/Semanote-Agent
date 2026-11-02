@@ -1,4 +1,16 @@
 document.querySelectorAll('[data-demo]').forEach(button=>button.addEventListener('click',()=>{document.querySelector('#demoStatus').textContent=button.dataset.demo;}));
+
+// Scroll reveals never control data or interaction availability.
+const revealObserver = new IntersectionObserver(entries => {
+  for (const entry of entries) if (entry.isIntersecting) {
+    entry.target.classList.add('scroll-visible'); revealObserver.unobserve(entry.target);
+  }
+}, { threshold: 0.06 });
+for (const card of document.querySelectorAll('.demo-card, .utility-card, .spec-extract')) {
+  const siblings = [...card.parentElement.children];
+  card.style.setProperty('--scroll-delay', `${Math.min(siblings.indexOf(card),5)*55}ms`);
+  card.classList.add('scroll-reveal'); revealObserver.observe(card);
+}
 document.querySelectorAll('[data-reading]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-reading]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));document.querySelector('#readingStatus').textContent=`当前选择：${button.dataset.reading}`;}));
 document.querySelector('#previewSearch').addEventListener('input',event=>{document.querySelector('#searchStatus').textContent=event.target.value?`正在查找：“${event.target.value}”`:'输入内容体验搜索反馈';});
 document.querySelectorAll('[data-width]').forEach(button=>button.addEventListener('click',()=>{const width=Number(button.dataset.width);document.querySelectorAll('[data-width]').forEach(item=>item.classList.toggle('selected',item===button));const demo=document.querySelector('#responsiveDemo');demo.style.maxWidth=`${width}px`;demo.classList.toggle('narrow',width<=833);document.querySelector('#responsiveStatus').textContent=`布局示例：${width}px`;}));
@@ -19,3 +31,5 @@ document.querySelectorAll('[data-pointer-tip],[data-hint]').forEach(element=>{
  element.addEventListener('pointermove',show);element.addEventListener('focus',show);element.addEventListener('pointerleave',hidePointerDesignTip);element.addEventListener('blur',hidePointerDesignTip);
 });
 window.addEventListener('scroll',hidePointerDesignTip,true);window.addEventListener('resize',hidePointerDesignTip);document.addEventListener('keydown',event=>{if(event.key==='Escape')hidePointerDesignTip();});
+
+document.querySelector('#specReplay').addEventListener('click',()=>{const workspace=document.querySelector('#specImmersive');workspace.classList.remove('spec-replaying');requestAnimationFrame(()=>requestAnimationFrame(()=>workspace.classList.add('spec-replaying')));});

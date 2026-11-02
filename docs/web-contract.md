@@ -15,13 +15,13 @@
 
 ## 需求的准确表述
 
-基于现有 Python 文本标注智能体，构建 Vue 3＋JavaScript＋Bootstrap 5 前端、Java 21＋Spring Boot 3.5 后端和 MySQL 8.4 存储的 B/S 软件。前端承担原文管理、交互标注、结果高亮和统计；后端承担导入校验、智能体调用、不可变修订/快照与恢复。实现“文本录入/导入 → 保存修订 → 自动候选或人工标注 → 显式保存快照 → 统计/JSON 导出”的单人工作流，多用户任务分配只保留扩展设计。
+基于现有 JavaScript 文本标注智能体，构建 Vue 3＋JavaScript＋Bootstrap 5 前端、Java 21＋Spring Boot 3.5 后端和 MySQL 8.4 存储的 B/S 软件。前端承担原文管理、交互标注、结果高亮和统计；后端承担导入校验、智能体调用、不可变修订/快照与恢复。实现“文本录入/导入 → 保存修订 → 自动候选或人工标注 → 显式保存快照 → 统计/JSON 导出”的单人工作流，多用户任务分配只保留扩展设计。
 
 统一沿用 Apple DESIGN.md 与 preview 的视觉语言，维护离线设计 HTML、共享变量及开发者中心。开发者中心提供设计规范、整体/智能体/前端/后端/数据库 Archify 图、Changelog 和 GitFlow 可视化。新增规范登记来源、用途和兼容性，保持既有界面一致。
 
 ## 已确认约束
 
-- Vue 3、Vite/npm、Bootstrap 5；Java 21、Spring Boot 3.5、Maven/JDBC；MySQL 8.4，结构脚本、SQL 备份/恢复；Windows 本地、当前 Chrome/Edge。Java 通过本地 JSON 子进程调用 Python；不改独立模块协议。
+- Vue 3、Vite/npm、Bootstrap 5；Java 21、Spring Boot 3.5、Maven/JDBC；MySQL 8.4，结构脚本、SQL 备份/恢复；Windows 本地、当前 Chrome/Edge。Java 通过本地 JSON 子进程调用 Node.js / JavaScript；活动模块协议为 1.1.0。
 - DOCX、UTF-8（允许 BOM）TXT/MD/CSV。TXT/MD/DOCX 整份正文一文本；CSV 首行三列列名，随后每格独立文本，重复不合并，保留来源逻辑记录号和列号/名。保留原文空格与换行，纯空白跳过并报告；不自动猜编码。
 - 最多 10,000 Unicode 码点/文本、5 MiB/文件、500 个非空白文本/导入或批量操作；超过任何限制整次导入拒绝，不静默截断。常规导入遵循该限制；本轮用户另行授权本地 train.csv 初始语料，在启动时精确去重、幂等加入，保留全部来源位置，不改变常规批量/模型调用上限。
 - 草稿只在当前页面保留；保存文本生成不可变修订，旧标注留历史，新修订当前快照清空。归档代替删除，可恢复；不承诺永久保留期限。
@@ -49,7 +49,7 @@
 | GET /documents/{id}/exports/{snapshotId} | 下载 JSON 1.0.0，固定快照/原文/来源/统计 |
 | GET /statistics | 未归档文档当前修订的已保存快照统计，缺层数量明确 |
 
-人工 layers 使用智能体已存在的候选表达：分词 itemText；关键词 itemText；POS tokenIndex/label；NER itemText/label/occurrence。服务经同一 Python 转换器生成可信位置/身份，不能接收客户端自报可信区间。未包含的层为未执行；合法空关键词/实体层为成功零结果。保存部分层必须 allowPartial=true。
+人工 layers 使用智能体已存在的候选表达：分词 itemText；关键词 itemText；POS tokenIndex/label；NER itemText/label/occurrence。服务经同一 JavaScript 转换器生成可信位置/身份，不能接收客户端自报可信区间。未包含的层为未执行；合法空关键词/实体层为成功零结果。保存部分层必须 allowPartial=true。
 
 ## 存储与运行边界
 

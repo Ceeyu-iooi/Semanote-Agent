@@ -1,14 +1,310 @@
 <script setup>
-import { computed,onMounted,onUnmounted,reactive,ref,watch } from 'vue';
-import { request, taskNames } from '../api.js';
-import PointerTip from './PointerTip.vue';
-const data=ref(null),busy=ref(false),error=ref(''),expanded=ref(null),tip=ref(null);
-const filters=reactive({provider:'',model:'',state:'',cache:'',query:'',sort:'time',page:1,size:20});let sequence=0,timer;
-const summary=computed(()=>data.value?.summary||{}),maxTokens=computed(()=>Math.max(1,summary.value.promptTokens||0,summary.value.completionTokens||0,summary.value.cachedTokens||0));
-async function load(){const current=++sequence;busy.value=true;error.value='';try{const result=await request('/model-logs?'+new URLSearchParams(filters));if(current===sequence)data.value=result;}catch(e){if(current===sequence)error.value=e.message;}finally{if(current===sequence)busy.value=false;}}
-watch(()=>[filters.provider,filters.model,filters.state,filters.cache,filters.query,filters.sort],()=>{filters.page=1;clearTimeout(timer);timer=setTimeout(load,180);});
-watch(()=>filters.page,load);onMounted(load);onUnmounted(()=>{sequence++;clearTimeout(timer);});
-const displayTime=value=>value?new Date(value).toLocaleString('zh-CN',{hour12:false}):'—';
-function showTip(event,label,count){tip.value={x:event.clientX,y:event.clientY,height:100,label,count};}
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue";
+import { request, taskNames } from "../api.js";
+import PointerTip from "./PointerTip.vue";
+const data = ref(null),
+  busy = ref(false),
+  error = ref(""),
+  expanded = ref(null),
+  tip = ref(null);
+const filters = reactive({
+  provider: "",
+  model: "",
+  state: "",
+  cache: "",
+  query: "",
+  sort: "time",
+  page: 1,
+  size: 20,
+});
+let sequence = 0,
+  timer;
+const summary = computed(() => data.value?.summary || {}),
+  maxTokens = computed(() =>
+    Math.max(
+      1,
+      summary.value.promptTokens || 0,
+      summary.value.completionTokens || 0,
+      summary.value.cachedTokens || 0,
+    ),
+  );
+async function load() {
+  const current = ++sequence;
+  busy.value = true;
+  error.value = "";
+  try {
+    const result = await request("/model-logs?" + new URLSearchParams(filters));
+    if (current === sequence) data.value = result;
+  } catch (e) {
+    if (current === sequence) error.value = e.message;
+  } finally {
+    if (current === sequence) busy.value = false;
+  }
+}
+watch(
+  () => [
+    filters.provider,
+    filters.model,
+    filters.state,
+    filters.cache,
+    filters.query,
+    filters.sort,
+  ],
+  () => {
+    filters.page = 1;
+    clearTimeout(timer);
+    timer = setTimeout(load, 180);
+  },
+);
+watch(() => filters.page, load);
+onMounted(load);
+onUnmounted(() => {
+  sequence++;
+  clearTimeout(timer);
+});
+const displayTime = (value) =>
+  value ? new Date(value).toLocaleString("zh-CN", { hour12: false }) : "—";
+function showTip(event, label, count) {
+  tip.value = { x: event.clientX, y: event.clientY, height: 100, label, count };
+}
 </script>
-<template><section class="model-logs"><div class="panel-toolbar"><div><p class="eyebrow">MODEL OBSERVABILITY</p><h1>模型调用日志</h1><p class="caption muted">筛选范围内的真实调用与本地复用。</p></div><button class="btn btn-outline-primary" :disabled="busy" @click="load">{{ busy?'刷新中…':'刷新记录' }}</button></div><p v-if="error" class="feedback error-feedback" role="alert">{{ error }}</p><div v-if="data" class="log-summary"><article><span>远程请求</span><strong>{{ summary.calls }}</strong></article><article><span>本地复用</span><strong>{{ summary.localHits }}</strong></article><article><span>失败请求</span><strong>{{ summary.failures }}</strong></article><article><span>供应商缓存命中</span><strong>{{ summary.promptTokens?(summary.cachedTokens/summary.promptTokens*100).toFixed(1)+'%':'—' }}</strong></article><div class="log-token-chart"><button v-for="[key,label] in [['promptTokens','输入'],['completionTokens','输出'],['cachedTokens','缓存输入']]" :key="key" class="bar-row" @pointermove="showTip($event,label,summary[key])" @pointerleave="tip=null" @focus="tip={x:100,y:100,height:100,label,count:summary[key]}"><span>{{ label }}</span><span class="bar-track"><span :style="{width:`${summary[key]/maxTokens*100}%`}"></span></span><strong>{{ summary[key].toLocaleString() }}</strong></button></div></div><section class="surface"><div class="log-filters"><label>供应商<select v-model="filters.provider" class="form-select"><option value="">全部</option><option v-for="provider in data?.providers" :key="provider">{{ provider }}</option></select></label><label>模型<select v-model="filters.model" class="form-select"><option value="">全部</option><option v-for="model in data?.models" :key="model">{{ model }}</option></select></label><label>状态<select v-model="filters.state" class="form-select"><option value="">全部</option><option value="success">成功</option><option value="failed">失败</option><option value="running">执行中</option></select></label><label>来源<select v-model="filters.cache" class="form-select"><option value="">全部</option><option value="miss">远程调用</option><option value="local">本地缓存</option></select></label><label>排序<select v-model="filters.sort" class="form-select"><option value="time">最近优先</option><option value="duration">耗时优先</option></select></label><label>查询<input v-model="filters.query" type="search" class="form-control" placeholder="模型 / 请求 ID"></label></div><p v-if="busy" class="caption log-refresh" role="status">正在更新筛选结果…</p><div class="log-table-wrap" :aria-busy="busy"><table class="log-table"><thead><tr><th>时间 / 供应商</th><th>模型 / 任务</th><th>状态</th><th>耗时</th><th>输入 / 输出</th><th>缓存</th><th>详情</th></tr></thead><tbody><template v-for="row in data?.rows" :key="row.id"><tr><td>{{ displayTime(row.startedAt) }}<small>{{ row.provider }}</small></td><td>{{ row.model }}<small>{{ row.tasks.map(task=>taskNames[task]).join('、') }}</small></td><td><span class="quiet-badge">{{ row.state==='success'?'成功':row.state==='failed'?'失败':'执行中' }}</span></td><td>{{ row.durationMs===null?'—':`${(row.durationMs/1000).toFixed(2)} s` }}</td><td>{{ row.promptTokens??'—' }} / {{ row.completionTokens??'—' }}</td><td>{{ row.cache==='local'?'本地复用':row.cachedTokens===null?'未提供':`${row.cachedTokens} tokens` }}</td><td><button class="text-action" :aria-expanded="expanded===row.id" @click="expanded=expanded===row.id?null:row.id">{{ expanded===row.id?'收起':'展开' }}</button></td></tr><tr v-if="expanded===row.id"><td colspan="7"><dl class="log-detail"><div><dt>调用 ID</dt><dd>{{ row.id }}</dd></div><div><dt>任务 ID</dt><dd>{{ row.jobId||'独立调用' }}</dd></div><div><dt>实际模型</dt><dd>{{ row.resolvedModel||row.model }}</dd></div><div><dt>诊断</dt><dd>{{ row.errorCode||'无错误' }}</dd></div><div><dt>提示版本</dt><dd>{{ row.promptVersion }}</dd></div></dl></td></tr></template></tbody></table><div v-if="data&&!data.total" class="empty-state">{{ Object.values(filters).some(v=>typeof v==='string'&&v&&v!=='time')?'没有匹配的调用记录。':'尚无模型调用。' }}</div></div><div v-if="data" class="pagination-bar"><span>{{ data.total }} 条记录</span><button class="utility-button" :disabled="busy||filters.page<=1" @click="filters.page--">上一页</button><span>{{ filters.page }} / {{ Math.max(1,Math.ceil(data.total/data.size)) }}</span><button class="utility-button" :disabled="busy||filters.page*data.size>=data.total" @click="filters.page++">下一页</button></div></section><p class="caption muted mt-3">token 以供应商 usage 为准；{{ summary.unknownUsage||0 }} 条请求未取得完整用量，{{ summary.unknownCacheUsage||0 }} 条未取得缓存用量。未配置服务价格，因此不推算金额。日志不含原文与密钥。</p><PointerTip :anchor="tip"><strong>{{ tip?.label }}</strong><p>{{ tip?.count?.toLocaleString() }} tokens</p></PointerTip></section></template>
+<template>
+  <section class="model-logs">
+    <div class="panel-toolbar">
+      <div>
+        <p class="eyebrow">MODEL OBSERVABILITY</p>
+        <h1>模型调用日志</h1>
+        <p class="caption muted">筛选范围内的真实调用与本地复用。</p>
+      </div>
+      <button class="btn btn-outline-primary" :disabled="busy" @click="load">
+        {{ busy ? "刷新中…" : "刷新记录" }}
+      </button>
+    </div>
+    <p v-if="error" class="feedback error-feedback" role="alert">{{ error }}</p>
+    <div v-if="data" class="log-summary">
+      <article>
+        <span>远程请求</span><strong>{{ summary.calls }}</strong>
+      </article>
+      <article>
+        <span>本地复用</span><strong>{{ summary.localHits }}</strong>
+      </article>
+      <article>
+        <span>失败请求</span><strong>{{ summary.failures }}</strong>
+      </article>
+      <article>
+        <span>供应商缓存命中</span
+        ><strong>{{
+          summary.promptTokens
+            ? ((summary.cachedTokens / summary.promptTokens) * 100).toFixed(1) +
+              "%"
+            : "—"
+        }}</strong>
+      </article>
+      <div class="log-token-chart">
+        <button
+          v-for="[key, label] in [
+            ['promptTokens', '输入'],
+            ['completionTokens', '输出'],
+            ['cachedTokens', '缓存输入'],
+          ]"
+          :key="key"
+          class="bar-row"
+          @pointermove="showTip($event, label, summary[key])"
+          @pointerleave="tip = null"
+          @focus="
+            tip = { x: 100, y: 100, height: 100, label, count: summary[key] }
+          "
+        >
+          <span>{{ label }}</span
+          ><span class="bar-track"
+            ><span
+              :style="{ width: `${(summary[key] / maxTokens) * 100}%` }"
+            ></span></span
+          ><strong>{{ summary[key].toLocaleString() }}</strong>
+        </button>
+      </div>
+    </div>
+    <section class="surface">
+      <div class="log-filters">
+        <label
+          >供应商<select v-model="filters.provider" class="form-select">
+            <option value="">全部</option>
+            <option v-for="provider in data?.providers" :key="provider">
+              {{ provider }}
+            </option>
+          </select></label
+        ><label
+          >模型<select v-model="filters.model" class="form-select">
+            <option value="">全部</option>
+            <option v-for="model in data?.models" :key="model">
+              {{ model }}
+            </option>
+          </select></label
+        ><label
+          >状态<select v-model="filters.state" class="form-select">
+            <option value="">全部</option>
+            <option value="success">成功</option>
+            <option value="failed">失败</option>
+            <option value="running">执行中</option>
+          </select></label
+        ><label
+          >来源<select v-model="filters.cache" class="form-select">
+            <option value="">全部</option>
+            <option value="miss">远程调用</option>
+            <option value="local">本地缓存</option>
+          </select></label
+        ><label
+          >排序<select v-model="filters.sort" class="form-select">
+            <option value="time">最近优先</option>
+            <option value="duration">耗时优先</option>
+          </select></label
+        ><label
+          >查询<input
+            v-model="filters.query"
+            type="search"
+            class="form-control"
+            placeholder="模型 / 请求 ID"
+        /></label>
+      </div>
+      <p v-if="busy" class="caption log-refresh" role="status">
+        正在更新筛选结果…
+      </p>
+      <div class="log-table-wrap" :aria-busy="busy">
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th>时间 / 供应商</th>
+              <th>模型 / 任务</th>
+              <th>状态</th>
+              <th>耗时</th>
+              <th>输入 / 输出</th>
+              <th>缓存</th>
+              <th>详情</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template v-for="row in data?.rows" :key="row.id"
+              ><tr>
+                <td>
+                  {{ displayTime(row.startedAt)
+                  }}<small>{{ row.provider }}</small>
+                </td>
+                <td>
+                  {{ row.model
+                  }}<small>{{
+                    row.tasks.map((task) => taskNames[task]).join("、")
+                  }}</small>
+                </td>
+                <td>
+                  <span class="quiet-badge">{{
+                    row.state === "success"
+                      ? "成功"
+                      : row.state === "failed"
+                        ? "失败"
+                        : "执行中"
+                  }}</span>
+                </td>
+                <td>
+                  {{
+                    row.durationMs === null
+                      ? "—"
+                      : `${(row.durationMs / 1000).toFixed(2)} s`
+                  }}
+                </td>
+                <td>
+                  {{ row.promptTokens ?? "—" }} /
+                  {{ row.completionTokens ?? "—" }}
+                </td>
+                <td>
+                  {{
+                    row.cache === "local"
+                      ? "本地复用"
+                      : row.cachedTokens === null
+                        ? "未提供"
+                        : `${row.cachedTokens} tokens`
+                  }}
+                </td>
+                <td>
+                  <button
+                    class="text-action"
+                    :aria-expanded="expanded === row.id"
+                    @click="expanded = expanded === row.id ? null : row.id"
+                  >
+                    {{ expanded === row.id ? "收起" : "展开" }}
+                  </button>
+                </td>
+              </tr>
+              <tr v-if="expanded === row.id">
+                <td colspan="7">
+                  <dl class="log-detail">
+                    <div>
+                      <dt>调用 ID</dt>
+                      <dd>{{ row.id }}</dd>
+                    </div>
+                    <div>
+                      <dt>任务 ID</dt>
+                      <dd>{{ row.jobId || "独立调用" }}</dd>
+                    </div>
+                    <div>
+                      <dt>实际模型</dt>
+                      <dd>{{ row.resolvedModel || row.model }}</dd>
+                    </div>
+                    <div>
+                      <dt>诊断</dt>
+                      <dd>{{ row.errorCode || "无错误" }}</dd>
+                    </div>
+                    <div>
+                      <dt>提示版本</dt>
+                      <dd>{{ row.promptVersion }}</dd>
+                    </div>
+                  </dl>
+                </td>
+              </tr></template
+            >
+          </tbody>
+        </table>
+        <div v-if="data && !data.total" class="empty-state">
+          {{
+            Object.values(filters).some(
+              (v) => typeof v === "string" && v && v !== "time",
+            )
+              ? "没有匹配的调用记录。"
+              : "尚无模型调用。"
+          }}
+        </div>
+      </div>
+      <div v-if="data" class="pagination-bar">
+        <span>{{ data.total }} 条记录</span
+        ><button
+          class="utility-button"
+          :disabled="busy || filters.page <= 1"
+          @click="filters.page--"
+        >
+          上一页</button
+        ><span
+          >{{ filters.page }} /
+          {{ Math.max(1, Math.ceil(data.total / data.size)) }}</span
+        ><button
+          class="utility-button"
+          :disabled="busy || filters.page * data.size >= data.total"
+          @click="filters.page++"
+        >
+          下一页
+        </button>
+      </div>
+    </section>
+    <p class="caption muted mt-3">
+      token 以供应商 usage 为准；{{
+        summary.unknownUsage || 0
+      }}
+      条请求未取得完整用量，{{
+        summary.unknownCacheUsage || 0
+      }}
+      条未取得缓存用量。未配置服务价格，因此不推算金额。日志不含原文与密钥。
+    </p>
+    <PointerTip :anchor="tip"
+      ><strong>{{ tip?.label }}</strong>
+      <p>{{ tip?.count?.toLocaleString() }} tokens</p></PointerTip
+    >
+  </section>
+</template>
