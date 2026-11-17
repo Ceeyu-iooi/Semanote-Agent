@@ -1,3 +1,14 @@
+/** Group opposite directions into one visual link while retaining every evidence record. */
+export function groupRelationships(relations) {
+  const groups = new Map();
+  for (const item of relations) {
+    const key = JSON.stringify([item.subject.itemText, item.object.itemText].sort());
+    if (!groups.has(key)) groups.set(key, { ...item, records: [] });
+    groups.get(key).records.push(item);
+  }
+  return [...groups.values()];
+}
+
 /** Same literal names share a display node, never a claim of resolved identity. */
 export function relationshipGraph(relations = [], entities = [], text = "") {
   const nodes = new Map();
@@ -108,78 +119,4 @@ export function eventContext(text, item) {
     end++;
   }
   return chars.slice(start, end).join("");
-}
-
-/** Try source-relative curve positions; choose the fewest card/label collisions. */
-export function routeRelations(nodes, relations, width, height) {
-  const labels = [];
-  return relations.map((edge) => {
-    const from = nodes.find((node) => node.id === edge.subject.itemText),
-      to = nodes.find((node) => node.id === edge.object.itemText);
-    if (from.id === to.id) {
-      const direction = from.x + 340 < width ? 1 : -1;
-      const anchor = from.x + (direction > 0 ? 200 : 0),
-        x = anchor + direction * 80,
-        y = from.y + 70;
-      labels.push({ x, y });
-      return {
-        ...edge,
-        x,
-        y,
-        d: `M${anchor} ${from.y + 30} C${anchor + direction * 150} ${from.y - 30} ${anchor + direction * 150} ${from.y + 170} ${anchor} ${from.y + 110}`,
-      };
-    }
-    const x1 = from.x + 100,
-      y1 = from.y + 70,
-      x2 = to.x + 100,
-      y2 = to.y + 70;
-    const dx = x2 - x1,
-      dy = y2 - y1,
-      length = Math.max(1, Math.hypot(dx, dy));
-    const options = [];
-    for (const bend of [0, 60, -60, 120, -120, 180, -180, 240, -240]) {
-      const cx = (x1 + x2) / 2 - (dy / length) * bend * 2,
-        cy = (y1 + y2) / 2 + (dx / length) * bend * 2;
-      for (const t of [0.5, 0.35, 0.65]) {
-        const x = (1 - t) ** 2 * x1 + 2 * t * (1 - t) * cx + t * t * x2,
-          y = (1 - t) ** 2 * y1 + 2 * t * (1 - t) * cy + t * t * y2;
-        const cardCollisions = nodes.filter(
-          (node) =>
-            x + 62 > node.x - 8 &&
-            x - 62 < node.x + 208 &&
-            y + 20 > node.y - 8 &&
-            y - 20 < node.y + 148,
-        ).length;
-        const labelCollisions = labels.filter(
-          (label) => Math.abs(label.x - x) < 124 && Math.abs(label.y - y) < 42,
-        ).length;
-        const outside = x < 64 || x > width - 64 || y < 24 || y > height - 24;
-        options.push({
-          x,
-          y,
-          cx,
-          cy,
-          penalty:
-            cardCollisions * 10 + labelCollisions * 5 + (outside ? 100 : 0),
-        });
-      }
-    }
-    const chosen = options.sort((a, b) => a.penalty - b.penalty)[0];
-    labels.push(chosen);
-    const vx = x2 - chosen.cx,
-      vy = y2 - chosen.cy;
-    const ratio = Math.min(
-      106 / Math.max(0.01, Math.abs(vx)),
-      76 / Math.max(0.01, Math.abs(vy)),
-    );
-    return {
-      ...edge,
-      x: chosen.x,
-      y: chosen.y,
-      d:
-        from.id === to.id
-          ? `M${x1} ${from.y} c-110 -80 110 -80 0 0`
-          : `M${x1} ${y1} Q${chosen.cx} ${chosen.cy} ${x2 - vx * ratio} ${y2 - vy * ratio}`,
-    };
-  });
 }

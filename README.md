@@ -1,24 +1,26 @@
 # Semanote-Agent
 
+> 当前界面调整及验证状态见 [界面调整记录](docs/interface-refinement-report.md)。首页图为上一轮界面，使用原创合成数据。
+
 **以原文为中心，完成可检查、可修正、可追溯的中文文本标注。**
 
 Vue 3 · JavaScript · Bootstrap 5 ｜ Java 21 · Spring Boot ｜ JavaScript Agent · MySQL
 
 [开始使用](#开始使用) · [标注能力](#标注能力) · [架构与设计](#架构与设计) · [验证与边界](#验证与边界)
 
-![实际工作区：中央原文、两侧标注卡片与正文后的交互图表，内容为原创合成文本](assets/readme/workspace.png)
+![工作空间首页：文本、任务和标注统计，使用原创合成示例数据](assets/readme/dashboard.png)
 
-从导入到审阅，在同一份原文上完成十一层标注。顶部导航切换文本库、工作台、任务和调用日志；进入工作台后，原文居中，抽取卡片随真实结果返回，图表紧随正文。
+从导入到审阅，在同一份原文上完成十一层标注。首页展示文本、任务与统计；进入工作台后，可对照原文检查和修正结果。
 
 ~~~text
 导入 / 输入 → AI 候选 → 审阅与人工修正 → 保存快照 → 统计与导出
               JavaScript Agent          Java / MySQL
 ~~~
 
-- **逐字有据**：分词边界、关键词波浪线、词性色彩、实体底色可叠加；点击卡片、词项或图表回到原文证据。
-- **修改可恢复**：自动候选显式保存，人工结果独立成版；原文改动生成新修订，历史标注保留在对应版本。
-- **每篇看清楚**：柱图、雷达图、实体环图、关系卡片及事件时间轴呈现当前展示版本，候选、草稿与快照分别标明。
-- **减少重复调用**：同一文本块合并推理，成功层缓存复用，失败显式重试。调用日志区分实际请求、已知 token 与未知用量。
+- 原文可叠加分词边界、关键词、词性和实体标记；点击结果可定位原文。
+- 自动结果先作为候选，人工修正后可保存快照。原文修改会产生新修订，历史标注保留在对应版本。
+- 统计和逐篇图谱展示当前选定版本；模型日志按日期展示已知 Token 用量和供应商缓存命中率。
+- 相同文本块可复用成功结果，失败层需显式重试；未知用量不会当作零。
 
 <a id="开始使用"></a>
 ## 开始使用
@@ -61,6 +63,8 @@ node tools/local-web.mjs start
 <a id="架构与设计"></a>
 ## 架构与设计
 
+![系统框架：浏览器、Web 服务、标注智能体与数据存储](assets/readme/system-framework.svg)
+
 | 层 | 实现与职责 |
 |---|---|
 | 浏览器 | Vue / JavaScript / Bootstrap：沉浸工作区、人工编辑、逐篇图谱 |
@@ -68,7 +72,7 @@ node tools/local-web.mjs start
 | 智能体 | Node.js 原生 JavaScript：合并推理、分块、原文定位、依赖校验、缓存与脱敏日志 |
 | 存储 | MySQL 8.4 业务版本；本机文件保存配置、推理缓存与调用元数据 |
 
-[独立开发者中心](http://127.0.0.1:8080/developer) 使用顶部导航：共享设计 preview、六份 Archify 图、真实 Git 父关系/分支颜色/时间定位、逐文件代码差异、调用日志和 Changelog。系统图节点可进入对应前端、后端、智能体及数据库框架。
+[独立开发者中心](http://127.0.0.1:8080/developer) 提供设计规范、Bootstrap 组件展示、系统框架、调用日志和 Git 时间轴。系统图节点可进入前端、后端、智能体和数据库框架。
 
 [系统 Archify](docs/diagrams/system-architecture.html) · [智能体 Archify](docs/diagrams/agent-architecture.html) · [Apple 来源设计规范](docs/design/README.md) · [Web 契约](docs/web-contract.md) · [标注契约](docs/annotation-contract.md)
 

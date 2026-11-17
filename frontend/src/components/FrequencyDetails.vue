@@ -2,6 +2,7 @@
 import { computed, ref, watch } from "vue";
 import { entityNames, labelNames } from "../api.js";
 import { frequencyGroups } from "../annotationPresentation.js";
+import PointerTip from "./PointerTip.vue";
 const props = defineProps({
   rows: Array,
   task: String,
@@ -9,18 +10,18 @@ const props = defineProps({
   sort: String,
 });
 const emit = defineEmits(["focus"]);
-const selectedKey = ref(null),
+const selectedKey = ref(null), tip = ref(null),
   grouping = ref("term");
 watch(
   () => props.task,
   (task) => {
     selectedKey.value = null;
-    grouping.value = ["pos", "sentiment", "intent", "errors"].includes(task)
-      ? "label"
-      : "term";
+    grouping.value = task === "keywords" ? "term" : "label";
   },
   { immediate: true },
 );
+// A new source or rail selection takes precedence over an earlier chart choice.
+watch(() => props.focusedIds, () => { selectedKey.value = null; });
 const groups = computed(() => {
   const rows = frequencyGroups(
     (props.rows || []).map((row) => row.item),
@@ -39,13 +40,22 @@ const maximum = computed(() =>
 const total = computed(() =>
   groups.value.reduce((sum, row) => sum + row.count, 0),
 );
+const palette = ['#50bdb5', '#8a83c4', '#e4ad68', '#699dc8', '#d58f9b', '#7daf7a', '#aa94be', '#d2b878'];
+const ringGradient = computed(() => {
+  let offset = 0;
+  return `conic-gradient(${groups.value.map((row, index) => {
+    const start = offset; offset += total.value ? row.count / total.value * 100 : 0;
+    return `${palette[index % palette.length]} ${start}% ${offset}%`;
+  }).join(', ')})`;
+});
 const selected = computed(
   () =>
-    groups.value.find((row) => row.key === selectedKey.value) ||
+    props.task === 'keywords' ? null : groups.value.find((row) => row.key === selectedKey.value) ||
     groups.value.find((row) =>
       row.items.some((item) => props.focusedIds?.includes(item.itemId)),
-    ),
+    ) || (props.task !== 'keywords' ? groups.value[0] : null),
 );
+function showTip(row, event) { const rect = event.currentTarget.getBoundingClientRect(); tip.value = { x: event.clientX || rect.left, y: event.clientY || rect.bottom, row }; }
 const name = (row) =>
   grouping.value === "label"
     ? entityNames[row.text] || labelNames[row.text] || row.text
@@ -53,7 +63,7 @@ const name = (row) =>
 </script>
 <template>
   <section class="frequency-details" :class="{ 'has-selection': selected }" aria-label="标注频次图">
-    <header class="frequency-summary">
+    <header v-if="task !== 'keywords'" class="frequency-summary">
       <div>
         <strong>{{ groups.length }}</strong
         ><span
@@ -61,48 +71,23 @@ const name = (row) =>
           }}<small>共 {{ total }} 次标注出现</small></span
         >
       </div>
-      <div
-        v-if="task !== 'segmentation' && task !== 'keywords'"
-        class="btn-group btn-group-sm"
-        role="group"
-        aria-label="频次聚合方式"
-      >
-        <button
-          class="btn btn-outline-primary"
-          :class="{ active: grouping === 'term' }"
-          :aria-pressed="grouping === 'term'"
-          @click="
-            grouping = 'term';
-            selectedKey = null;
-          "
-        >
-          按词项</button
-        ><button
-          class="btn btn-outline-primary"
-          :class="{ active: grouping === 'label' }"
-          :aria-pressed="grouping === 'label'"
-          @click="
-            grouping = 'label';
-            selectedKey = null;
-          "
-        >
-          按类别
-        </button>
-      </div>
     </header>
-    <div class="frequency-caption">
-      <span>{{ grouping === "label" ? "类别分布" : "词项频次" }}</span
-      ><span>0 <i></i> {{ maximum }} 次</span>
+    <div v-if="task !== 'keywords'" class="frequency-caption"><span>{{ grouping === "label" ? "类别分布" : "词项频次" }}</span><span>选择查看原文</span></div>
+    <div v-if="grouping === 'label' && groups.length" class="frequency-donut-layout">
+      <div class="frequency-donut" :style="{ background: ringGradient }"><div><strong>{{ total }}</strong><small>次标注</small></div></div>
+      <div class="frequency-donut-legend"><button v-for="(row, index) in groups" :key="row.key" :class="{ selected: selected?.key === row.key }" :aria-pressed="selected?.key === row.key" @click="selectedKey = row.key"><i :style="{ background: palette[index % palette.length] }"></i><span>{{ name(row) }}</span><strong>{{ row.count }}</strong></button></div>
     </div>
-    <div class="frequency-rows">
+    <div v-else class="frequency-rows" :class="{ 'word-cloud': task === 'keywords' }">
       <button
         v-for="(row, index) in groups"
         :key="row.key"
         class="frequency-row"
         :class="{ selected: selected?.key === row.key }"
-        :aria-pressed="selected?.key === row.key"
+        :aria-pressed="task === 'keywords' ? undefined : selected?.key === row.key"
         :aria-label="`${name(row)}，${row.count} 次`"
-        @click="selectedKey = row.key"
+        :style="{ '--bubble-size': `${Math.max(48, 48 + 36 * row.count / maximum)}px`, '--word-size': `${16 + 22 * Math.sqrt(row.count / maximum)}px` }"
+        @pointermove="showTip(row, $event)" @pointerleave="tip = null" @focus="showTip(row, $event)" @blur="tip = null"
+        @click="task === 'keywords' ? showTip(row, $event) : selectedKey = row.key"
       >
         <span class="frequency-name"
           ><small class="frequency-rank">{{
@@ -114,11 +99,7 @@ const name = (row) =>
               entityNames[row.label] || labelNames[row.label] || row.label
             }}</small></span
           ></span
-        ><span class="frequency-track"
-          ><span
-            :style="{ width: `${(row.count / maximum) * 100}%` }"
-          ></span></span
-        ><b
+        ><b v-if="task !== 'keywords'"
           >{{ row.count
           }}<small
             >{{ total ? ((row.count / total) * 100).toFixed(1) : 0 }}%</small
@@ -157,8 +138,9 @@ const name = (row) =>
         </article>
       </div>
     </section>
-    <p v-else-if="groups.length" class="caption muted frequency-guide">
-      点击柱条展开对应的原文证据。
+    <p v-else-if="task !== 'keywords' && groups.length" class="caption muted frequency-guide">
+      选择词项查看原文证据。
     </p>
+    <PointerTip :anchor="tip"><strong>{{ tip?.row?.text }}</strong><p>{{ tip?.row?.count }} 次</p></PointerTip>
   </section>
 </template>

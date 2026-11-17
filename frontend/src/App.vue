@@ -19,6 +19,7 @@ import ExtraLayerEditor from "./components/ExtraLayerEditor.vue";
 import TopNavigation from "./components/TopNavigation.vue";
 import ExtractionRail from "./components/ExtractionRail.vue";
 import FrequencyDetails from "./components/FrequencyDetails.vue";
+import DashboardView from "./components/DashboardView.vue";
 import {
   request,
   send,
@@ -33,7 +34,7 @@ import {
   sourcePositions as positions,
 } from "./annotationPresentation.js";
 
-const page = ref("library"),
+const page = ref("dashboard"),
   documents = ref([]),
   jobs = ref([]),
   statistics = ref(null),
@@ -51,7 +52,7 @@ watch(
   () => [page.value, current.value?.id],
   async () => {
     await nextTick();
-    window.scrollTo({ top: 0, behavior: "instant" });
+    document.querySelector('.main-content')?.scrollTo({ top: 0, behavior: "instant" });
   },
 );
 const candidate = ref(null),
@@ -110,7 +111,7 @@ const detailTaskNames = computed(() =>
     Object.entries(taskNames).filter(
       ([task]) =>
         editing.value ||
-        !["paragraphs", "relations", "events", "semantic"].includes(task),
+        !["segmentation", "paragraphs", "relations", "events", "semantic"].includes(task),
     ),
   ),
 );
@@ -171,6 +172,8 @@ const activeCount = computed(
 const runningJobs = computed(() =>
   jobs.value.filter((job) => ["queued", "running"].includes(job.state)),
 );
+const jobTab = ref("pending");
+const visibleJobs = computed(() => jobs.value.filter((job) => (job.state === "success") === (jobTab.value === "completed")));
 const displayText = computed(
   () =>
     historicalSnapshot.value?.revision.textBody ??
@@ -1295,12 +1298,8 @@ watch(detailCategories, (values) => {
       @settings="openSettings"
     />
     <div class="app-layout">
-      <Transition name="page" mode="out-in" appear
-        ><main
-          class="main-content"
-        :key="page"
-        :class="{ 'workspace-content': page === 'workspace' }"
-      >
+      <main class="main-content" :class="{ 'workspace-content': page === 'workspace' }">
+      <Transition name="page" mode="out-in" appear><div :key="page" class="page-content">
         <div v-if="loadError" role="alert" class="feedback error-feedback">
           <span>{{ loadError }}</span
           ><button class="text-action" @click="refresh">重新连接</button>
@@ -1323,6 +1322,19 @@ watch(detailCategories, (values) => {
           <span class="loading-indicator"></span>
           <h2>正在打开工作空间…</h2>
         </div>
+        <div v-else-if="loadError && !meta" class="empty-state">
+          <h2>暂时无法读取工作空间</h2>
+          <p>请检查服务连接后重试。</p>
+        </div>
+        <DashboardView
+          v-else-if="page === 'dashboard'"
+          :documents="documents"
+          :jobs="jobs"
+          :statistics="statistics"
+          @navigate="navigate"
+          @open="openDocument"
+          @create="openEditor()"
+        />
         <template v-else-if="page === 'library'">
           <section class="page-heading">
             <div>
@@ -1428,46 +1440,24 @@ watch(detailCategories, (values) => {
                 新建文本
               </button>
             </div>
-            <div v-else class="document-list">
-              <article
-                  v-for="(document, rowIndex) in pagedDocuments"
-                :key="document.id"
-                class="document-row"
-                  v-reveal="rowIndex"
-              >
-                <label v-if="!showArchived" class="document-select"
+            <div v-else class="compact-table-wrap library-table-wrap"><table class="compact-table"><colgroup><col class="library-select-col"><col><col class="library-time-col"><col class="library-state-col"><col class="library-action-col"></colgroup><thead><tr><th><span class="visually-hidden">选择</span></th><th>文件名称</th><th>更新时间</th><th>状态</th><th>操作</th></tr></thead><tbody>
+              <tr v-for="document in pagedDocuments" :key="document.id">
+                <td><label v-if="!showArchived" class="document-select"
                   ><input
                     v-model="selectedIds"
                     class="form-check-input"
                     type="checkbox"
                     :value="document.id"
                     :aria-label="`选择 ${document.title}`"
-                /></label>
-                <div class="document-file-icon"><AppIcon name="file" /></div>
-                <button
-                  class="document-main"
-                  @click="openDocument(document.id)"
-                >
-                  <div>
-                    <strong>{{ document.title }}</strong
-                    ><span
+                /></label></td>
+                <td><button class="table-title" @click="openDocument(document.id)">{{ document.title }}</button></td>
+                <td>{{ timestamp(document.updatedAt) }}</td><td><span
                       class="quiet-badge"
                       :class="{ 'is-saved': document.currentSnapshotId }"
                       >{{
                         document.currentSnapshotId ? "已标注" : "待标注"
                       }}</span
-                    >
-                  </div>
-                  <p>{{ document.preview }}</p>
-                  <small
-                    >{{ document.textLength }} 字符 <span>·</span>
-                    {{
-                      document.source.kind === "corpus"
-                        ? `初始语料 · ${document.source.sourceCount} 处来源`
-                        : `修订 ${document.revisionNumber}`
-                    }}</small
-                  ></button
-                ><Hint :text="showArchived ? '恢复到文本库' : '归档后可恢复'"
+                    ></td><td><Hint :text="showArchived ? '恢复到文本库' : '归档后可恢复'"
                   ><button
                     class="icon-button archive-action"
                     :aria-label="`${showArchived ? '恢复' : '归档'} ${document.title}`"
@@ -1476,15 +1466,8 @@ watch(detailCategories, (values) => {
                     <AppIcon
                       :name="showArchived ? 'jobs' : 'library'"
                     /></button></Hint
-                ><button
-                  class="open-arrow"
-                  :aria-label="`打开 ${document.title}`"
-                  @click="openDocument(document.id)"
-                >
-                  <AppIcon name="arrow" />
-                </button>
-              </article>
-            </div>
+                ><button v-if="!showArchived" class="icon-button library-open" :aria-label="`打开 ${document.title}`" @click="openDocument(document.id)">→</button></td>
+              </tr></tbody></table></div>
             <footer class="list-footer">
                 <span
                   >{{ sourceDocuments.length.toLocaleString() }} 份文本</span
@@ -1585,150 +1568,8 @@ watch(detailCategories, (values) => {
             class="inference-progress"
             :class="{ 'is-processing': processing }"
           >
-            <div class="progress-heading">
-              <span class="status-dot" :class="{ pulsing: processing }"></span
-              ><strong>{{
-                processing
-                  ? candidate.state === "queued"
-                    ? "任务排队中"
-                    : `${taskNames[candidate.progress?.taskType] || "文本"}分析中`
-                  : stateNames[candidate.state]
-              }}</strong
-              ><span>{{ completedLayers }} / {{ totalLayers }} 层已返回</span
-              ><small v-if="processing && candidate.progress?.totalChunks"
-                >已处理 {{ candidate.progress.completedChunks }} /
-                {{ candidate.progress.totalChunks }} 个文本块</small
-              >
-            </div>
-            <div class="inference-phases row g-3">
-              <div class="col-md-6">
-                <div class="d-flex justify-content-between caption">
-                  <span>文本块处理</span
-                  ><b
-                    >{{
-                      candidate.progress?.completedChunks ??
-                      candidate.response?.execution?.chunks ??
-                      0
-                    }}
-                    /
-                    {{
-                      candidate.progress?.totalChunks ??
-                      candidate.response?.execution?.chunks ??
-                      "—"
-                    }}</b
-                  >
-                </div>
-                <div
-                  class="progress"
-                  role="progressbar"
-                  aria-label="文本块处理进度"
-                  :aria-valuenow="
-                    candidate.progress?.completedChunks ??
-                    candidate.response?.execution?.chunks ??
-                    0
-                  "
-                  :aria-valuemax="
-                    candidate.progress?.totalChunks ??
-                    candidate.response?.execution?.chunks ??
-                    1
-                  "
-                  aria-valuemin="0"
-                >
-                  <div
-                    class="progress-bar"
-                    :style="{ width: chunkProgress + '%' }"
-                  ></div>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="d-flex justify-content-between caption">
-                  <span>标注层校验</span
-                  ><b
-                    >{{ settledLayers }} / {{ totalLayers }} · 成功
-                    {{ completedLayers }}</b
-                  >
-                </div>
-                <div
-                  class="progress"
-                  role="progressbar"
-                  aria-label="标注层校验进度"
-                  :aria-valuenow="settledLayers"
-                  :aria-valuemax="Math.max(1, totalLayers)"
-                  aria-valuemin="0"
-                >
-                  <div
-                    class="progress-bar"
-                    :style="{
-                      width:
-                          (settledLayers / Math.max(1, totalLayers)) * 100 +
-                          '%',
-                    }"
-                  ></div>
-                </div>
-              </div>
-            </div>
-            <p v-if="processing" class="caption muted mt-3">
-              {{
-                candidate.state === "queued"
-                  ? "等待前序任务结束"
-                  : candidate.progress?.phase === "validating"
-                    ? "已收到模型回包，正在核对原文与区间"
-                    : "联合分析当前文本块；模型返回前进度保持不变"
-              }}。成功层复用缓存，失败只在显式重试后调用。
-            </p>
-              <div class="inference-telemetry d-flex flex-wrap gap-3">
-                <span v-if="processing"
-                  >任务已用时 <b>{{ jobElapsed }} 秒</b></span
-                ><span
-                  >实际请求
-                  <b>{{
-                    candidate.progress?.networkCalls ??
-                    candidate.response?.execution?.networkCalls ??
-                    0
-                  }}</b></span
-                ><span
-                  >本地缓存命中
-                  <b>{{
-                    candidate.progress?.localCacheHits ??
-                    candidate.response?.execution?.localCacheHits ??
-                    0
-                  }}</b></span
-                ><span v-if="candidate.response?.execution"
-                  >输入
-                  <b>{{
-                    candidate.response.execution.promptTokens ?? "未知"
-                  }}</b>
-                  / 输出
-                  <b>{{
-                    candidate.response.execution.completionTokens ?? "未知"
-                  }}</b>
-                  tokens</span
-                >
-              </div>
-            <div class="stage-list">
-              <div
-                v-for="(name, task) in taskNames"
-                :key="task"
-                :class="{
-                  done: visibleLayers[task]?.status === 'success',
-                    failed: visibleLayers[task]?.status === 'failed',
-                    running:
-                      candidate.progress?.taskType === task && processing,
-                }"
-              >
-                <span>{{
-                  visibleLayers[task]?.status === "success"
-                    ? "✓"
-                      : visibleLayers[task]?.status === "failed"
-                        ? "!"
-                    : candidate.progress?.taskType === task && processing
-                      ? "◌"
-                      : "○"
-                }}</span
-                >{{ name
-                }}<small v-if="!effectiveTasks.includes(task)">未选</small>
-              </div>
-            </div>
+            <div class="compact-progress-label"><span>{{ processing ? (candidate.state === 'queued' ? '等待标注' : candidate.progress?.phase === 'validating' ? '正在校验标注' : '正在分析文本') : stateNames[candidate.state] }}</span><strong>{{ Math.round((settledLayers / Math.max(1, totalLayers)) * 100) }}%</strong></div>
+            <div class="progress" role="progressbar" aria-label="标注进度" :aria-valuenow="Math.round(settledLayers / Math.max(1, totalLayers) * 100)" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" :style="{ width: settledLayers / Math.max(1,totalLayers) * 100 + '%' }"></div></div>
             <button class="text-action caption" @click="returnCurrent">
               返回当前保存版本
             </button>
@@ -1864,7 +1705,7 @@ watch(detailCategories, (values) => {
                   </button>
                 </div>
               </div>
-              <div class="layer-toolbar">
+              <details class="layer-disclosure"><summary>显示图层 <span>{{ enabledLayers.length }} 层开启</span></summary><div class="layer-toolbar">
                 <span class="caption muted">叠加图层</span
                 ><Hint
                   v-for="(name, task) in taskNames"
@@ -1884,11 +1725,11 @@ watch(detailCategories, (values) => {
                     :aria-pressed="enabledLayers.includes(task)"
                     @click="toggleLayer(task)"
                   >
-                    <span class="layer-sample">文</span>{{ name
+                    <AppIcon :name="task" />{{ name
                     }}<span v-if="enabledLayers.includes(task)">✓</span>
                   </button></Hint
                 >
-              </div>
+              </div></details>
               <div v-if="sourceEditing" class="source-edit-area">
                 <input
                   v-model="editor.title"
@@ -2378,39 +2219,18 @@ watch(detailCategories, (values) => {
               从文本库开始 →
             </button>
           </div>
-          <section v-else class="surface task-list">
-            <article v-for="job in jobs" :key="job.id" class="job-row">
-              <span
-                class="job-state-icon"
-                  :class="{
-                    pulsing: ['queued', 'running'].includes(job.state),
-                  }"
-                >{{
-                  job.state === "success"
-                    ? "✓"
-                    : ["queued", "running"].includes(job.state)
-                      ? "◌"
-                      : "!"
-                }}</span
-              ><button @click="openCandidate(job.id)">
-                <strong>{{ job.title }}</strong
-                ><small
-                  >{{ job.provider }} · {{ timestamp(job.createdAt) }}</small
-                ></button
-              ><span class="quiet-badge">{{ stateNames[job.state] }}</span
-              ><button class="text-action" @click="openCandidate(job.id)">
-                查看 →
-              </button>
-            </article>
-          </section></template
+          <template v-else><nav class="job-tabs nav nav-pills" :class="{ completed: jobTab === 'completed' }" aria-label="任务分类"><button v-for="[id, label] in [['pending', '待处理'], ['completed', '已完成']]" :key="id" class="nav-link" :class="{ active: jobTab === id }" :aria-pressed="jobTab === id" @click="jobTab = id">{{ label }} <small>{{ jobs.filter(job => (job.state === 'success') === (id === 'completed')).length }}</small></button></nav>
+          <section class="surface task-list compact-table-wrap">
+            <p v-if="!visibleJobs.length" class="muted p-4 mb-0">此分类暂无任务。</p>
+            <table v-else class="compact-table"><thead><tr><th>任务名称</th><th>创建时间</th><th>供应商</th><th>状态</th><th>操作</th></tr></thead><tbody><tr v-for="job in visibleJobs" :key="job.id"><td><button class="table-title" @click="openCandidate(job.id)">{{ job.title }}</button></td><td>{{ timestamp(job.createdAt) }}</td><td>{{ job.provider }}</td><td><span class="quiet-badge" :class="{ 'is-saved': job.state === 'success' }">{{ stateNames[job.state] }}</span></td><td><button class="text-action" @click="openCandidate(job.id)">查看 →</button></td></tr></tbody></table>
+          </section></template></template
         >
         <ModelLogs v-else-if="page === 'logs'" />
         <StatisticsView
           v-else-if="page === 'statistics'"
           :statistics="statistics"
           @refresh="refresh"
-          /></main
-      ></Transition>
+          /></div></Transition></main>
     </div>
     <dialog
       ref="editorDialog"

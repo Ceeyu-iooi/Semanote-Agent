@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref, watch } from "vue";
+import deepseekLogo from "../assets/deepseek.svg";
 const settings = defineModel({ type: Object, required: true });
 const selected = ref("");
 const current = computed(
@@ -54,7 +55,7 @@ function remove(id) {
         :aria-current="current?.id === item.id ? 'true' : undefined"
         @click="selected = item.id"
       >
-        <span class="provider-icon">{{ item.name.slice(0, 1) }}</span
+        <span class="provider-icon"><img v-if="item.id === 'deepseek'" :src="deepseekLogo" alt="" /><template v-else>{{ item.name.slice(0, 1) }}</template></span
         ><span>{{ item.name }}</span
         ><i
           class="provider-state-dot"
@@ -68,7 +69,7 @@ function remove(id) {
     </nav>
     <section v-if="current" :key="current.id" class="provider-detail">
       <header class="provider-detail-header">
-        <span class="provider-icon">{{ current.name.slice(0, 1) }}</span>
+        <span class="provider-icon"><img v-if="current.id === 'deepseek'" :src="deepseekLogo" alt="" /><template v-else>{{ current.name.slice(0, 1) }}</template></span>
         <div>
           <h3>{{ current.name }}</h3>
           <p>

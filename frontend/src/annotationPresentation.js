@@ -91,6 +91,7 @@ export function buildSegments(text, items, breaks = []) {
       breakBefore: start > 0 && breakSet.has(start),
       text: chars.slice(start, end).join(""),
       matches,
+      tokenStart: matches.some(item => item.task === "segmentation" && item.spans.some(span => span.start === start)),
       tokenEnd: matches.some(
         (item) =>
           item.task === "segmentation" &&

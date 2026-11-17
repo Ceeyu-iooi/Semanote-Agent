@@ -5,7 +5,7 @@ import {
   relationshipGraph,
   eventTime,
   eventContext,
-  routeRelations,
+  groupRelationships,
 } from "../graphPresentation.js";
 const props = defineProps({
   layers: Object,
@@ -31,20 +31,7 @@ const items = (task) =>
 const fullGraph = computed(() =>
   relationshipGraph(items("relations"), items("ner"), props.text),
 );
-const graph = computed(() => {
-  const people = fullGraph.value.nodes.filter(
-    (node) => node.label === "PERSON",
-  );
-  if (scope.value !== "people" || !people.length) return fullGraph.value;
-  const names = new Set(people.map((node) => node.id));
-  return {
-    nodes: people,
-    edges: fullGraph.value.edges.filter(
-      (edge) =>
-        names.has(edge.subject.itemText) && names.has(edge.object.itemText),
-    ),
-  };
-});
+const graph = computed(() => fullGraph.value);
 const activePerson = computed(() =>
   fullGraph.value.nodes.find((node) => node.id === chosenPerson.value),
 );
@@ -81,39 +68,22 @@ const events = computed(() =>
         a.index - b.index,
     ),
 );
+const sharedEvents = computed(() => activeEdge.value ? events.value.filter(({item}) => { const people = Object.values(item.roles || {}).flat().map(role => role.itemText); return people.includes(activeEdge.value.subject.itemText) && people.includes(activeEdge.value.object.itemText); }) : []);
 const activeEvent = computed(
   () =>
     events.value.find((entry) => entry.item.itemId === chosenEvent.value)
       ?.item || events.value[0]?.item,
 );
 const activeEdge = computed(() =>
-  graph.value.edges.find((item) => item.itemId === chosenEdge.value),
+  groupedEdges.value.find((item) => item.itemId === chosenEdge.value || item.records.some(record => record.itemId === chosenEdge.value)),
 );
-const width = computed(() =>
-  Math.max(900, Math.ceil(graph.value.nodes.length / 6) * 680),
-);
-const height = computed(() =>
-  Math.max(560, Math.ceil(graph.value.nodes.length / 8) * 400),
-);
-const nodes = computed(() =>
-  graph.value.nodes.map((node, index, all) => {
-    const angle = (index / Math.max(all.length, 1)) * Math.PI * 2 - Math.PI / 2;
-    return {
-      ...node,
-      ...(Object.hasOwn(positions.value, node.id)
-        ? positions.value[node.id]
-        : {
-            x:
-              width.value / 2 - 100 + Math.cos(angle) * (width.value / 2 - 120),
-            y:
-              height.value / 2 - 70 + Math.sin(angle) * (height.value / 2 - 90),
-          }),
-    };
-  }),
-);
-const edges = computed(() =>
-  routeRelations(nodes.value, graph.value.edges, width.value, height.value),
-);
+const rawNodes = computed(() => graph.value.nodes.map((node,index) => ({...node,...(positions.value[node.id] || {x:24+(index % (graph.value.nodes.length > 6 ? 3 : 2))*250,y:24+Math.floor(index/(graph.value.nodes.length > 6 ? 3 : 2))*200})})));
+const origin = computed(() => ({x: Math.max(0, 24 - Math.min(24, ...rawNodes.value.map(node => node.x))), y: Math.max(0, 24 - Math.min(24, ...rawNodes.value.map(node => node.y)))}));
+const nodes = computed(() => rawNodes.value.map(node => ({...node, x: node.x + origin.value.x, y: node.y + origin.value.y})));
+const width = computed(() => Math.max(900, ...nodes.value.map(p => p.x + 340)));
+const height = computed(() => Math.max(520, ...nodes.value.map(p => p.y + 190)));
+const groupedEdges = computed(() => groupRelationships(graph.value.edges));
+const edges = computed(() => groupedEdges.value.map(edge => { const from = nodes.value.find(node => node.id === edge.subject.itemText), to = nodes.value.find(node => node.id === edge.object.itemText); if (from.id === to.id) return { ...edge, x: from.x + 245, y: from.y + 70, d: `M ${from.x + 190} ${from.y + 28} C ${from.x + 300} ${from.y - 20}, ${from.x + 300} ${from.y + 160}, ${from.x + 190} ${from.y + 112}` }; return { ...edge, x: (from.x + to.x)/2 + 100, y: (from.y + to.y)/2 + 70, d: `M ${from.x + 100} ${from.y + 70} L ${to.x + 100} ${to.y + 70}` }; }));
 const roleNames = {
   subject: "主体",
   object: "客体",
@@ -138,8 +108,8 @@ function startDrag(event, node) {
   event.currentTarget.setPointerCapture(event.pointerId);
   drag = {
     id: node.id,
-    x: node.x,
-    y: node.y,
+    x: node.x - origin.value.x,
+    y: node.y - origin.value.y,
     clientX: event.clientX,
     clientY: event.clientY,
   };
@@ -151,20 +121,8 @@ function moveDrag(event) {
   positions.value = {
     ...positions.value,
     [drag.id]: {
-      x: Math.max(
-        8,
-        Math.min(
-          width.value - 208,
-          drag.x + (event.clientX - drag.clientX) / zoom.value,
-        ),
-      ),
-      y: Math.max(
-        8,
-        Math.min(
-          height.value - 148,
-          drag.y + (event.clientY - drag.clientY) / zoom.value,
-        ),
-      ),
+      x: drag.x + (event.clientX - drag.clientX) / zoom.value,
+      y: drag.y + (event.clientY - drag.clientY) / zoom.value,
     },
   };
 }
@@ -181,8 +139,8 @@ function moveKey(event, node) {
   positions.value = {
     ...positions.value,
     [node.id]: {
-      x: Math.max(8, Math.min(width.value - 208, node.x + x)),
-      y: Math.max(8, Math.min(height.value - 148, node.y + y)),
+      x: node.x - origin.value.x + x,
+      y: node.y - origin.value.y + y,
     },
   };
 }
@@ -207,7 +165,7 @@ watch(
     <header class="panel-toolbar">
       <div>
         <p class="eyebrow">PEOPLE · EVENTS · EVIDENCE</p>
-        <h3>沿着证据，理解联系。</h3>
+        <h3>关系与事件</h3>
       </div>
       <div class="nav nav-pills graph-tabs" aria-label="图谱视图">
         <button
@@ -215,13 +173,13 @@ watch(
           :class="{ active: tab === 'events' }"
           @click="tab = 'events'"
         >
-          事件时间轴 <span class="badge">{{ events.length }}</span></button
+          {{ events.some(entry => entry.timestamp !== null) ? "事件时间轴" : "事件顺序" }} <span class="badge">{{ events.length }}</span></button
         ><button
           class="nav-link"
           :class="{ active: tab === 'relations' }"
           @click="tab = 'relations'"
         >
-          人物关系图 <span class="badge">{{ graph.nodes.length }}</span>
+          实体关系图 <span class="badge">{{ graph.nodes.length }}</span>
         </button>
       </div>
     </header>
@@ -257,6 +215,7 @@ watch(
           <dl class="row g-3 event-facts">
             <div
               v-for="(name, role) in roleNames"
+              v-show="activeEvent.roles?.[role]?.length"
               :key="role"
               class="col-sm-6 col-lg-4"
             >
@@ -270,7 +229,7 @@ watch(
               </dd>
             </div>
           </dl>
-          <details class="event-context" open>
+          <details class="event-context">
             <summary>上下文介绍 <small>来自原文相邻语句</small></summary>
             <p>{{ eventContext(text, activeEvent) }}</p>
           </details>
@@ -287,46 +246,7 @@ watch(
     </template>
     <template v-else>
       <div class="graph-toolbar d-flex flex-wrap align-items-center gap-3">
-        <div
-          class="btn-group btn-group-sm"
-          role="group"
-          aria-label="关系图范围"
-        >
-          <button
-            class="btn btn-outline-primary"
-            :class="{ active: scope === 'people' }"
-            @click="
-              scope = 'people';
-              chosenPerson = null;
-              chosenEdge = null;
-            "
-          >
-            人物关系</button
-          ><button
-            class="btn btn-outline-primary"
-            :class="{ active: scope === 'all' }"
-            @click="
-              scope = 'all';
-              chosenPerson = null;
-              chosenEdge = null;
-            "
-          >
-            全部实体
-          </button>
-        </div>
-        <p class="caption muted mb-0">
-          拖动卡片整理布局 · 方向键移动 · 悬停或聚焦突出人物
-        </p>
-        <label class="caption d-flex align-items-center gap-2"
-          >缩放<input
-            class="form-range"
-            v-model.number="zoom"
-            type="range"
-            min="0.65"
-            max="1.3"
-            step="0.05"
-            aria-label="人物关系图缩放" /></label
-        ><button
+        <div class="graph-zoom" role="group" aria-label="关系图缩放"><button type="button" aria-label="缩小" @click="zoom = Math.max(.4, zoom - .1)">−</button><span>{{ Math.round(zoom * 100) }}%</span><button type="button" aria-label="放大" @click="zoom = Math.min(2, zoom + .1)">＋</button></div><button
           class="btn btn-outline-primary btn-sm"
           @click="
             positions = {};
@@ -376,7 +296,7 @@ watch(
                     edge.object.itemText !== spotlight,
                 }"
               >
-                <path :d="edge.d" marker-end="url(#relationArrow)" />
+                <path :d="edge.d" tabindex="0" role="button" :aria-label="`${edge.subject.itemText}与${edge.object.itemText}，${edge.records.length}条关系`" @click="chosenEdge = edge.itemId; chosenPerson = null" @keydown.enter="chosenEdge = edge.itemId; chosenPerson = null" />
                 <foreignObject
                   :x="edge.x - 58"
                   :y="edge.y - 16"
@@ -390,7 +310,7 @@ watch(
                       chosenPerson = null;
                     "
                   >
-                    {{ edge.label }} →
+                    {{ edge.records.length }} 条关系
                   </button></foreignObject
                 >
               </g>
@@ -490,26 +410,7 @@ watch(
             </div>
           </div>
         </section>
-        <template v-if="activeEdge"
-          ><span class="badge text-bg-primary">{{ activeEdge.label }}</span
-          ><strong
-            >{{ activeEdge.subject.itemText }} →
-            {{ activeEdge.object.itemText }}</strong
-          >
-          <p>{{ activeEdge.itemText }}</p>
-          <button
-            class="text-action"
-            @click="
-              emit('focus', { task: 'relations', itemId: activeEdge.itemId })
-            "
-          >
-            定位原文证据 ↗
-          </button></template
-        >
-        <p v-else-if="!activePerson" class="caption muted mb-0">
-          点击连线上的关系名称查看完整证据。{{ graph.edges.length }} 条关系 ·
-          同名卡片仅按词面聚合，未进行身份消歧。
-        </p>
+        <template v-if="activeEdge"><h4>{{ activeEdge.subject.itemText }} · {{ activeEdge.object.itemText }}</h4><article v-for="record in activeEdge.records" :key="record.itemId"><strong>{{ record.subject.itemText }} → {{ record.object.itemText }} · {{ record.label }}</strong><p>{{ record.itemText }}</p><button class="text-action" @click="emit('focus', { task: 'relations', itemId: record.itemId })">定位原文 ↗</button></article><article v-for="entry in sharedEvents" :key="entry.item.itemId"><strong>{{ entry.item.label }}</strong><p>{{ entry.item.itemText }}</p><button class="text-action" @click="emit('focus', { task: 'events', itemId: entry.item.itemId })">定位事件 ↗</button></article></template>
       </div>
     </template>
   </section>

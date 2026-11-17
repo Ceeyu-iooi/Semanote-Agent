@@ -1,12 +1,12 @@
 <script setup>
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import { request, taskNames } from "../api.js";
-import PointerTip from "./PointerTip.vue";
+import TaskUsageChart from "./TaskUsageChart.vue";
+import AnimatedNumber from "./AnimatedNumber.vue";
 const data = ref(null),
   busy = ref(false),
   error = ref(""),
-  expanded = ref(null),
-  tip = ref(null);
+  expanded = ref(null);
 const filters = reactive({
   provider: "",
   model: "",
@@ -19,15 +19,7 @@ const filters = reactive({
 });
 let sequence = 0,
   timer;
-const summary = computed(() => data.value?.summary || {}),
-  maxTokens = computed(() =>
-    Math.max(
-      1,
-      summary.value.promptTokens || 0,
-      summary.value.completionTokens || 0,
-      summary.value.cachedTokens || 0,
-    ),
-  );
+const summary = computed(() => data.value?.summary || {});
 async function load() {
   const current = ++sequence;
   busy.value = true;
@@ -64,9 +56,6 @@ onUnmounted(() => {
 });
 const displayTime = (value) =>
   value ? new Date(value).toLocaleString("zh-CN", { hour12: false }) : "—";
-function showTip(event, label, count) {
-  tip.value = { x: event.clientX, y: event.clientY, height: 100, label, count };
-}
 </script>
 <template>
   <section class="model-logs">
@@ -83,47 +72,25 @@ function showTip(event, label, count) {
     <p v-if="error" class="feedback error-feedback" role="alert">{{ error }}</p>
     <div v-if="data" class="log-summary">
       <article>
-        <span>远程请求</span><strong>{{ summary.calls }}</strong>
+        <span>总 Token（已知）</span><strong><AnimatedNumber :value="summary.promptTokens + summary.completionTokens" /></strong>
       </article>
       <article>
-        <span>本地复用</span><strong>{{ summary.localHits }}</strong>
+        <span>输入 Token（已知）</span><strong><AnimatedNumber :value="summary.promptTokens" /></strong>
       </article>
       <article>
-        <span>失败请求</span><strong>{{ summary.failures }}</strong>
+        <span>输出 Token（已知）</span><strong><AnimatedNumber :value="summary.completionTokens" /></strong>
       </article>
       <article>
         <span>供应商缓存命中</span
         ><strong>{{
-          summary.promptTokens
+          summary.promptTokens && !summary.unknownCacheUsage && !summary.unknownUsage
             ? ((summary.cachedTokens / summary.promptTokens) * 100).toFixed(1) +
               "%"
             : "—"
         }}</strong>
       </article>
-      <div class="log-token-chart">
-        <button
-          v-for="[key, label] in [
-            ['promptTokens', '输入'],
-            ['completionTokens', '输出'],
-            ['cachedTokens', '缓存输入'],
-          ]"
-          :key="key"
-          class="bar-row"
-          @pointermove="showTip($event, label, summary[key])"
-          @pointerleave="tip = null"
-          @focus="
-            tip = { x: 100, y: 100, height: 100, label, count: summary[key] }
-          "
-        >
-          <span>{{ label }}</span
-          ><span class="bar-track"
-            ><span
-              :style="{ width: `${(summary[key] / maxTokens) * 100}%` }"
-            ></span></span
-          ><strong>{{ summary[key].toLocaleString() }}</strong>
-        </button>
-      </div>
     </div>
+    <TaskUsageChart v-if="data" :series="data.dailySeries || []" />
     <section class="surface">
       <div class="log-filters">
         <label
@@ -196,7 +163,7 @@ function showTip(event, label, count) {
                   }}</small>
                 </td>
                 <td>
-                  <span class="quiet-badge">{{
+                  <span class="quiet-badge" :class="'log-state-' + row.state">{{
                     row.state === "success"
                       ? "成功"
                       : row.state === "failed"
@@ -302,9 +269,5 @@ function showTip(event, label, count) {
       }}
       条未取得缓存用量。未配置服务价格，因此不推算金额。日志不含原文与密钥。
     </p>
-    <PointerTip :anchor="tip"
-      ><strong>{{ tip?.label }}</strong>
-      <p>{{ tip?.count?.toLocaleString() }} tokens</p></PointerTip
-    >
   </section>
 </template>

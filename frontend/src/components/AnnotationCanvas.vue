@@ -15,22 +15,7 @@ const props = defineProps({
 const emit = defineEmits(["select", "focus"]);
 const canvas = ref(null),
   tip = ref(null);
-const segments = computed(() =>
-  buildSegments(props.text, props.items, props.breaks).flatMap((segment) =>
-    props.revealKey && !props.selectable
-      ? Array.from(segment.text).map((text, index, chars) => ({
-          ...segment,
-          text,
-          sourceText: segment.text,
-          firstCharacter: index === 0,
-          start: segment.start + index,
-          end: segment.start + index + 1,
-          breakBefore: index === 0 && segment.breakBefore,
-          tokenEnd: index === chars.length - 1 && segment.tokenEnd,
-        }))
-      : [segment],
-  ),
-);
+const segments = computed(() => buildSegments(props.text, props.items, props.breaks));
 function selectText() {
   if (!props.selectable) return;
   const selection = window.getSelection();
@@ -89,8 +74,9 @@ function showTip(segment, event) {
         segment.classes,
         {
           'semantic-break': segment.breakBefore,
-          'has-annotation': segment.matches.length,
+          'has-annotation': segment.matches.some(item => item.task !== 'paragraphs'),
           'token-end': segment.tokenEnd,
+          'token-start': segment.tokenStart,
           'focused-text': segment.matches.some(
             (item) => item.itemId === focusedItem,
           ),
@@ -142,10 +128,8 @@ function showTip(segment, event) {
         labelNames[item.label] ||
         item.label ||
         (item.rank ? `第 ${item.rank} 位` : "词项")
-      }}</b>
+      }}</b><small>{{ (item.spans || []).filter(span => span.start <= tip.start && span.end >= tip.end).map(span => `${span.start}–${span.end}`).join('、') }}</small>
     </div>
-    <small
-      >区间 {{ tip?.start }}–{{ tip?.end }} · 点击定位条目</small
-    ></PointerTip
+    <small>点击定位条目</small></PointerTip
   >
 </template>

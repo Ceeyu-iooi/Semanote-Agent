@@ -27,7 +27,9 @@ node tools/local-web.mjs lan
 node tools/local-web.mjs start
 ```
 
-工具只管理本项目进程，复用 profile/tools 便携 MySQL；初次创建 profile/runtime/mysql-data、随机密码和本地配置，不接管系统数据库。配置/数据被忽略，不公开。中文路径使用 MySQL Windows 兼容选项文件编码；业务文本仍严格 UTF-8。
+工具只管理本项目进程，复用 profile/tools 便携 MySQL；初次创建 profile/runtime/mysql-data、随机密码和本地配置，不接管系统数据库。配置/数据被忽略，不公开。项目路径含非 ASCII 字符时，MySQL 启动器自动分配并校验一个项目专用临时盘符，以兼容 Windows 路径；数据库仍位于原目录，业务文本严格 UTF-8。盘符会在数据库运行期间保留，不覆盖已有盘符。
+
+`node tools/local-web.mjs stop` 停止后端并保留数据库；要同时关闭由本工具通过临时盘符启动的数据库并释放盘符，随后运行 `node tools/local-web.mjs stop-database`。该命令核验监听进程和盘符归属，后端仍运行或归属无法确认时拒绝操作。它不会关闭由其他程序管理的数据库。
 
 1. 文本库新建或导入 DOCX、UTF-8 TXT/MD/三列 CSV；TXT/MD/DOCX 各为整份正文，CSV 每格独立并保留来源行列和重复。10000 码点/文本、5 MiB/文件、500 非空文本/批；超限整次拒绝，纯空白跳过并报告。DOCX 只提取正文，不读取外链或宏。
 2. 在工作台自动标注或直接人工标注。模型会发送文本，须确认有权外发；本轮百炼仅测试原创合成文本；其他真实语料仍按服务和范围授权。在顶部设置中维护供应商、HTTPS 地址、模型和密钥，详见 agent-usage.md；不伪造结果或自动切换。

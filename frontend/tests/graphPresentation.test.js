@@ -3,38 +3,19 @@ import assert from "node:assert/strict";
 import {
   relationshipGraph,
   eventTime,
-  routeRelations,
+  groupRelationships,
 } from "../src/graphPresentation.js";
 
-test("parallel directed links get separate labels and self relations remain finite", () => {
-  const nodes = [
-    { id: "a", x: 80, y: 180 },
-    { id: "b", x: 550, y: 180 },
-  ];
+test("opposite relationships share one link without losing evidence", () => {
   const edge = (id, from, to) => ({
     itemId: id,
     subject: { itemText: from },
     object: { itemText: to },
   });
-  const routes = routeRelations(
-    nodes,
-    [edge("1", "a", "b"), edge("2", "b", "a"), edge("3", "a", "a")],
-    820,
-    510,
-  );
-  assert.ok(
-    routes.every(
-      (route) =>
-        Number.isFinite(route.x) &&
-        Number.isFinite(route.y) &&
-        !route.d.includes("NaN"),
-    ),
-  );
-  assert.ok(
-    Math.abs(routes[0].x - routes[1].x) >= 124 ||
-      Math.abs(routes[0].y - routes[1].y) >= 42,
-  );
-  assert.ok(routes[2].x > nodes[0].x + 200);
+  const groups = groupRelationships([edge("1", "a", "b"), edge("2", "b", "a"), edge("3", "a", "a")]);
+  assert.equal(groups.length, 2);
+  assert.deepEqual(groups[0].records.map(item => item.itemId), ["1", "2"]);
+  assert.equal(groups[1].records[0].itemId, "3");
 });
 test("relation display keeps directed edges, isolated people and literal evidence without inventing profiles", () => {
   const text = "😀林晓联系周宁。林晓在晨星公司工作。";

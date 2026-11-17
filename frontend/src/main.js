@@ -10,8 +10,11 @@ import App from "./App.vue";
 import DeveloperCenter from "./components/DeveloperCenter.vue";
 import { reveal } from "./motion.js";
 import "./styles/interaction.css";
+import "./styles/review-workspace.css";
+import "./styles/dashboard-theme.css";
 
 try {
+  document.documentElement.dataset.theme = localStorage.getItem("semanote.theme") === "dark" ? "dark" : "light";
   const preferences = JSON.parse(
     localStorage.getItem("semanote.preferences") || "{}",
   );

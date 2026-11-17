@@ -4,7 +4,7 @@
 
 项目是通用中文文本标注 B/S 系统，四项核心为分词、关键词、词性和命名实体；0.1.1 用户新增分段、关系、事件、情感、意图、语义及错误标注。司法案件只作本地示例，不扩展为司法分析系统。
 
-开始前检查 Git 状态与分支，阅读 README.md、docs/requirements.md、docs/decisions.md、docs/workflow.json、docs/initialization-report.md。当前事实以 README、决策与验收记录为准；不得重做已核验初始化，也不得将历史报告中的“尚未开始”当作现状。
+每次开始或继续任务时，先重新阅读本文件和相关职责目录的 AGENTS.md，检查 Git 状态与分支，并阅读 README.md、docs/requirements.md、docs/decisions.md、docs/workflow.json、docs/initialization-report.md。当前事实以 README、决策与验收记录为准；不得重做已核验初始化，也不得将历史报告中的“尚未开始”当作现状。
 
 根规范对全仓库有效。进入以下职责前必须读取对应文件；补充规则不削弱数据、确认与 Git 约束：
 

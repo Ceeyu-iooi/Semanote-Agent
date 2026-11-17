@@ -70,11 +70,11 @@ export async function mysql(args, input) {
   );
 }
 
-async function launchManaged(command, args, logName, env = process.env) {
+async function launchManaged(command, args, logName, env = process.env, cwd = projectRoot) {
   const log = await open(resolve(runtimeRoot, logName), "a");
   try {
     const child = spawn(command, args, {
-      cwd: projectRoot,
+      cwd,
       env,
       windowsHide: true,
       detached: true,
@@ -90,6 +90,65 @@ async function launchManaged(command, args, logName, env = process.env) {
     await log.close();
   }
 }
+
+// MySQL's Windows executable cannot always resolve a Unicode installation path.
+// Keep the actual files in place and use only a verified, project-owned drive mapping.
+const mysqlDriveRecord = resolve(runtimeRoot, "mysql-drive.json");
+async function driveState(letter) {
+  const result = await powershell(
+    `Add-Type -TypeDefinition 'using System; using System.Text; using System.Runtime.InteropServices; public static class SemanoteDrive { [DllImport("kernel32.dll", CharSet=CharSet.Unicode)] public static extern uint QueryDosDevice(string name, StringBuilder target, int max); }'; $b=[Text.StringBuilder]::new(2048); $n=[SemanoteDrive]::QueryDosDevice($env:SEMANOTE_DRIVE,$b,$b.Capacity); if (!$n) { 'free' } elseif ($b.ToString().Equals(('\\??\\'+$env:SEMANOTE_TARGET),[StringComparison]::OrdinalIgnoreCase)) { 'match' } else { 'occupied' }`,
+    { env: { ...process.env, SEMANOTE_DRIVE: `${letter}:`, SEMANOTE_TARGET: projectRoot } },
+  );
+  return result.stdout.toString("utf8").trim();
+}
+async function mysqlDrive() {
+  const record = await readJson(mysqlDriveRecord, null);
+  if (record && (!/^[D-Z]$/.test(record.letter) || record.projectRoot !== projectRoot))
+    throw new Error("Invalid MySQL drive mapping record");
+  const candidates = record ? [record.letter] : "ZYXWVUTSRQPONMLKJIHGFED".split("");
+  for (const letter of candidates) {
+    const state = await driveState(letter);
+    if (state === "occupied" || (state === "match" && !record)) continue;
+    if (state === "free") {
+      const result = await run("subst.exe", [`${letter}:`, projectRoot], { check: false });
+      if (result.code !== 0 || await driveState(letter) !== "match")
+        throw new Error("Could not create the project MySQL drive mapping");
+      try { await writeJson(mysqlDriveRecord, { letter, projectRoot }); }
+      catch (error) { await run("subst.exe", [`${letter}:`, "/D"], { check: false }); throw error; }
+    }
+    return `${letter}:`;
+  }
+  throw new Error("No verified drive is available for project MySQL");
+}
+
+export function rewriteMysqlOptions(content, drive) {
+  for (const [key, expected, replacement] of [
+    ["basedir", resolve(toolRoot, "mysql"), `${drive}/profile/tools/mysql`],
+    ["datadir", resolve(runtimeRoot, "mysql-data"), `${drive}/profile/runtime/mysql-data`],
+  ]) {
+    const pattern = new RegExp(`^[ \\t]*${key}[ \\t]*=[ \\t]*([^\\r\\n]+?)[ \\t]*(?=\\r?$)`, "im");
+    const match = content.match(pattern);
+    if (!match || resolve(match[1].replace(/^['"]|['"]$/g, "")).toLowerCase() !== expected.toLowerCase())
+      throw new Error(`MySQL ${key} does not match the project directory`);
+    content = content.replace(pattern, `${key}=${replacement}`);
+  }
+  // Preserve all other configured options; only remap the standard project log path.
+  const log = /^[ \t]*log-error[ \t]*=[ \t]*([^\r\n]+?)[ \t]*(?=\r?$)/im;
+  const found = content.match(log);
+  if (found && resolve(found[1].replace(/^['"]|['"]$/g, "")).toLowerCase() === resolve(runtimeRoot, "mysql-error.log").toLowerCase())
+    content = content.replace(log, `log-error=${drive}/profile/runtime/mysql-error.log`);
+  return content;
+}
+async function mappedMysqlConfig(drive) {
+  const optionPath = resolve(runtimeRoot, "mysql-managed.cnf");
+  const bytes = await readFile(resolve(runtimeRoot, "mysql.cnf"));
+  let content;
+  try { content = new TextDecoder("utf-8", { fatal: true }).decode(bytes); }
+  catch { content = new TextDecoder("gbk", { fatal: true }).decode(bytes); }
+  content = rewriteMysqlOptions(content, drive);
+  await writeFile(optionPath, content, { encoding: "utf8", mode: 0o600 });
+  return `${drive}/profile/runtime/mysql-managed.cnf`;
+}
 export async function startDatabase() {
   const { config } = await paths();
   if ((await mysql(["--execute=SELECT 1"])).code === 0) {
@@ -104,13 +163,19 @@ export async function startDatabase() {
     if (error.code !== "ENOENT") throw error;
     initialize = true;
   }
-  const executable = resolve(toolRoot, "mysql/bin/mysqld.exe");
+  const drive = /[^\x00-\x7f]/.test(projectRoot) ? await mysqlDrive() : null;
+  const executable = drive
+    ? `${drive}\\profile\\tools\\mysql\\bin\\mysqld.exe`
+    : resolve(toolRoot, "mysql/bin/mysqld.exe");
+  const option = drive
+    ? await mappedMysqlConfig(drive)
+    : "profile/runtime/mysql.cnf";
   if (initialize)
     await run(executable, [
-      "--defaults-file=profile/runtime/mysql.cnf",
+      `--defaults-file=${option}`,
       "--initialize-insecure",
       "--console",
-    ]);
+    ], { cwd: drive ? `${drive}\\` : projectRoot });
   const initFile = resolve(runtimeRoot, "mysql-init.sql");
   if (initialize) {
     if (
@@ -124,10 +189,10 @@ export async function startDatabase() {
       { mode: 0o600 },
     );
   }
-  const args = ["--defaults-file=profile/runtime/mysql.cnf", "--console"];
-  if (await exists(initFile)) args.push("--init-file=../mysql-init.sql");
-  const pid = await launchManaged(executable, args, "mysql-process.log");
-  await writeJson(resolve(runtimeRoot, "mysql-pid.json"), { pid });
+  const args = [`--defaults-file=${option}`, "--console"];
+  if (await exists(initFile)) args.push(drive ? `--init-file=${drive}/profile/runtime/mysql-init.sql` : "--init-file=../mysql-init.sql");
+  const pid = await launchManaged(executable, args, "mysql-process.log", process.env, drive ? `${drive}\\` : projectRoot);
+  await writeJson(resolve(runtimeRoot, "mysql-pid.json"), { pid, drive });
   for (let i = 0; i < 100; i++) {
     if ((await mysql(["--execute=SELECT 1"])).code === 0) {
       if (await exists(initFile)) await unlink(initFile);
@@ -259,6 +324,39 @@ export async function stopBackend() {
   }
   await unlink(recordPath);
 }
+
+/** Stop only the MySQL instance started with our recorded compatibility drive. */
+export async function stopDatabase() {
+  try {
+    if ((await getJson("http://127.0.0.1:8080/api/v1/health")).status === "ready")
+      throw new Error("Stop the project backend before stopping MySQL");
+  } catch (error) {
+    if (error.message === "Stop the project backend before stopping MySQL") throw error;
+  }
+  const recordPath = resolve(runtimeRoot, "mysql-pid.json");
+  const record = await readJson(recordPath, null);
+  const mapping = await readJson(mysqlDriveRecord, null);
+  if (!record || !Number.isInteger(record.pid) || record.pid < 1 ||
+      !mapping || mapping.projectRoot !== projectRoot ||
+      !/^[D-Z]$/.test(mapping.letter) || record.drive !== `${mapping.letter}:` ||
+      await driveState(mapping.letter) !== "match")
+    throw new Error("Cannot verify ownership of the project MySQL instance");
+  const check = await powershell(
+    `$listener=Get-NetTCPConnection -LocalAddress '127.0.0.1' -LocalPort 3307 -State Listen -ErrorAction Stop | Select-Object -First 1; $p=Get-CimInstance Win32_Process -Filter ('ProcessId='+$listener.OwningProcess); if ($p -and ($p.ProcessId -eq [int]$env:SEMANOTE_MYSQL_PID -or $p.ParentProcessId -eq [int]$env:SEMANOTE_MYSQL_PID) -and $p.CommandLine -like ($env:SEMANOTE_MYSQL_EXE+'*') -and $p.CommandLine -like '*mysql-managed.cnf*') { 'owned' } else { 'other' }`,
+    { env: { ...process.env, SEMANOTE_MYSQL_PID: String(record.pid), SEMANOTE_MYSQL_EXE: `${record.drive}\\profile\\tools\\mysql\\bin\\mysqld.exe` } },
+  );
+  if (check.stdout.toString("utf8").trim() !== "owned")
+    throw new Error("The MySQL listener does not match the managed process");
+  await run(`${record.drive}\\profile\\tools\\mysql\\bin\\mysqladmin.exe`,
+    [`--defaults-file=${record.drive}/profile/runtime/mysql-client.cnf`, "shutdown"],
+    { cwd: `${record.drive}\\` });
+  if (await driveState(mapping.letter) !== "match")
+    throw new Error("MySQL stopped, but its drive mapping changed and was retained");
+  await run("subst.exe", [`${mapping.letter}:`, "/D"]);
+  await unlink(recordPath);
+  await unlink(mysqlDriveRecord);
+  console.log("Project MySQL stopped and its verified drive mapping released");
+}
 export async function backupDatabase() {
   await startDatabase();
   const directory = resolve(projectRoot, "profile/backups");
@@ -313,6 +411,7 @@ if (
     database: startDatabase,
     start: startBackend,
     stop: stopBackend,
+    "stop-database": stopDatabase,
     backup: backupDatabase,
     lan: () => setNetworkMode("lan"),
     local: () => setNetworkMode("local"),
@@ -320,7 +419,7 @@ if (
   try {
     const action = actions[process.argv[2]];
     if (!action)
-      throw new Error("Use database, start, stop, backup, lan or local");
+      throw new Error("Use database, start, stop, stop-database, backup, lan or local");
     await action();
   } catch (error) {
     console.error(error.message);

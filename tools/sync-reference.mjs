@@ -38,6 +38,7 @@ export async function syncReference() {
   await mkdir(destination, { recursive: true });
   const copies = [];
   for (const name of [
+    "dashboard-preview.html",
     "preview.html",
     "preview.css",
     "preview.js",
@@ -70,7 +71,7 @@ export async function syncReference() {
   );
   for (const name of await readdir(resolve(projectRoot, "docs/licenses")))
     copies.push([`docs/licenses/${name}`, `frontend/dist/licenses/${name}`]);
-  for (const name of ["workspace.png", "insights.png"])
+  for (const name of ["workspace.png", "insights.png", "dashboard.png", "system-framework.svg"])
     copies.push([
       `assets/readme/${name}`,
       `frontend/dist/assets/readme/${name}`,

@@ -1,5 +1,5 @@
 import test, { after } from "node:test";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, rename } from "node:fs/promises";
 import { resolve, sep } from "node:path";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -190,6 +190,31 @@ test("cache reuse performs zero network calls and yields fresh result identity",
   );
   validateResponse(next, second);
 });
+test("equivalent trailing-slash endpoints reuse legacy cached layers", async () => {
+  const input = request(["segmentation", "pos", "ner"]), unique = { ...config, model: randomUUID() };
+  let calls = 0;
+  const providerCall = async () => { calls++; return reply(); };
+  await annotate(input, unique, { providerCall });
+  const legacy = { ...unique, baseUrl: unique.baseUrl + '/' };
+  const cacheDir = resolve(testRoot, 'annotation-cache');
+  await rename(resolve(cacheDir, cacheIdentity(unique, text) + '.json'), resolve(cacheDir, cacheIdentity(legacy, text) + '.json'));
+  const next = { ...input, requestId: randomUUID() };
+  const output = await annotate(next, unique, { providerCall });
+  assert.equal(calls, 1); assert.equal(output.execution.networkCalls, 0);
+  validateResponse(next, output);
+  const other = await annotate({ ...next, requestId: randomUUID() }, { ...legacy, apiKey: 'different' }, { providerCall });
+  assert.equal(other.execution.networkCalls, 1);
+});
+test("concurrent equivalent endpoint spellings share one cache publication", async () => {
+  const unique = { ...config, model: randomUUID() }, first = request(["ner"]), second = request(["ner"]);
+  let calls = 0;
+  const providerCall = async () => { calls++; await new Promise(resolve => setTimeout(resolve, 60)); return reply(); };
+  const [a, b] = await Promise.all([
+    annotate(first, unique, { providerCall }),
+    annotate(second, { ...unique, baseUrl: unique.baseUrl + '/' }, { providerCall }),
+  ]);
+  assert.equal(calls, 1); validateResponse(first, a); validateResponse(second, b);
+});
 test("manual semantic and error layers never apply suggestions to original text", () => {
   const source = "今天天汽很好。";
   const output = manual({
@@ -319,4 +344,12 @@ test("paragraph-only annotation is lossless and makes no model call", async () =
   );
   assert.ok(output.layers.paragraphs.result.items.length >= 3);
   validateResponse(input, output);
+});
+test('concurrent identical requests reuse the first validated cache publication', async () => {
+  const unique = {...config, model:randomUUID()}; let calls=0;
+  const providerCall=async()=>{calls++;await new Promise(r=>setTimeout(r,60));return reply();};
+  const inputs=[request(taskTypes),request(taskTypes)];
+  const results=await Promise.all(inputs.map(input=>annotate(input,unique,{providerCall})));
+  assert.equal(calls,1);assert.equal(results.reduce((sum,r)=>sum+r.execution.networkCalls,0),1);assert.equal(results.filter(r=>r.execution.localCacheHits===1).length,1);
+  results.forEach((result,i)=>validateResponse(inputs[i],result));
 });

@@ -91,6 +91,7 @@
   font-weight: 600;
   flex-shrink: 0;
 }
+.provider-icon img { width: 75%; height: 75%; object-fit: contain; }
 .provider-state-dot {
   width: 6px;
   height: 6px;

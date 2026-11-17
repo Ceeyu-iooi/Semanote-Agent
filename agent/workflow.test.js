@@ -239,6 +239,14 @@ test("POS retry cannot replace retained words with a different tokenization", as
     first.layers.segmentation.result.resultId,
   );
 });
+test("POS retry ignores cached tags for a different retained segmentation", async () => {
+  const request = input(["pos"]), unique = { ...config, model: randomUUID() };
+  const first = await annotate(request, unique, { useCache: false, providerCall: async () => ({ payload: { tokens: tokens.map(([word]) => [word, "TIME"]) }, log: usage }) });
+  await annotate(input(["pos"]), unique, { providerCall: async () => ({ payload: { tokens: [["林晓喜欢", "VERB"], ["阅读", "VERB"], ["。", "PUNCT"]] }, log: usage }) });
+  let calls = 0;
+  const next = await annotate(request, unique, { previousResponse: first, providerCall: async () => { calls++; return { payload: { tokens }, log: usage }; } });
+  assert.equal(calls, 1); assert.equal(next.status, "success"); validateResponse(request, next);
+});
 test("cross-chunk keyword ranking includes high-ranked later evidence", async () => {
   const text = "甲乙丙丁戊己庚辛壬癸。".repeat(60) + "重点。",
     request = input(["keywords"], text);

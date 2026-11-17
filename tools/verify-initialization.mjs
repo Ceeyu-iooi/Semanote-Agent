@@ -115,6 +115,7 @@ async function verifyGit(expectGit) {
     images = new Set([
       "assets/readme/workspace.png",
       "assets/readme/insights.png",
+      "assets/readme/dashboard.png",
     ]);
   const tracked = (await git("ls-files")).split("\n");
   for (const name of tracked) {

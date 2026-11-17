@@ -1,8 +1,12 @@
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 const props = defineProps({ view: Object });
 const emit = defineEmits(["navigate"]);
 const frame = ref(null);
+function syncTheme() { const doc = frame.value?.contentDocument; const theme = document.documentElement.dataset.theme || 'light'; if (doc?.documentElement.dataset.theme !== theme) doc?.getElementById('btn-theme')?.click(); }
+let observer;
+onMounted(() => { observer = new MutationObserver(syncTheme); observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] }); });
+onUnmounted(() => observer?.disconnect());
 const destinations = {
   vue: "frontend",
   spring: "backend",
@@ -17,6 +21,7 @@ const names = {
 };
 function connect() {
   const document = frame.value?.contentDocument;
+  syncTheme();
   if (!document || props.view.id !== "system") return;
   for (const [id, destination] of Object.entries(destinations)) {
     const element =
@@ -43,7 +48,7 @@ function connect() {
 </script>
 <template>
   <section class="architecture-explorer">
-    <div class="architecture-breadcrumb" aria-label="架构层级">
+    <div v-if="view.id !== 'system'" class="architecture-breadcrumb" aria-label="架构层级">
       <button
         :class="{ current: view.id === 'system' }"
         @click="$emit('navigate', 'system')"

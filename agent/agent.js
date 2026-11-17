@@ -24,6 +24,8 @@ import {
 import { promptVersion } from "./prompts.js";
 import { groundTokens, groundOrdered, sentenceEvidence } from "./grounding.js";
 
+import { lockCache } from './cacheLock.js';
+
 export const adapterVersion = "2.1.0";
 /** Bounded, lossless chunks; only source boundaries are used and no text is trimmed. */
 export function chunks(text, limit = 650) {
@@ -254,39 +256,53 @@ export async function annotate(
   for (const chunk of textChunks) {
     if (!remoteTasks.length) break;
     counters.chunks++;
-    const key = cacheIdentity(config, chunk.text),
-      cachePath = resolve(runtimeRoot, "annotation-cache", key + ".json");
-    let stored = {};
-    if (useCache)
+    // The transport removes one trailing slash. Lock both legacy identities in a
+    // stable order so equivalent spellings can safely reuse already saved layers.
+    const base = config.baseUrl;
+    const variants = base.endsWith('//') ? [base] : base.endsWith('/') ? [base.slice(0, -1), base] : [base, base + '/'];
+    const cachePaths = [...new Set(variants.map(url => resolve(runtimeRoot, "annotation-cache", cacheIdentity({ ...config, baseUrl: url }, chunk.text) + ".json")))];
+    const cachePath = cachePaths[0], releases = [];
+    try {
+    if (useCache) for (const path of [...cachePaths].sort()) releases.push(await lockCache(path, (config.timeoutSeconds + 30) * 1000));
+    const candidates = [];
+    if (useCache) for (const path of cachePaths) {
+      let entry = {};
       try {
-        stored = await readJson(cachePath, {});
+        entry = await readJson(path, {});
       } catch (error) {
         if (!(error instanceof SyntaxError)) throw error;
         counters.cacheRepairs++;
       }
-    if (!stored || typeof stored !== "object" || Array.isArray(stored)) {
-      stored = {};
-      counters.cacheRepairs++;
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) { entry = {}; counters.cacheRepairs++; }
+      candidates.push(entry);
     }
+    let stored = { ...(candidates[0] || {}) };
     const valid = {},
       missing = [];
+    const previousTokens = layers.segmentation.status === "success"
+      ? layers.segmentation.result.items.filter(item => item.spans[0].start >= chunk.start && item.spans[0].end <= chunk.start + Array.from(chunk.text).length).map(item => item.itemText)
+      : null;
     for (const task of remoteTasks) {
-      try {
-        requireValue(Array.isArray(stored[task]));
+      for (const entry of candidates) try {
+        requireValue(Array.isArray(entry[task]));
         const tokens =
           task === "pos"
             ? convertItems(
                 "segmentation",
-                stored.segmentation || [],
+                entry.segmentation || [],
                 chunk.text,
               )
             : [];
-        const items = convertItems(task, stored[task], chunk.text, tokens);
+        if (task === "pos" && valid.segmentation) requireValue(isDeepStrictEqual(tokens.map(item => item.itemText), valid.segmentation.map(item => item.itemText)));
+        if (task === "pos" && previousTokens) requireValue(isDeepStrictEqual(tokens.map(item => item.itemText), previousTokens));
+        const items = convertItems(task, entry[task], chunk.text, tokens);
         validateCoverage(task, items, chunk.text);
         valid[task] = items;
-      } catch {
-        missing.push(task);
-      }
+        stored[task] = entry[task];
+        if (task === "pos") stored.segmentation = entry.segmentation;
+        break;
+      } catch { /* Try the equivalent legacy identity before a remote call. */ }
+      if (!valid[task]) missing.push(task);
     }
     if (Object.keys(valid).length) {
       counters.localCacheHits++;
@@ -306,16 +322,7 @@ export async function annotate(
       ]),
     ];
     const retainedTokens =
-      layers.segmentation.status === "success"
-        ? layers.segmentation.result.items
-            .filter(
-              (item) =>
-                item.spans[0].start >= chunk.start &&
-                item.spans[0].end <=
-                  chunk.start + Array.from(chunk.text).length,
-            )
-            .map((item) => item.itemText)
-        : valid.segmentation?.map((item) => item.itemText);
+      previousTokens ?? valid.segmentation?.map((item) => item.itemText);
     let reply = null;
     if (modelTasks.length) {
       counters.networkCalls++;
@@ -420,6 +427,7 @@ export async function annotate(
       completedChunks: counters.chunks,
       totalChunks: textChunks.length,
     });
+    } finally { for (const release of releases.reverse()) await release(); }
   }
   onProgress({
     event: "progress",

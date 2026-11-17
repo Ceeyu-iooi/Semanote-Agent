@@ -1,5 +1,4 @@
-/* Shared Apple-derived surfaces;
-annotation colors encode data rather than actions. */
+/* Shared surfaces; annotation colors encode data rather than actions. */
 * {
   box-sizing: border-box;
 }

@@ -1,5 +1,6 @@
 <script setup>
-import { computed, ref, watch } from "vue";
+import AppIcon from "./AppIcon.vue";
+import { computed, ref } from "vue";
 import { taskNames, entityNames, labelNames } from "../api.js";
 const props = defineProps({
   tasks: Array,
@@ -13,12 +14,6 @@ const props = defineProps({
 const emit = defineEmits(["focus", "activate"]);
 const opened = ref(
   props.tasks?.includes(props.activeTask) ? props.activeTask : props.tasks?.[0],
-);
-watch(
-  () => props.activeTask,
-  (task) => {
-    if (props.tasks.includes(task)) opened.value = task;
-  },
 );
 function toggle(card) {
   const next = opened.value === card.task ? null : card.task;
@@ -40,6 +35,17 @@ const cards = computed(() =>
     };
   }),
 );
+function clusters(card) {
+  const grouped = new Map();
+  for (const item of card.items) {
+    const key = ['ner','pos','sentiment','intent','semantic','errors'].includes(card.task) ? label(item) || '其他' : card.task === 'events' ? item.label || '事件' : card.task === 'relations' ? item.label || '关系' : taskNames[card.task];
+    if (!grouped.has(key)) grouped.set(key, new Map());
+    const entries = grouped.get(key), text = previewText(card.task,item);
+    if (!entries.has(text)) entries.set(text,{item,text,count:0});
+    entries.get(text).count += item.spans?.length || 1;
+  }
+  return [...grouped].map(([name,entries])=>({name,entries:[...entries.values()].sort((a,b)=>b.count-a.count)}));
+}
 const titles = { left: "词项与证据", right: "语义与上下文" };
 function label(item) {
   return entityNames[item.label] || labelNames[item.label] || item.label || "";
@@ -72,7 +78,7 @@ function choose(card, item = null) {
       class="extraction-card accordion-item"
       :class="[
         {
-          selected: activeTask === card.task,
+          selected: opened === card.task,
           waiting: processing && card.requested && card.status !== 'success',
         },
         `extraction-${card.task}`,
@@ -88,9 +94,7 @@ function choose(card, item = null) {
           :aria-controls="`rail-${side}-${card.task}`"
           @click="toggle(card)"
         >
-          <span class="extraction-kind-mark" :class="card.task">{{
-            taskNames[card.task].slice(0, 1)
-          }}</span
+          <span class="extraction-kind-mark" :class="card.task"><AppIcon :name="card.task" /></span
           ><strong>{{ taskNames[card.task] }}</strong
           ><span class="extraction-count">{{
             card.status === "success"
@@ -113,18 +117,7 @@ function choose(card, item = null) {
         <Transition name="extract" mode="out-in"
           ><div :key="card.key" class="extraction-card-content">
             <template v-if="card.status === 'success'"
-              ><div v-if="card.items.length" class="extraction-chips">
-                <button
-                  v-for="item in card.items.slice(0, 60)"
-                  :key="item.itemId"
-                  class="extraction-chip"
-                  :class="`chip-${item.label || card.task}`"
-                  @click="choose(card, item)"
-                >
-                  <span>{{ previewText(card.task, item) }}</span
-                  ><small v-if="label(item)">{{ label(item) }}</small>
-                </button>
-              </div>
+              ><div v-if="card.items.length" class="extraction-groups"><section v-for="group in clusters(card)" :key="group.name" class="extraction-group"><h4>{{ group.name }} <small>{{ group.entries.length }} 项</small></h4><button v-for="entry in group.entries.slice(0,12)" :key="entry.item.itemId" class="extraction-chip" @click="choose(card,entry.item)"><span>{{ entry.text }}</span><small>{{ entry.count }} 处</small></button></section></div>
               <p v-else class="extraction-empty">
                 本篇未发现{{ taskNames[card.task] }}
               </p>

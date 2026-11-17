@@ -3,21 +3,27 @@ import { computed, ref, onMounted, onUnmounted } from "vue";
 import GitTimeline from "./GitTimeline.vue";
 import ModelLogs from "./ModelLogs.vue";
 import ArchitectureExplorer from "./ArchitectureExplorer.vue";
+import ThemeToggle from "./ThemeToggle.vue";
+import logo from "../assets/semanote-mark.svg";
+import { useNavIndicator } from "../useNavIndicator.js";
 const selected = ref(
   new URLSearchParams(location.search).get("view") || "design",
 );
+const { nav, indicator, update } = useNavIndicator(selected);
 const designFrame = ref(null);
 function syncFrameMotion() {
   const root = designFrame.value?.contentDocument?.documentElement;
   if (root)
     root.dataset.motion = document.documentElement.dataset.motion || "full";
+  if (root)
+    root.dataset.theme = document.documentElement.dataset.theme || "light";
 }
 let motionObserver;
 onMounted(() => {
   motionObserver = new MutationObserver(syncFrameMotion);
   motionObserver.observe(document.documentElement, {
     attributes: true,
-    attributeFilter: ["data-motion"],
+    attributeFilter: ["data-motion", "data-theme"],
   });
 });
 onUnmounted(() => motionObserver?.disconnect());
@@ -26,7 +32,7 @@ const entries = [
     id: "design",
     name: "设计规范",
     caption: "Foundations & components",
-    url: "/reference/design/preview.html?revision=1.5",
+    url: "/reference/design/dashboard-preview.html",
   },
   {
     id: "system",
@@ -89,11 +95,12 @@ function choose(id) {
   <div class="developer-shell">
     <header class="product-navigation developer-topbar">
       <a href="/" class="product-brand"
-        ><span class="product-monogram">S</span
+        ><img class="product-monogram" :src="logo" alt=""
         ><span>Semanote<small>DEVELOPER STUDIO</small></span></a
       >
 
-      <nav class="developer-navigation nav nav-pills" aria-label="开发者导航">
+      <nav ref="nav" class="developer-navigation nav nav-pills sliding-navigation" aria-label="开发者导航" @scroll="update">
+        <span class="nav-indicator" :style="indicator" aria-hidden="true"></span>
         <button
           v-for="entry in navigationEntries"
           :key="entry.id"
@@ -105,7 +112,7 @@ function choose(id) {
           {{ entry.name }}
         </button>
       </nav>
-      <a href="/" class="developer-return">返回文本工作台 ↗</a>
+      <ThemeToggle /><a href="/" class="developer-return">返回文本工作台 ↗</a>
     </header>
     <Transition name="page" mode="out-in" appear
       ><main :key="current.id" class="developer-main">

@@ -105,24 +105,6 @@ const percentage = (count, total) =>
           共 {{ statistics.documentCount.toLocaleString() }} 份文本 ·
           自动候选和人工草稿不计入
         </p>
-        <div
-          class="progress"
-          role="progressbar"
-          aria-label="已保存文本占比"
-          :aria-valuenow="statistics.savedCount"
-          aria-valuemin="0"
-          :aria-valuemax="Math.max(1, statistics.documentCount)"
-        >
-          <div
-            class="progress-bar"
-            :style="{
-              width: percentage(
-                statistics.savedCount,
-                statistics.documentCount,
-              ),
-            }"
-          ></div>
-        </div>
         <span class="caption"
           >保存覆盖
           {{
@@ -257,32 +239,18 @@ const percentage = (count, total) =>
         <p class="caption muted chart-selection">
           以 {{ statistics.savedCount }} 份已保存文本为范围
         </p>
-        <button
+        <div class="coverage-tiles"><button
           v-for="(name, task) in taskNames"
           :key="task"
-          class="bar-row"
+          class="coverage-tile"
           :class="{ active: activeCoverage === task }"
+          :style="{ '--coverage': `${(statistics.coverage[task] || 0) / statistics.savedCount * 100}%` }"
           :aria-pressed="activeCoverage === task"
           @click="activeCoverage = task"
           :title="`${name}已覆盖 ${statistics.coverage[task]} / ${statistics.savedCount} 份已保存文本`"
         >
-          <span>{{ name }}</span
-          ><span class="bar-track"
-            ><span
-              :style="{
-                width: percentage(
-                  statistics.coverage[task],
-                  statistics.savedCount,
-                ),
-              }"
-            ></span></span
-          ><strong
-            >{{ statistics.coverage[task] }} / {{ statistics.savedCount
-            }}<small>{{
-              percentage(statistics.coverage[task], statistics.savedCount)
-            }}</small></strong
-          >
-        </button>
+          <span>{{ name }}</span><strong>{{ percentage(statistics.coverage[task], statistics.savedCount) }}</strong><small>{{ statistics.coverage[task] }} / {{ statistics.savedCount }} 份</small>
+        </button></div>
         <p class="caption muted mt-3 mb-0">
           {{
             activeCoverage
@@ -303,10 +271,10 @@ const percentage = (count, total) =>
           }}
         </p>
         <p v-if="!posRows.length" class="muted caption">暂无保存的词性结果。</p>
-        <button
+        <div class="pos-columns"><button
           v-for="[label, count] in posRows"
           :key="label"
-          class="bar-row"
+          class="pos-column"
           :class="{ active: activePos?.[0] === label }"
           @pointermove="
             activePos = [label, count];
@@ -315,13 +283,12 @@ const percentage = (count, total) =>
           @focus="activePos = [label, count]"
           @click="activePos = [label, count]"
         >
-          <span>{{ label }}</span
-          ><span class="bar-track"
+          <strong>{{ count }}</strong><span class="pos-column-track"
             ><span
-              :style="{ width: `${(count / maxPos) * 100}%` }"
+              :style="{ height: `${(count / maxPos) * 100}%` }"
             ></span></span
-          ><strong>{{ count }}</strong>
-        </button>
+          ><span>{{ label }}</span>
+        </button></div>
       </article>
       <article class="surface chart-panel" v-reveal="3">
         <p class="eyebrow">KEYWORDS IN CONTEXT</p>
@@ -329,13 +296,14 @@ const percentage = (count, total) =>
         <p v-if="!statistics.keywords.length" class="muted caption">
           暂无保存的关键词。
         </p>
-        <ol class="keyword-ranking">
+        <ol class="keyword-ranking keyword-cloud">
           <li
-            v-for="(keyword, index) in statistics.keywords"
+            v-for="(keyword, index) in statistics.keywords.slice(0, 12)"
             :key="keyword.itemText"
           >
             <button
               class="keyword-chart-button"
+              :style="{ '--keyword-scale': 0.85 + 0.45 * keyword.count / statistics.keywords[0].count }"
               :class="{ active: activeKeyword?.itemText === keyword.itemText }"
               @pointermove="
                 activeKeyword = keyword;
@@ -345,14 +313,7 @@ const percentage = (count, total) =>
               @click="activeKeyword = keyword"
             >
               <small>{{ String(index + 1).padStart(2, "0") }}</small
-              ><span>{{ keyword.itemText }}</span
-              ><span class="keyword-meter"
-                ><i
-                  :style="{
-                    width: `${(keyword.count / Math.max(1, ...statistics.keywords.map((entry) => entry.count))) * 100}%`,
-                  }"
-                ></i
-              ></span>
+              ><span>{{ keyword.itemText }}</span>
               <strong>{{ keyword.count }} <small>次</small></strong>
             </button>
           </li>

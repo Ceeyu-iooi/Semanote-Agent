@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 310" role="img" aria-labelledby="title desc">
+<title id="title">Semanote 系统框架</title><desc id="desc">浏览器与 Web 服务交互，服务调用标注智能体并读写数据库。</desc>
+<rect width="1200" height="310" rx="24" fill="#f3f2f7"/>
+<g font-family="system-ui, Microsoft YaHei, sans-serif" fill="#211d38">
+<text x="40" y="54" font-size="26" font-weight="700">从原文到可追溯的标注</text>
+<g font-size="23" font-weight="700"><text x="72" y="135">浏览器工作区</text><text x="348" y="135">Web 服务</text><text x="625" y="135">标注智能体</text><text x="914" y="135">数据存储</text></g>
+<g font-size="18" fill="#575668"><text x="72" y="170">Vue · Bootstrap</text><text x="348" y="170">Spring Boot</text><text x="625" y="170">JavaScript · Node.js</text><text x="914" y="170">MySQL · 本地配置</text><text x="72" y="205">输入、审阅与导出</text><text x="348" y="205">任务、修订与快照</text><text x="625" y="205">推理、定位与校验</text><text x="914" y="205">文本、标注与缓存</text></g>
+<g fill="none" stroke="#41a9a1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M270 150h45m-10-8 10 8-10 8"/><path d="M548 150h45m-10-8 10 8-10 8"/><path d="M450 220v18h550v-18m-8 10 8-10 8 10"/></g>
+<text x="40" y="275" font-size="18" fill="#575668">原文修订、标注结果与保存快照保持关联</text></g></svg>
