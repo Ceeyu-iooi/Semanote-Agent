@@ -319,7 +319,7 @@ try {
   );
   check(
     "batch/text/file limits reject without truncation",
-    (await upload("many.csv", "A,B,C\n" + "a,b,c\n".repeat(167))).code ===
+    (await upload("many.csv", "A,B,C\n" + "a,b,c\n".repeat(16667))).code ===
       413 &&
       (await call("/documents", { title: "超限", text: "😀".repeat(10001) }))
         .code === 413 &&
@@ -441,6 +441,18 @@ try {
     "SQL restore into a new empty database",
     restored.code === 0 && original.stdout.equals(restoredCounts.stdout),
   );
+  await start();
+  const sample = "原创合成文本".repeat(100);
+  const dataset = "A,B,C\r\n" + `${sample},${sample},${sample}\r\n`.repeat(5102);
+  const largeImport = await upload("synthetic-dataset.csv", dataset);
+  check("training-sized CSV imports all 15306 individual cells",
+    largeImport.code === 200 && largeImport.data.importedCount === 15306 &&
+    largeImport.data.documentIds.length === 15306 &&
+    new Set(largeImport.data.documentIds).size === 15306);
+  const lastImported = await call("/documents/" + largeImport.data.documentIds.at(-1));
+  check("large CSV stores the final document and source coordinates",
+    lastImported.code === 200 && lastImported.data.revision.textBody === sample &&
+    lastImported.data.source.rowNumber === 5103 && lastImported.data.source.columnNumber === 3);
   await writeJson(resolve(receiptRoot, "http-regression.json"), {
     status: "passed",
     checks,

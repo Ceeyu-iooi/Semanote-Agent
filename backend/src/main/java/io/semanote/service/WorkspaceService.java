@@ -125,11 +125,24 @@ public class WorkspaceService {
         String finalName = safeName;
         List<String> documentIds = transaction.execute(status -> {
             repository.jdbc().update("INSERT INTO importBatch(id,fileName,summaryJson,createdAt) VALUES (?,?,?,?)", batchId, finalName, repository.json(summary), now());
-            List<String> ids = new ArrayList<>();
-            for (ImportParser.ImportedText item : parsed.texts()) {
-                Map<String, Object> source = Map.of("kind", "import", "batchId", batchId, "fileName", finalName, "rowNumber", item.rowNumber(), "columnNumber", item.columnNumber(), "columnName", item.columnName());
-                String itemTitle = finalName + " · " + item.rowNumber() + ":" + item.columnNumber();
-                ids.add(createDocument(itemTitle.substring(0, Math.min(200, itemTitle.length())), item.text(), source));
+            List<String> ids = new ArrayList<>(parsed.texts().size());
+            String timestamp = now();
+            // Bound each JDBC batch while keeping the whole file in one transaction.
+            for (int offset = 0; offset < parsed.texts().size(); offset += 200) {
+                List<Object[]> documents = new ArrayList<>();
+                List<Object[]> revisions = new ArrayList<>();
+                for (var item : parsed.texts().subList(offset, Math.min(offset + 200, parsed.texts().size()))) {
+                    String documentId = identity(), revisionId = identity();
+                    Map<String, Object> source = Map.of("kind", "import", "batchId", batchId, "fileName", finalName,
+                            "rowNumber", item.rowNumber(), "columnNumber", item.columnNumber(), "columnName", item.columnName());
+                    String itemTitle = finalName + " · " + item.rowNumber() + ":" + item.columnNumber();
+                    int end = itemTitle.offsetByCodePoints(0, Math.min(200, itemTitle.codePointCount(0, itemTitle.length())));
+                    documents.add(new Object[]{documentId, itemTitle.substring(0, end), revisionId, repository.json(source), timestamp, timestamp});
+                    revisions.add(new Object[]{revisionId, documentId, 1, item.text(), fingerprint(item.text()), timestamp});
+                    ids.add(documentId);
+                }
+                repository.jdbc().batchUpdate("INSERT INTO textDocument(id,title,currentRevisionId,sourceJson,createdAt,updatedAt) VALUES (?,?,?,?,?,?)", documents);
+                repository.jdbc().batchUpdate("INSERT INTO textRevision(id,documentId,revisionNumber,textBody,textHash,createdAt) VALUES (?,?,?,?,?,?)", revisions);
             }
             return ids;
         });

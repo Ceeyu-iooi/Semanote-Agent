@@ -2,6 +2,7 @@ package io.semanote.api;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.semanote.service.JobService;
+import io.semanote.service.ImportParser;
 import io.semanote.service.WorkspaceService;
 import io.semanote.service.GitService;
 import io.semanote.service.ModelSettingsService;
@@ -30,7 +31,9 @@ public class WorkspaceController {
         return Map.of("tasks", WorkspaceService.TASKS,
                 "entityLabels", List.of("PERSON", "LOCATION", "ORGANIZATION", "TIME", "MONEY"),
                 "posLabels", List.of("ADJ", "ADP", "ADV", "AUX", "CCONJ", "DET", "INTJ", "NOUN", "NUM", "PART", "PRON", "PROPN", "PUNCT", "SCONJ", "SYM", "VERB", "X"),
-                "maxTextLength", 10000, "maxBatchSize", 500, "maxFileBytes", 5242880, "offsetUnit", "unicodeCodePoint");
+                "maxTextLength", 10000, "maxBatchSize", 500, "maxFileBytes", ImportParser.MAX_FILE_BYTES,
+                "maxCsvBytes", ImportParser.MAX_CSV_BYTES, "maxCsvTexts", ImportParser.MAX_CSV_TEXTS,
+                "offsetUnit", "unicodeCodePoint");
     }
     @GetMapping("/documents") public Object documents() { return workspace.documents(); }
     @PostMapping("/documents") public ResponseEntity<?> create(@RequestBody JsonNode body) { return ResponseEntity.status(201).body(workspace.create(body)); }

@@ -20,6 +20,7 @@ import TopNavigation from "./components/TopNavigation.vue";
 import ExtractionRail from "./components/ExtractionRail.vue";
 import FrequencyDetails from "./components/FrequencyDetails.vue";
 import DashboardView from "./components/DashboardView.vue";
+import deepseekLogo from "./assets/deepseek.svg";
 import {
   request,
   send,
@@ -392,23 +393,59 @@ async function saveText() {
     editorBusy.value = false;
   }
 }
-async function importFile(event) {
-  const file = event.target.files?.[0];
-  if (!file) return;
+const importDragDepth = ref(0);
+const dragHasFiles = event => Array.from(event.dataTransfer?.types || []).includes("Files");
+function enterImportZone(event) {
+  if (!dragHasFiles(event)) return;
+  event.preventDefault();
+  if (!importBusy.value) importDragDepth.value++;
+}
+function overImportZone(event) {
+  if (!dragHasFiles(event)) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = importBusy.value ? "none" : "copy";
+}
+function leaveImportZone() {
+  importDragDepth.value = Math.max(0, importDragDepth.value - 1);
+}
+function dropImportFiles(event) {
+  if (!dragHasFiles(event)) return;
+  event.preventDefault();
+  importDragDepth.value = 0;
+  void importFiles(Array.from(event.dataTransfer.files));
+}
+function selectImportFiles(event) {
+  const files = Array.from(event.target.files || []);
+  event.target.value = "";
+  void importFiles(files);
+}
+async function importFiles(files) {
+  if (!files.length || importBusy.value) return;
   importBusy.value = true;
   actionError.value = "";
   notice.value = "";
+  let imported = 0, skipped = 0, completed = 0;
+  const failures = [];
   try {
-    const form = new FormData();
-    form.append("file", file);
-    const result = await request("/imports", { method: "POST", body: form });
-    await refresh();
-    notice.value = `已导入 ${result.importedCount} 份文本，跳过 ${result.skippedCount} 个纯空白文本。`;
-  } catch (error) {
-    actionError.value = message(error);
+    for (const file of files) {
+      try {
+        const form = new FormData();
+        form.append("file", file);
+        const result = await request("/imports", { method: "POST", body: form });
+        imported += result.importedCount;
+        skipped += result.skippedCount;
+        completed++;
+      } catch (error) {
+        failures.push(`${file.name}：${message(error)}`);
+      }
+    }
+    if (completed) {
+      await refresh();
+      notice.value = `已导入 ${imported.toLocaleString()} 份文本${skipped ? `，跳过 ${skipped.toLocaleString()} 个空白单元` : ""}。`;
+    }
+    if (failures.length) actionError.value = failures.join("；");
   } finally {
     importBusy.value = false;
-    event.target.value = "";
   }
 }
 function clearHiddenSelection() {
@@ -1319,7 +1356,10 @@ function nextPage(delta) {
           @open="openDocument"
           @create="openEditor()"
         />
-        <template v-else-if="page === 'library'">
+        <div v-else-if="page === 'library'" class="library-import-zone"
+          :class="{ 'is-file-over': importDragDepth > 0 }"
+          @dragenter="enterImportZone" @dragover="overImportZone"
+          @dragleave="leaveImportZone" @drop="dropImportFiles">
           <section class="page-heading">
             <div>
               <p class="eyebrow">YOUR WORDS, IN FOCUS</p>
@@ -1328,7 +1368,7 @@ function nextPage(delta) {
             </div>
             <div class="button-row">
               <button
-                class="btn btn-outline-primary"
+                class="btn btn-outline-primary library-import-button"
                 :disabled="importBusy"
                 @click="importInput.click()"
               >
@@ -1341,9 +1381,10 @@ function nextPage(delta) {
                 ref="importInput"
                 class="visually-hidden"
                 type="file"
+                multiple
                 accept=".txt,.md,.csv,.docx"
                 aria-label="导入 DOCX、TXT、MD 或 CSV"
-                @change="importFile"
+                @change="selectImportFiles"
               />
             </div>
           </section>
@@ -1474,7 +1515,7 @@ function nextPage(delta) {
               </div>
             </footer>
           </section>
-        </template>
+        </div>
         <template v-else-if="page === 'workspace' && current">
           <section class="workspace-heading">
             <div>
@@ -1820,14 +1861,7 @@ function nextPage(delta) {
                   </button>
                 </fieldset>
               </div>
-              <footer class="editor-statusbar">
-                <span>{{
-                  editing
-                    ? "划选正文添加标注"
-                    : sourceEditing
-                      ? "原文编辑中"
-                      : "选择图层，点击词语查看详情"
-                }}</span>
+              <footer v-if="editing || sourceEditing || (candidate && !processing && ['success', 'partialFailure'].includes(candidate.state) && !isHistorical)" class="editor-statusbar">
                 <div class="button-row">
                   <template v-if="sourceEditing"
                     ><button
@@ -2279,17 +2313,22 @@ function nextPage(delta) {
             ×
           </button>
         </header>
-        <div class="dialog-body">
-          <p>
+        <div class="dialog-body annotation-dialog-body">
+          <div class="annotation-dialog-summary">
+            <AppIcon name="layers" />
+            <div><strong>{{ modelTargets.length }} 份文本</strong><p>
             {{
               retryTarget
                 ? retryTarget.response
                   ? "保留成功层，只重试失败层。"
                   : "没有完整回执，将重新调用全部所选层，可能重复计费。"
-                : `分析 ${modelTargets.length} 份文本`
+                : `已选 ${selectedTasks.length} 个标注图层`
             }}
-          </p>
-          <div v-if="!retryTarget" class="task-options">
+            </p></div>
+          </div>
+          <fieldset v-if="!retryTarget" class="annotation-dialog-field">
+            <legend>标注图层</legend>
+            <div class="task-options">
             <label
               v-for="(name, task) in taskNames"
               :key="task"
@@ -2299,26 +2338,24 @@ function nextPage(delta) {
                 type="checkbox"
                 class="form-check-input"
                 :value="task"
-              />{{ name }}</label
+              /><AppIcon :name="task" />{{ name }}</label
             >
-          </div>
-          <label v-if="!retryTarget" class="form-label mt-3" for="providerName"
-            >模型供应商</label
-          ><select
-            v-if="!retryTarget"
-            id="providerName"
-            v-model="provider"
-            class="form-select"
-            required
-          >
-            <option
-              v-for="item in modelPreferences.providers"
-              :key="item.id"
-              :value="item.id"
-            >
-              {{ item.name }} · {{ item.model }}
-            </option>
-          </select>
+            </div>
+          </fieldset>
+          <fieldset v-if="!retryTarget" class="annotation-dialog-field">
+            <legend>模型供应商</legend>
+            <p v-if="!modelPreferences.providers.length" class="muted">请先在设置中配置模型供应商。</p>
+            <div class="annotation-provider-options">
+              <label v-for="item in modelPreferences.providers" :key="item.id" class="annotation-provider-option">
+                <input v-model="provider" type="radio" name="annotation-provider" :value="item.id" required class="form-check-input">
+                <span class="provider-icon">
+                  <img v-if="item.id === 'deepseek'" :src="deepseekLogo" alt="">
+                  <template v-else>{{ item.name.slice(0, 1) }}</template>
+                </span>
+                <span><strong>{{ item.name }}</strong><small>{{ item.model }}</small></span>
+              </label>
+            </div>
+          </fieldset>
           <div class="consent-panel">
             <strong>文本将发送到所选模型。</strong
             ><label class="checkbox-label caption"
@@ -2341,7 +2378,7 @@ function nextPage(delta) {
             @click="modelDialog.close()"
           >
             取消</button
-          ><button class="btn btn-primary" :disabled="modelBusy">
+          ><button class="btn btn-primary" :disabled="modelBusy || (!retryTarget && !modelPreferences.providers.length)">
             {{
               modelBusy ? "提交中…" : retryTarget ? "重试失败层" : "开始标注"
             }}

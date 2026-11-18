@@ -46,7 +46,7 @@ export function workspaceDiagram(template, diagram, theme, reduced) {
     return element;
   };
   doc.documentElement.dataset.theme = theme;
-  doc.documentElement.dataset.embed = "true";
+  doc.documentElement.dataset.workspaceView = "true";
   if (reduced) doc.documentElement.dataset.motion = "still";
   const policy = doc.createElement("meta");
   policy.httpEquiv = "Content-Security-Policy";
@@ -56,9 +56,17 @@ export function workspaceDiagram(template, diagram, theme, reduced) {
   doc.title = diagram.title;
   const style = doc.createElement("style");
   style.textContent = `
-    body { margin:0 !important; padding:0 !important; }
-    .diagram-container { border-radius:12px; margin:0 !important; }
-    .diagram-container > svg { min-width:${diagram.timeline ? width : Math.min(width, 640)}px; }
+    html[data-workspace-view] body { margin:0; padding:0; background:var(--panel); overflow:hidden; }
+    html[data-workspace-view] .container { display:block; padding:0; max-width:none; }
+    html[data-workspace-view] :is(.toolbar, .header, .reader-rail, .rail-reveal, .focus-chip) { display:none !important; }
+    html[data-workspace-view] .diagram-container {
+      display:block; height:100dvh; min-height:0; margin:0; padding:0 0 60px;
+      border:0; box-shadow:none; border-radius:12px;
+    }
+    html[data-workspace-view] .diagram-container > svg {
+      width:100%; min-width:0; max-width:none; height:100%;
+    }
+    html[data-workspace-view] .diagram-nav { bottom:12px; right:12px; translate:none; }
     body, button, [role=button] { cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='28'%3E%3Cpath d='M3 2L8 23l4-8 8-3z' fill='%232563eb' stroke='white' stroke-width='1.5'/%3E%3C/svg%3E") 3 2, auto !important; }
     [data-workspace-edge] { cursor:inherit; }
     [data-workspace-edge]:focus-visible { outline:2px solid #2563eb; }

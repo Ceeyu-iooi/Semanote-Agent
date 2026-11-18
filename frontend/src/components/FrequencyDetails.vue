@@ -86,19 +86,18 @@ const name = (row) =>
 </script>
 <template>
   <section class="frequency-details" :class="{ 'has-selection': selected }" aria-label="标注频次图">
-    <header v-if="task !== 'keywords'" class="frequency-summary">
-      <div>
-        <strong>{{ groups.length }}</strong
-        ><span
-          >{{ grouping === "label" ? "个类别" : "个不同词项"
-          }}<small>共 {{ total }} 次标注出现</small></span
-        >
+    <div v-if="task !== 'keywords'" class="frequency-chart-column">
+      <header class="frequency-summary">
+        <div>
+          <strong>{{ groups.length }}</strong>
+          <span>{{ grouping === "label" ? "个类别" : "个不同词项" }}<small>共 {{ total }} 次标注出现</small></span>
+        </div>
+      </header>
+      <div class="frequency-caption"><span>{{ grouping === "label" ? "类别分布" : "词项频次" }}</span><span>选择查看原文</span></div>
+      <div v-if="grouping === 'label' && groups.length" class="frequency-donut-layout">
+        <div class="frequency-donut" :style="{ background: ringGradient }"><div><strong>{{ total }}</strong><small>次标注</small></div></div>
+        <div class="frequency-donut-legend"><button v-for="(row, index) in groups" :key="row.key" :class="{ selected: selected?.key === row.key }" :aria-pressed="selected?.key === row.key" @click="selectedKey = row.key"><i :style="{ background: palette[index % palette.length] }"></i><span>{{ name(row) }}</span><strong>{{ row.count }}</strong></button></div>
       </div>
-    </header>
-    <div v-if="task !== 'keywords'" class="frequency-caption"><span>{{ grouping === "label" ? "类别分布" : "词项频次" }}</span><span>选择查看原文</span></div>
-    <div v-if="grouping === 'label' && groups.length" class="frequency-donut-layout">
-      <div class="frequency-donut" :style="{ background: ringGradient }"><div><strong>{{ total }}</strong><small>次标注</small></div></div>
-      <div class="frequency-donut-legend"><button v-for="(row, index) in groups" :key="row.key" :class="{ selected: selected?.key === row.key }" :aria-pressed="selected?.key === row.key" @click="selectedKey = row.key"><i :style="{ background: palette[index % palette.length] }"></i><span>{{ name(row) }}</span><strong>{{ row.count }}</strong></button></div>
     </div>
     <div v-else-if="task === 'keywords' && groups.length" ref="cloud" class="frequency-rows word-cloud" :style="{ height: cloudLayout.height + 'px' }">
       <button

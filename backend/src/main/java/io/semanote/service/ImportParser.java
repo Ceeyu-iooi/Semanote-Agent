@@ -14,14 +14,19 @@ import javax.xml.stream.XMLStreamConstants;
 
 /** Strict UTF-8 and RFC-style quoted CSV; fields retain original characters. */
 public final class ImportParser {
+    public static final int MAX_FILE_BYTES = 5 * 1024 * 1024;
+    public static final int MAX_CSV_BYTES = 64 * 1024 * 1024;
+    public static final int MAX_CSV_TEXTS = 50000;
     public record ImportedText(String text, int rowNumber, int columnNumber, String columnName) {}
     public record ImportResult(List<ImportedText> texts, int skippedCount) {}
     private ImportParser() {}
 
     public static ImportResult parse(String fileName, byte[] bytes) {
-        if (bytes.length > 5 * 1024 * 1024) throw new ApiFailure(413, "fileTooLarge", "文件超过 5 MiB。");
         String content;
         String extension = fileName.toLowerCase(java.util.Locale.ROOT);
+        boolean isCsv = extension.endsWith(".csv");
+        if (bytes.length > (isCsv ? MAX_CSV_BYTES : MAX_FILE_BYTES))
+            throw new ApiFailure(413, "fileTooLarge", isCsv ? "CSV 文件超过 64 MiB。" : "文件超过 5 MiB。");
         try {
             content = extension.endsWith(".docx") ? docx(bytes) : StandardCharsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT)
                     .onUnmappableCharacter(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(bytes)).toString();
@@ -32,7 +37,7 @@ public final class ImportParser {
         if (extension.endsWith(".txt") || extension.endsWith(".md") || extension.endsWith(".docx")) {
             if (isBlank(content)) skippedCount++;
             else { validateText(content); texts.add(new ImportedText(content, 1, 1, "text")); }
-        } else if (fileName.toLowerCase(java.util.Locale.ROOT).endsWith(".csv")) {
+        } else if (isCsv) {
             List<List<String>> rows = csv(content);
             if (rows.isEmpty() || rows.getFirst().size() != 3) throw new ApiFailure(400, "invalidColumns", "CSV 首行必须包含三个列名。");
             List<String> headers = rows.getFirst();
@@ -43,7 +48,8 @@ public final class ImportParser {
                     String text = row.get(column);
                     if (isBlank(text)) skippedCount++;
                     else { validateText(text); texts.add(new ImportedText(text, index + 1, column + 1, headers.get(column))); }
-                    if (texts.size() > 500) throw new ApiFailure(413, "batchTooLarge", "单批最多 500 个非空白文本；本次未导入，请拆分文件。");
+                    if (texts.size() > MAX_CSV_TEXTS)
+                        throw new ApiFailure(413, "batchTooLarge", "每个 CSV 最多 50,000 份非空文本，请拆分后导入。");
                 }
             }
         } else throw new ApiFailure(400, "unsupportedFile", "请选择 DOCX、UTF-8 TXT、MD 或三列 CSV 文件。");

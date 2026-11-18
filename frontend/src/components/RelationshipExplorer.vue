@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { entityNames } from "../api.js";
 import { relationshipGraph, eventTime, eventContext, groupRelationships } from "../graphPresentation.js";
 import { workspaceDiagram } from "../archifyWorkspace.js";
@@ -8,6 +8,8 @@ const props = defineProps({ layers: Object, text: String, activeTask: String, gr
 const emit = defineEmits(["focus"]);
 const tab = ref("events"), selection = ref(null), template = ref(""), loadError = ref(false);
 const frame = ref(null), panel = ref(null), detailPosition = ref(null);
+const closeButton = ref(null);
+let evidenceTrigger;
 const theme = ref(document.documentElement.dataset.theme || "light");
 const reduced = ref(document.documentElement.dataset.motion === "reduced");
 const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -95,32 +97,41 @@ function chooseTab(value) {
   selection.value = null;
   detailPosition.value = null;
 }
+function closeEvidence(restoreFocus = false) {
+  selection.value = null;
+  detailPosition.value = null;
+  if (restoreFocus && evidenceTrigger?.isConnected) evidenceTrigger.focus({ preventScroll: true });
+  evidenceTrigger = null;
+}
 function bindViewer() {
-  const doc = frame.value?.contentDocument;
+  const viewer = frame.value;
+  const doc = viewer?.contentDocument;
   if (!doc) return;
   doc.documentElement.dataset.theme = theme.value;
   if (reduced.value) doc.documentElement.dataset.motion = "still";
   const open = event => {
     if (event.type === "keydown" && !["Enter", " "].includes(event.key)) return;
-    const target = event.target.closest("[data-workspace-edge], [data-node-id]");
-    const id = target?.dataset.workspaceEdge || target?.dataset.nodeId;
+    const target = event.target.closest("[data-workspace-edge], [data-relationship-hit-key], [data-node-id]");
+    const id = target?.dataset.workspaceEdge || target?.dataset.relationshipId || target?.dataset.nodeId;
     if (!id || !entries.value.some(entry => entry.id === id)) return;
     if (event.type === "keydown") event.preventDefault();
+    evidenceTrigger = target;
     const bounds = target.getBoundingClientRect();
     const outer = panel.value.getBoundingClientRect();
-    const iframe = frame.value.getBoundingClientRect();
+    const iframe = viewer.getBoundingClientRect();
     const x = event.type === "click" && event.detail ? event.clientX : bounds.left + bounds.width / 2;
     const y = event.type === "click" && event.detail ? event.clientY : bounds.bottom;
     detailPosition.value = {
       left: Math.round(Math.max(12, Math.min(iframe.left - outer.left + x + 12, outer.width - Math.min(348, outer.width - 24) - 12))) + "px",
-      top: Math.round(iframe.top - outer.top + Math.min(y + 12, Math.max(20, iframe.height - 165))) + "px",
+      top: Math.round(iframe.top - outer.top + Math.max(12, Math.min(y + 12, iframe.height - 360))) + "px",
     };
     selection.value = id;
+    if (event.type === "keydown") nextTick(() => closeButton.value?.focus({ preventScroll: true }));
   };
-  doc.addEventListener("click", open);
-  doc.addEventListener("keydown", open);
+  doc.addEventListener("click", open, true);
+  doc.addEventListener("keydown", open, true);
   doc.addEventListener("keydown", event => {
-    if (event.key === "Escape") selection.value = null;
+    if (event.key === "Escape") closeEvidence();
   });
 }
 onMounted(async () => {
@@ -142,7 +153,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <section v-if="events.length || graph.nodes.length" ref="panel" class="surface relationship-panel evidence-explorer archify-workspace" @keydown.esc="selection = null">
+  <section v-if="events.length || graph.nodes.length" ref="panel" class="surface relationship-panel evidence-explorer archify-workspace" @keydown.esc="closeEvidence(true)">
     <header class="panel-toolbar">
       <h3>关系与事件</h3>
       <div class="nav nav-pills graph-tabs" aria-label="图谱视图">
@@ -152,10 +163,14 @@ onUnmounted(() => {
     </header>
     <p v-if="!model.nodes.length" class="empty-state">本篇暂无对应标注。</p>
     <p v-else-if="loadError" class="empty-state">无法加载 Archify 图谱，请刷新页面重试。</p>
-    <iframe v-else-if="source" ref="frame" :srcdoc="source" :title="model.title" class="workspace-graph-frame" @load="bindViewer"></iframe>
+    <div v-else-if="source" class="workspace-graph-stage">
+      <Transition name="workspace-graph-fade" mode="out-in">
+        <iframe :key="tab" ref="frame" :srcdoc="source" :title="model.title" class="workspace-graph-frame" @load="bindViewer"></iframe>
+      </Transition>
+    </div>
     <p v-else class="empty-state" role="status">正在加载图谱…</p>
     <section v-if="active?.entries" class="archify-evidence" :class="{ 'anchored-evidence': detailPosition }" :style="detailPosition" aria-label="标注证据">
-      <header><strong>{{ active.title || active.label }}</strong><button type="button" class="text-action" aria-label="关闭标注证据" @click="selection = null">×</button></header>
+      <header><strong>{{ active.title || active.label }}</strong><button ref="closeButton" type="button" class="archify-evidence-close" aria-label="关闭标注证据" @click.stop="closeEvidence(true)">×</button></header>
       <ul>
         <li v-for="(entry, index) in active.entries" :key="entry.itemId + '-' + index">
           <strong>{{ entry.title }}</strong>
