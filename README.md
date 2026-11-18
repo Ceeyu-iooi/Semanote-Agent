@@ -5,7 +5,7 @@
   <a href="https://github.com/Ceeyu-iooi/Semanote-Agent/releases/latest"><img src="https://img.shields.io/github/v/release/Ceeyu-iooi/Semanote-Agent?style=flat-square&amp;color=25203f" alt="最新发布"></a>
   <img src="https://img.shields.io/badge/平台-Windows%20x64-25203f?style=flat-square" alt="Windows x64">
   <img src="https://img.shields.io/badge/技术栈-Vue%20%2B%20Spring%20Boot%20%2B%20Node.js-117e79?style=flat-square" alt="Vue、Spring Boot 和 Node.js">
-  <a href="#许可证"><img src="https://img.shields.io/badge/许可证-见说明-64748b?style=flat-square" alt="许可证说明"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/许可证-MIT-64748b?style=flat-square" alt="MIT 许可证"></a>
 </div>
 
 <p align="center">
@@ -20,16 +20,21 @@ Semanote-Agent 是一个在本机运行的中文文本标注工作台。导入�
 
 ## 标注能力
 
-| 图层 | 可查看的结果 |
-| --- | --- |
-| 分词、词性 | 词语边界与 UD 词性 |
-| 关键词、命名实体 | 词频、原文位置，以及人名、地点、机构、时间和金额 |
-| 分段、语义 | 原文分段、主题、解释与列举 |
-| 关系、事件 | 实体之间的联系、事件角色和时间轴 |
-| 情感、意图 | 情感倾向，以及陈述、请求、提问等表达意图 |
-| 错误 | 用词、语法、错别字和标点的修改建议 |
+<table width="100%">
+  <thead>
+    <tr><th scope="col">图层</th><th scope="col">标注结果</th><th scope="col">如何查看</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>分词、词性</td><td>中文词语边界和 UD 词性标签</td><td>在正文中叠加分词边界，按词性类别核对对应词语。</td></tr>
+    <tr><td>关键词、命名实体</td><td>关键词，以及人名、地点、机构、时间和金额</td><td>用词云查看关键词频次，在侧栏按实体类别定位原文。</td></tr>
+    <tr><td>分段、语义</td><td>段落边界、主题、说明与列举</td><td>按段落阅读原文，在语义侧栏查看片段及其类别。</td></tr>
+    <tr><td>关系、事件</td><td>实体之间的联系、事件角色及时间</td><td>点击关系连线查看证据，按时间轴浏览有明确日期的事件。</td></tr>
+    <tr><td>情感、意图</td><td>正面、负面、中性，以及陈述、请求、提问等意图</td><td>在标注详情中按类别查看，点击条目回到原句。</td></tr>
+    <tr><td>错误</td><td>用词、语法、错别字和标点问题</td><td>对照原文检查建议，由人工决定是否修改。</td></tr>
+  </tbody>
+</table>
 
-![合成读书会示例，展示正文高亮、关键词和事件](assets/readme/annotation-demo.png)
+![合成读书会示例，展示正文高亮、关键词提示、命名实体和关系](assets/readme/annotation-demo.png)
 
 ## 开始使用
 
@@ -51,7 +56,10 @@ node tools/local-web.mjs start
 
 [![Archify 系统框架，展示浏览器、Vue 工作台、Spring Boot、JavaScript 智能体和 MySQL 的连接](assets/readme/archify-system.png)](docs/diagrams/system-architecture.html)
 
-Vue 和 Bootstrap 提供工作台。Spring Boot 管理文本、任务和快照，MySQL 保存业务数据，Node.js 智能体执行模型调用并校验标注。开发者中心提供设计规范、架构图、调用日志和 Git 时间轴。
+- **工作台。** Vue 和 Bootstrap 构建文本库、标注编辑器与统计界面。选中标注可回到原文位置。
+- **服务与存储。** Spring Boot 提供 API、管理导入和标注任务，MySQL 保存原文修订、候选和快照。
+- **标注智能体。** Node.js 按任务调用所选模型，并在本地校验返回的标注与原文位置。
+- **开发者中心。** 可从系统图进入各模块架构，也可查看设计规范、模型调用日志和 Git 时间轴。
 
 [设计规范](docs/design/README.md) · [Web 契约](docs/web-contract.md) · [标注契约](docs/annotation-contract.md)
 
@@ -72,8 +80,8 @@ Vue 和 Bootstrap 提供工作台。Spring Boot 管理文本、任务和快照�
 
 ## 致谢
 
-README 页首排版参考 [灵犀工作坊](https://github.com/Ceeyu-iooi/Lingxi-Workspace)。感谢 Vue、Bootstrap、Spring Boot、Node.js 和 MySQL 社区。
+感谢 Vue、Bootstrap、Spring Boot、Node.js 和 MySQL 社区。
 
 ## 许可证
 
-本项目目前未声明整体开源许可证。第三方组件按各自许可证使用。 [第三方许可证](docs/licenses)
+本项目原创代码采用 [MIT 许可证](LICENSE)。第三方组件和素材沿用各自的许可。[第三方许可证](docs/licenses) · [供应商标识来源](docs/design/provider-assets.md)
