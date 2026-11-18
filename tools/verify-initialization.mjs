@@ -107,6 +107,7 @@ async function verifyGit(expectGit) {
       "AGENTS.md",
       "CHANGELOG.md",
       "VERSION",
+      "LICENSE",
       ".gitignore",
       ".gitattributes",
       ".editorconfig",
