@@ -40,7 +40,14 @@ Semanote-Agent 是一个在本机运行的中文文本标注工作台。导入�
 
 ### 1. 安装
 
-需要 Windows x64、Git、Java 21 和 Node.js 24。
+需要 Windows x64 和 Git。在 PowerShell 中安装 Java 21 和 Node.js 24。
+
+~~~powershell
+winget install --id Microsoft.OpenJDK.21 --exact --source winget
+winget install --id OpenJS.NodeJS --exact --version 24.10.0 --source winget
+~~~
+
+安装后重新打开 PowerShell。
 
 ~~~powershell
 git clone https://github.com/Ceeyu-iooi/Semanote-Agent.git
@@ -50,6 +57,12 @@ node tools/setup.mjs
 
 [打开工作台](http://127.0.0.1:8080/)
 
+已有构建环境时，在项目目录启动。
+
+~~~powershell
+node tools/local-web.mjs start
+~~~
+
 ### 2. 更新
 
 ~~~powershell
@@ -57,9 +70,13 @@ git pull --ff-only
 node tools/setup.mjs
 ~~~
 
-### 3. 标注与导出
+### 3. 供应商配置
 
-在文本库新建或导入文本。自动标注前，在「设置 → 模型供应商」填写接口地址、模型和 API Key。核对标注后保存快照，再选择导出格式。
+在「设置 → 模型供应商」填写接口地址、模型和 API Key。
+
+### 4. 标注与导出
+
+在文本库新建或导入文本，核对标注后保存快照，再选择导出格式。
 
 [运行手册](docs/web-usage.md)
 
