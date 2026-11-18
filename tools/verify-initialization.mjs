@@ -116,6 +116,8 @@ async function verifyGit(expectGit) {
       "assets/readme/workspace.png",
       "assets/readme/insights.png",
       "assets/readme/dashboard.png",
+      "assets/readme/annotation-demo.png",
+      "assets/readme/archify-system.png",
       "assets/readme/system-framework.svg",
       "frontend/src/assets/deepseek.svg",
       "frontend/src/assets/semanote-mark.svg",
