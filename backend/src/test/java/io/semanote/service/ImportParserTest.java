@@ -23,7 +23,20 @@ class ImportParserTest {
     @Test void limitsCountCodePointsAndNeverTruncate() {
         ImportParser.validateText("😀".repeat(10000));
         assertThrows(ApiFailure.class, () -> ImportParser.validateText("😀".repeat(10001)));
-        assertThrows(ApiFailure.class, () -> ImportParser.parse("many.csv", ("A,B,C\n" + "a,b,c\n".repeat(167)).getBytes(StandardCharsets.UTF_8)));
         assertThrows(ApiFailure.class, () -> ImportParser.validateText("\uD800"));
+    }
+
+    @Test void parsesTrainingSizedCsvWithoutCombiningCells() {
+        String text = "原创示例".repeat(150);
+        String csv = "\uFEFFA,B,C\n" + (text + "," + text + "," + text + "\n").repeat(5102);
+        byte[] bytes = csv.getBytes(StandardCharsets.UTF_8);
+        assertTrue(bytes.length > ImportParser.MAX_FILE_BYTES);
+        var result = ImportParser.parse("synthetic.csv", bytes);
+        assertEquals(15306, result.texts().size());
+        assertEquals(5103, result.texts().getLast().rowNumber());
+        assertEquals(3, result.texts().getLast().columnNumber());
+        assertEquals(text, result.texts().getLast().text());
+        assertThrows(ApiFailure.class, () -> ImportParser.parse("overflow.csv",
+                ("A,B,C\n" + "a,b,c\n".repeat(16667)).getBytes(StandardCharsets.UTF_8)));
     }
 }

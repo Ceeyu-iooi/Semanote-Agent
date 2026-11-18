@@ -3,7 +3,10 @@
   max-width: 1640px;
   margin: auto;
   padding: 32px;
+  min-width: 0;
+  height: auto;
 }
+.git-explorer > * { flex-shrink: 0; }
 .git-explorer > .panel-toolbar {
   padding: 0 0 24px;
 }
@@ -51,6 +54,8 @@
 }
 .git-map-scroll {
   overflow-x: auto;
+  overflow-y: hidden;
+  min-height: max-content;
   border: 1px solid var(--color-border);
   border-radius: 14px;
   background: var(--color-canvas);
@@ -140,6 +145,7 @@
   border: 1px solid var(--color-border);
   border-radius: 14px;
   overflow: hidden;
+  min-height: max-content;
 }
 .git-change-header {
   display: flex;

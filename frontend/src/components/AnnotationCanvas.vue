@@ -8,6 +8,7 @@ const props = defineProps({
   items: { type: Array, default: () => [] },
   selectable: Boolean,
   focusedItem: String,
+  focusRange: Object,
   preferences: Object,
   revealKey: String,
   breaks: { type: Array, default: () => [] },
@@ -15,7 +16,12 @@ const props = defineProps({
 const emit = defineEmits(["select", "focus"]);
 const canvas = ref(null),
   tip = ref(null);
-const segments = computed(() => buildSegments(props.text, props.items, props.breaks));
+const segments = computed(() => buildSegments(props.text, props.items, props.breaks,
+  props.focusRange ? [props.focusRange.start, props.focusRange.end] : []));
+const tipHeight = computed(() => {
+  const maxRows = segments.value.reduce((max, entry) => Math.max(max, entry.matches.length), 0);
+  return Math.min(320, 90 + maxRows * 29);
+});
 function selectText() {
   if (!props.selectable) return;
   const selection = window.getSelection();
@@ -47,7 +53,6 @@ function showTip(segment, event) {
     text: segment.sourceText || segment.text,
     x: event.clientX ?? rectangle.left,
     y: event.clientY ?? rectangle.bottom,
-    height: Math.min(450, 100 + segment.matches.length * 32),
   };
 }
 </script>
@@ -77,7 +82,7 @@ function showTip(segment, event) {
           'has-annotation': segment.matches.some(item => item.task !== 'paragraphs'),
           'token-end': segment.tokenEnd,
           'token-start': segment.tokenStart,
-          'focused-text': segment.matches.some(
+          'focused-text': (focusRange && segment.start >= focusRange.start && segment.end <= focusRange.end) || segment.matches.some(
             (item) => item.itemId === focusedItem,
           ),
         },
@@ -119,10 +124,10 @@ function showTip(segment, event) {
       >{{ segment.text }}</span
     >
   </div>
-  <PointerTip :anchor="tip"
+  <PointerTip :anchor="tip" variant="annotation" :min-height="tipHeight"
     ><strong>{{ tip?.text }}</strong>
     <div v-for="item in tip?.matches" :key="item.itemId" class="popover-row">
-      <span>{{ taskNames[item.task] }}</span
+      <span><i :class="`tip-dot tip-dot--${item.task}`" aria-hidden="true"></i>{{ taskNames[item.task] }}</span
       ><b>{{
         entityNames[item.label] ||
         labelNames[item.label] ||
