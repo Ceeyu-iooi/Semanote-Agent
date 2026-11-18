@@ -262,7 +262,7 @@ export async function releaseArtifact() {
   const version = (
     await readFile(resolve(projectRoot, "VERSION"), "utf8")
   ).trim();
-  if (!/^\d+\.\d+\.\d+(?:-[\w.-]+)?$/.test(version))
+  if (!/^\d+\.\d+\.\d+(?:\.\d+)?(?:-[\w.-]+)?$/.test(version))
     throw new Error("Invalid product version");
   return resolve(projectRoot, `backend/target/semanote-web-${version}.jar`);
 }
