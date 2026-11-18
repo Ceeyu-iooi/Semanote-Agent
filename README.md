@@ -41,10 +41,15 @@ Semanote-Agent 是一个在本机运行的中文文本标注工作台。导入�
 **1. 部署。** 在 Windows x64 上安装 Java 21 和 Node.js 24，下载并解压源码。在项目目录运行以下命令。[GitHub Releases](https://github.com/Ceeyu-iooi/Semanote-Agent/releases/latest)
 
 ~~~powershell
+# 准备 Maven 和精简 MySQL 运行文件，已有安装会复用
 node tools/download-web-tools.mjs
+# 安装构建依赖，编译 Vue 前端，并测试和打包 Spring Boot 后端
 node tools/build-web.mjs
+# 启动本机数据库和 Web 服务，首次运行会初始化数据库
 node tools/local-web.mjs start
 ~~~
+
+Maven 和前端依赖默认走华为云镜像。MySQL 从官方 CDN 按需下载约 25 MiB，校验后只保留启动、连接、备份和恢复所需的文件。前两个命令都可加 `--source=official`，改用相应项目的官方源。
 
 **2. 配置供应商。** 打开本地工作台，在「设置 → 模型供应商」选择 DeepSeek、阿里云百炼或自定义 OpenAI 兼容服务，填写接口地址、模型名和 API Key。 [打开工作台](http://127.0.0.1:8080/)
 
@@ -73,7 +78,7 @@ node tools/local-web.mjs start
 
 | 问题 | 处理方式 |
 | --- | --- |
-| 页面打不开 | 运行 `node tools/local-web.mjs status` 检查服务，再按 [运行手册](docs/web-usage.md) 排查。 |
+| 页面打不开 | 运行 `node tools/local-web.mjs start` 查看启动结果，再按 [运行手册](docs/web-usage.md) 排查。 |
 | 模型调用失败 | 核对供应商地址、模型和 API Key，在「调用日志」查看状态，然后重试任务。 |
 | 没有 API Key 能用吗？ | 可以使用文本管理、人工标注和本地分段。 |
 | 导出怎么没有刚修改的内容？ | 先保存当前修订的标注快照，再导出该快照。 |

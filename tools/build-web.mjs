@@ -23,6 +23,7 @@ import {
 } from "./lib/project.mjs";
 import { syncReference } from "./sync-reference.mjs";
 import { releaseArtifact } from "./local-web.mjs";
+import { deploymentSource } from "./lib/deployment-source.mjs";
 
 async function files(root) {
   const result = [];
@@ -180,10 +181,14 @@ export async function offlineJava(baseline) {
 }
 export async function buildWeb(args = process.argv.slice(2)) {
   try {
+    const source = deploymentSource(args);
+    const npmRegistry = source === "cn"
+      ? "https://repo.huaweicloud.com/repository/npm/"
+      : "https://registry.npmjs.org/";
     if (!(await exists(resolve(projectRoot, "frontend/node_modules/vite"))))
       await run(
         "npm.cmd",
-        ["ci", "--prefix", "frontend", "--no-audit", "--no-fund"],
+        ["ci", "--prefix", "frontend", "--no-audit", "--no-fund", "--registry=" + npmRegistry],
         { echo: true },
       );
     await run("npm.cmd", ["--prefix", "frontend", "run", "build"], {
@@ -199,6 +204,7 @@ export async function buildWeb(args = process.argv.slice(2)) {
       await run(
         resolve(toolRoot, "maven/bin/mvn.cmd"),
         [
+          ...(source === "cn" ? ["-s", resolve(projectRoot, "tools/maven-cn-settings.xml")] : []),
           "-f",
           "backend/pom.xml",
           `-Dmaven.repo.local=${resolve(projectRoot, "profile/maven-repository")}`,

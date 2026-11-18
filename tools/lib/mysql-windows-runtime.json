@@ -1,0 +1,95 @@
+{
+  "version": "8.4.13",
+  "url": "https://cdn.mysql.com/Downloads/MySQL-8.4/mysql-8.4.13-winx64.zip",
+  "archiveBytes": 281154912,
+  "files": [
+    {
+      "path": "bin/abseil_dll.dll",
+      "offset": 2934881,
+      "method": 8,
+      "compressedSize": 491192,
+      "size": 1751688,
+      "sha256": "5f1660035ab366f2f13b62b85bc4a1307dd05a2b6d231618493a52dd51c19a02"
+    },
+    {
+      "path": "bin/libcrypto-3-x64.dll",
+      "offset": 8869999,
+      "method": 8,
+      "compressedSize": 2195309,
+      "size": 6946448,
+      "sha256": "a40604fae9cc1b7da66320c55b8a7ed780d311816872c5e2a239a6f622122626"
+    },
+    {
+      "path": "bin/libprotobuf-lite.dll",
+      "offset": 19730820,
+      "method": 8,
+      "compressedSize": 201357,
+      "size": 674960,
+      "sha256": "588dfc2493c8a53036da807c3ad4b29fb6a7b316c3a8c240e9b30af3fb7e9ade"
+    },
+    {
+      "path": "bin/libssl-3-x64.dll",
+      "offset": 22025701,
+      "method": 8,
+      "compressedSize": 484512,
+      "size": 1296520,
+      "sha256": "fba392d00a534a51eff3e6f5fc53cd46a0d45f3f4095af773601a891e8e8c16a"
+    },
+    {
+      "path": "bin/mysql.exe",
+      "offset": 31398910,
+      "method": 8,
+      "compressedSize": 2051772,
+      "size": 7179384,
+      "sha256": "4617a66bf7509891d3a7be522d78a141b1d4dc16936c5077ddf119f7dd264b88"
+    },
+    {
+      "path": "bin/mysqladmin.exe",
+      "offset": 33450864,
+      "method": 8,
+      "compressedSize": 2005203,
+      "size": 7055496,
+      "sha256": "44bda80b8adacb890c99e9f3c9a876ca33b6eda2e02f896cd747a95ad1bb15ae"
+    },
+    {
+      "path": "bin/mysqld.exe",
+      "offset": 39691889,
+      "method": 8,
+      "compressedSize": 16412104,
+      "size": 51644544,
+      "sha256": "7a976874ef3974d612081960b1c193c663b4434692b6257382352c587e367ad6"
+    },
+    {
+      "path": "bin/mysqldump.exe",
+      "offset": 160800923,
+      "method": 8,
+      "compressedSize": 2044204,
+      "size": 7146624,
+      "sha256": "f2bddb327a28a2059639918eb0f591a61224b4af33bf701e4c4bd2c697292eef"
+    },
+    {
+      "path": "LICENSE",
+      "offset": 277704089,
+      "method": 8,
+      "compressedSize": 55330,
+      "size": 262847,
+      "sha256": "627ee2a5b4b508844c37b8617b77adb1747b47b7de10d66af6816021498d15cd"
+    },
+    {
+      "path": "README",
+      "offset": 277759589,
+      "method": 8,
+      "compressedSize": 362,
+      "size": 666,
+      "sha256": "4f8f901666dfdc5dbd307ff90248eac8c3da030249b630019d982a4e57ba91d5"
+    },
+    {
+      "path": "share/english/errmsg.sys",
+      "offset": 278333488,
+      "method": 8,
+      "compressedSize": 122345,
+      "size": 413000,
+      "sha256": "2f2a9afa6b9ab7efd1b77cbe34abf03ef3e380180d4e1ab0031a2a97cc008a14"
+    }
+  ]
+}
