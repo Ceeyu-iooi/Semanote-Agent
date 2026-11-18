@@ -38,24 +38,51 @@ Semanote-Agent 是一个在本机运行的中文文本标注工作台。导入�
 
 ## 开始使用
 
-**1. 部署。** 在 Windows x64 上安装 Java 21 和 Node.js 24，下载并解压源码。在项目目录运行以下命令。[GitHub Releases](https://github.com/Ceeyu-iooi/Semanote-Agent/releases/latest)
+### 1. 安装
+
+需要 Windows x64、Git、JDK 21 或更高版本，以及 Node.js 24 或更高版本。在 PowerShell 中检查并安装缺少的环境。
 
 ~~~powershell
-# 准备 Maven 和精简 MySQL 运行文件，已有安装会复用
-node tools/download-web-tools.mjs
-# 安装构建依赖，编译 Vue 前端，并测试和打包 Spring Boot 后端
-node tools/build-web.mjs
-# 启动本机数据库和 Web 服务，首次运行会初始化数据库
+if (-not (Get-Command javac -ErrorAction SilentlyContinue) -or -not ((javac -version 2>&1 | Out-String) -match 'javac (2[1-9]|[3-9][0-9])\b')) {
+  winget install --id Microsoft.OpenJDK.21 --exact --source winget
+}
+if (-not (Get-Command node -ErrorAction SilentlyContinue) -or [int]((node --version).TrimStart('v').Split('.')[0]) -lt 24) {
+  winget install --id OpenJS.NodeJS --exact --version 24.10.0 --source winget
+}
+~~~
+
+重启 PowerShell 后：
+
+~~~powershell
+git clone https://github.com/Ceeyu-iooi/Semanote-Agent.git
+cd Semanote-Agent
+node tools/setup.mjs
+~~~
+
+[打开工作台](http://127.0.0.1:8080/)
+
+（下面这条命令，是在已有构建环境时的直接启动命令）
+
+~~~powershell
 node tools/local-web.mjs start
 ~~~
 
-Maven 和前端依赖默认走华为云镜像。MySQL 从官方 CDN 按需下载约 25 MiB，校验后只保留启动、连接、备份和恢复所需的文件。前两个命令都可加 `--source=official`，改用相应项目的官方源。
+### 2. 更新
 
-**2. 配置供应商。** 打开本地工作台，在「设置 → 模型供应商」选择 DeepSeek、阿里云百炼或自定义 OpenAI 兼容服务，填写接口地址、模型名和 API Key。 [打开工作台](http://127.0.0.1:8080/)
+~~~powershell
+git pull --ff-only
+node tools/setup.mjs
+~~~
 
-**3. 标注并导出。** 新建文本或导入 DOCX、TXT、Markdown 或三列 CSV。打开文本后选择「自动标注」或「人工标注」，核对结果并保存快照，再选择导出格式。
+### 3. 供应商配置
 
-局域网、备份和离线构建见 [运行手册](docs/web-usage.md)。
+在「设置 → 模型供应商」填写接口地址、模型和 API Key。
+
+### 4. 标注与导出
+
+在文本库新建或导入文本，核对标注后保存快照，再选择导出格式。
+
+[运行手册](docs/web-usage.md)
 
 ## 架构与设计
 
