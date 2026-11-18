@@ -40,14 +40,18 @@ Semanote-Agent 是一个在本机运行的中文文本标注工作台。导入�
 
 ### 1. 安装
 
-需要 Windows x64 和 Git。在 PowerShell 中安装 Java 21 和 Node.js 24。
+需要 Windows x64、Git、JDK 21 或更高版本，以及 Node.js 24 或更高版本。在 PowerShell 中检查并安装缺少的环境。
 
 ~~~powershell
-winget install --id Microsoft.OpenJDK.21 --exact --source winget
-winget install --id OpenJS.NodeJS --exact --version 24.10.0 --source winget
+if (-not (Get-Command javac -ErrorAction SilentlyContinue) -or -not ((javac -version 2>&1 | Out-String) -match 'javac (2[1-9]|[3-9][0-9])\b')) {
+  winget install --id Microsoft.OpenJDK.21 --exact --source winget
+}
+if (-not (Get-Command node -ErrorAction SilentlyContinue) -or [int]((node --version).TrimStart('v').Split('.')[0]) -lt 24) {
+  winget install --id OpenJS.NodeJS --exact --version 24.10.0 --source winget
+}
 ~~~
 
-安装后重新打开 PowerShell。
+重启 PowerShell 后：
 
 ~~~powershell
 git clone https://github.com/Ceeyu-iooi/Semanote-Agent.git
@@ -57,7 +61,7 @@ node tools/setup.mjs
 
 [打开工作台](http://127.0.0.1:8080/)
 
-已有构建环境时，在项目目录启动。
+（下面这条命令，是在已有构建环境时的直接启动命令）
 
 ~~~powershell
 node tools/local-web.mjs start
