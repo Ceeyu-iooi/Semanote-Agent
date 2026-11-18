@@ -1,417 +1,187 @@
 <script setup>
-import { computed, ref, watch } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { entityNames } from "../api.js";
-import {
-  relationshipGraph,
-  eventTime,
-  eventContext,
-  groupRelationships,
-} from "../graphPresentation.js";
-const props = defineProps({
-  layers: Object,
-  text: String,
-  activeTask: String,
-  graphFocus: Object,
-});
+import { relationshipGraph, eventTime, eventContext, groupRelationships } from "../graphPresentation.js";
+import { workspaceDiagram } from "../archifyWorkspace.js";
+
+const props = defineProps({ layers: Object, text: String, activeTask: String, graphFocus: Object });
 const emit = defineEmits(["focus"]);
-const tab = ref("events"),
-  chosenEvent = ref(null),
-  chosenEdge = ref(null),
-  chosenPerson = ref(null),
-  scope = ref("people"),
-  hovered = ref(null),
-  focusedNode = ref(null),
-  positions = ref({}),
-  board = ref(null),
-  zoom = ref(1);
-const items = (task) =>
-  props.layers?.[task]?.status === "success"
-    ? props.layers[task].result.items
-    : [];
-const fullGraph = computed(() =>
-  relationshipGraph(items("relations"), items("ner"), props.text),
-);
-const graph = computed(() => fullGraph.value);
-const activePerson = computed(() =>
-  fullGraph.value.nodes.find((node) => node.id === chosenPerson.value),
-);
-const spotlight = computed(() => hovered.value || focusedNode.value);
-watch(
-  () => props.activeTask,
-  (task) => {
-    if (task === "events" || task === "relations") tab.value = task;
-  },
-  { immediate: true },
-);
-// A repeated entry click is still a navigation intent even when the active layer did not change.
-watch(
-  () => props.graphFocus,
-  (focus) => {
-    if (!focus || !["events", "relations"].includes(focus.task)) return;
-    tab.value = focus.task;
-    if (!focus.itemId) return;
-    if (focus.task === "events") chosenEvent.value = focus.itemId;
-    else {
-      chosenEdge.value = focus.itemId;
-      chosenPerson.value = null;
-      if (!graph.value.edges.some((item) => item.itemId === focus.itemId))
-        scope.value = "all";
-    }
-  },
-);
-const events = computed(() =>
-  items("events")
-    .map((item, index) => ({ item, index, ...eventTime(item) }))
-    .sort(
-      (a, b) =>
-        (a.timestamp ?? Infinity) - (b.timestamp ?? Infinity) ||
-        a.index - b.index,
-    ),
-);
-const sharedEvents = computed(() => activeEdge.value ? events.value.filter(({item}) => { const people = Object.values(item.roles || {}).flat().map(role => role.itemText); return people.includes(activeEdge.value.subject.itemText) && people.includes(activeEdge.value.object.itemText); }) : []);
-const activeEvent = computed(
-  () =>
-    events.value.find((entry) => entry.item.itemId === chosenEvent.value)
-      ?.item || events.value[0]?.item,
-);
-const activeEdge = computed(() =>
-  groupedEdges.value.find((item) => item.itemId === chosenEdge.value || item.records.some(record => record.itemId === chosenEdge.value)),
-);
-const rawNodes = computed(() => graph.value.nodes.map((node,index) => ({...node,...(positions.value[node.id] || {x:24+(index % (graph.value.nodes.length > 6 ? 3 : 2))*250,y:24+Math.floor(index/(graph.value.nodes.length > 6 ? 3 : 2))*200})})));
-const origin = computed(() => ({x: Math.max(0, 24 - Math.min(24, ...rawNodes.value.map(node => node.x))), y: Math.max(0, 24 - Math.min(24, ...rawNodes.value.map(node => node.y)))}));
-const nodes = computed(() => rawNodes.value.map(node => ({...node, x: node.x + origin.value.x, y: node.y + origin.value.y})));
-const width = computed(() => Math.max(900, ...nodes.value.map(p => p.x + 340)));
-const height = computed(() => Math.max(520, ...nodes.value.map(p => p.y + 190)));
-const groupedEdges = computed(() => groupRelationships(graph.value.edges));
-const edges = computed(() => groupedEdges.value.map(edge => { const from = nodes.value.find(node => node.id === edge.subject.itemText), to = nodes.value.find(node => node.id === edge.object.itemText); if (from.id === to.id) return { ...edge, x: from.x + 245, y: from.y + 70, d: `M ${from.x + 190} ${from.y + 28} C ${from.x + 300} ${from.y - 20}, ${from.x + 300} ${from.y + 160}, ${from.x + 190} ${from.y + 112}` }; return { ...edge, x: (from.x + to.x)/2 + 100, y: (from.y + to.y)/2 + 70, d: `M ${from.x + 100} ${from.y + 70} L ${to.x + 100} ${to.y + 70}` }; }));
-const roleNames = {
-  subject: "主体",
-  object: "客体",
-  time: "时间",
-  location: "地点",
-  cause: "原因",
-  result: "结果",
-};
-let drag = null;
-let dragMoved = false;
-function choosePerson(node) {
-  if (dragMoved) {
-    dragMoved = false;
-    return;
-  }
-  chosenPerson.value = node.id;
-  chosenEdge.value = null;
+const tab = ref("events"), selection = ref(null), template = ref(""), loadError = ref(false);
+const frame = ref(null), panel = ref(null), detailPosition = ref(null);
+const closeButton = ref(null);
+let evidenceTrigger;
+const theme = ref(document.documentElement.dataset.theme || "light");
+const reduced = ref(document.documentElement.dataset.motion === "reduced");
+const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+const observer = new MutationObserver(syncPreferences);
+function syncPreferences() {
+  theme.value = document.documentElement.dataset.theme || "light";
+  reduced.value = document.documentElement.dataset.motion === "reduced" || motion.matches;
 }
-function startDrag(event, node) {
-  if (event.button !== 0) return;
-  dragMoved = false;
-  event.currentTarget.setPointerCapture(event.pointerId);
-  drag = {
-    id: node.id,
-    x: node.x - origin.value.x,
-    y: node.y - origin.value.y,
-    clientX: event.clientX,
-    clientY: event.clientY,
+const items = task => props.layers?.[task]?.status === "success"
+  ? props.layers[task].result.items : [];
+const events = computed(() => items("events").map((item, index) => ({ item, index, ...eventTime(item) }))
+  .sort((a, b) => (a.timestamp ?? Infinity) - (b.timestamp ?? Infinity) || a.index - b.index));
+const graph = computed(() => relationshipGraph(items("relations"), items("ner"), props.text));
+const relationships = computed(() => groupRelationships(graph.value.edges));
+const relationModel = computed(() => {
+  const ids = new Map(graph.value.nodes.map((node, i) => [node.id, "entity-" + i]));
+  return {
+    title: "实体关系图",
+    nodes: graph.value.nodes.map(node => ({
+      id: ids.get(node.id), label: node.name, sublabel: entityNames[node.label] || "关系端点",
+      entries: [
+        ...node.facts.map(fact => ({ title: fact.text, task: "relations", itemId: fact.itemId })),
+        ...node.evidence.map(text => ({ title: "原文提及", text })),
+        ...items("ner").filter(item => item.itemText === node.name)
+          .slice(0, 1).map(item => ({ title: "首处实体标注", task: "ner", itemId: item.itemId })),
+      ],
+    })),
+    links: relationships.value.map((edge, i) => {
+      const from = edge.subject.itemText, to = edge.object.itemText;
+      const related = events.value.filter(({ item }) => {
+        const names = Object.values(item.roles || {}).flat().map(role => role.itemText);
+        return names.includes(from) && names.includes(to);
+      });
+      return {
+        id: "relation-" + i, from: ids.get(from), to: ids.get(to), label: edge.records.length + " 条关系",
+        title: from + " · " + to,
+        entries: [
+          ...edge.records.map(item => ({
+            title: item.subject.itemText + " → " + item.object.itemText + " · " + item.label,
+            text: item.itemText, task: "relations", itemId: item.itemId,
+          })),
+          ...related.map(({ item }) => ({
+            title: item.label, text: item.itemText, task: "events", itemId: item.itemId,
+          })),
+        ],
+      };
+    }),
   };
+});
+const eventModel = computed(() => ({
+  title: "事件时间轴", timeline: true,
+  nodes: events.value.map(({ item, value }, i) => ({
+    id: "event-" + i, label: item.label, sublabel: value,
+    entries: [{
+      title: value, text: item.itemText, task: "events", itemId: item.itemId,
+      context: eventContext(props.text, item),
+      facts: Object.entries({ subject: "主体", object: "客体", location: "地点", cause: "原因", result: "结果" })
+        .flatMap(([role, label]) => item.roles?.[role]?.length
+          ? [{ label, text: item.roles[role].map(entry => entry.itemText).join("、") }] : []),
+    }],
+  })),
+  links: events.value.slice(1).map((_, i) => ({
+    id: "sequence-" + i, from: "event-" + i, to: "event-" + (i + 1),
+  })),
+}));
+const model = computed(() => tab.value === "events" ? eventModel.value : relationModel.value);
+const source = computed(() => template.value && model.value.nodes.length
+  ? workspaceDiagram(template.value, model.value, theme.value, reduced.value) : "");
+const entries = computed(() => [...model.value.nodes, ...model.value.links]);
+const active = computed(() => entries.value.find(entry => entry.id === selection.value));
+watch(() => props.layers, () => { selection.value = null; detailPosition.value = null; });
+watch(() => props.activeTask, task => {
+  if (["events", "relations"].includes(task)) tab.value = task;
+}, { immediate: true });
+watch(() => props.graphFocus, focus => {
+  if (!focus || !["events", "relations"].includes(focus.task)) return;
+  tab.value = focus.task;
+  detailPosition.value = null;
+  selection.value = (focus.task === "relations" ? model.value.links : model.value.nodes)
+    .find(entry => entry.entries?.some(item => item.itemId === focus.itemId))?.id;
+});
+function chooseTab(value) {
+  if (value === tab.value) return;
+  tab.value = value;
+  selection.value = null;
+  detailPosition.value = null;
 }
-function moveDrag(event) {
-  if (!drag) return;
-  dragMoved ||=
-    Math.hypot(event.clientX - drag.clientX, event.clientY - drag.clientY) > 4;
-  positions.value = {
-    ...positions.value,
-    [drag.id]: {
-      x: drag.x + (event.clientX - drag.clientX) / zoom.value,
-      y: drag.y + (event.clientY - drag.clientY) / zoom.value,
-    },
-  };
+function closeEvidence(restoreFocus = false) {
+  selection.value = null;
+  detailPosition.value = null;
+  if (restoreFocus && evidenceTrigger?.isConnected) evidenceTrigger.focus({ preventScroll: true });
+  evidenceTrigger = null;
 }
-function moveKey(event, node) {
-  const offsets = {
-    ArrowLeft: [-16, 0],
-    ArrowRight: [16, 0],
-    ArrowUp: [0, -16],
-    ArrowDown: [0, 16],
+function bindViewer() {
+  const viewer = frame.value;
+  const doc = viewer?.contentDocument;
+  if (!doc) return;
+  doc.documentElement.dataset.theme = theme.value;
+  if (reduced.value) doc.documentElement.dataset.motion = "still";
+  const open = event => {
+    if (event.type === "keydown" && !["Enter", " "].includes(event.key)) return;
+    const target = event.target.closest("[data-workspace-edge], [data-relationship-hit-key], [data-node-id]");
+    const id = target?.dataset.workspaceEdge || target?.dataset.relationshipId || target?.dataset.nodeId;
+    if (!id || !entries.value.some(entry => entry.id === id)) return;
+    if (event.type === "keydown") event.preventDefault();
+    evidenceTrigger = target;
+    const bounds = target.getBoundingClientRect();
+    const outer = panel.value.getBoundingClientRect();
+    const iframe = viewer.getBoundingClientRect();
+    const x = event.type === "click" && event.detail ? event.clientX : bounds.left + bounds.width / 2;
+    const y = event.type === "click" && event.detail ? event.clientY : bounds.bottom;
+    detailPosition.value = {
+      left: Math.round(Math.max(12, Math.min(iframe.left - outer.left + x + 12, outer.width - Math.min(348, outer.width - 24) - 12))) + "px",
+      top: Math.round(iframe.top - outer.top + Math.max(12, Math.min(y + 12, iframe.height - 360))) + "px",
+    };
+    selection.value = id;
+    if (event.type === "keydown") nextTick(() => closeButton.value?.focus({ preventScroll: true }));
   };
-  if (!offsets[event.key]) return;
-  event.preventDefault();
-  const [x, y] = offsets[event.key];
-  positions.value = {
-    ...positions.value,
-    [node.id]: {
-      x: node.x - origin.value.x + x,
-      y: node.y - origin.value.y + y,
-    },
-  };
+  doc.addEventListener("click", open, true);
+  doc.addEventListener("keydown", open, true);
+  doc.addEventListener("keydown", event => {
+    if (event.key === "Escape") closeEvidence();
+  });
 }
-watch(
-  () => props.layers,
-  () => {
-    positions.value = {};
-    chosenEvent.value = null;
-    chosenEdge.value = null;
-    chosenPerson.value = null;
-    hovered.value = null;
-    focusedNode.value = null;
-    drag = null;
-  },
-);
+onMounted(async () => {
+  syncPreferences();
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "data-motion"] });
+  motion.addEventListener("change", syncPreferences);
+  try {
+    const response = await fetch("/reference/diagrams/system-architecture.html");
+    if (!response.ok) throw new Error("viewer unavailable");
+    const documentText = await response.text();
+    if (!documentText.includes('name="generator" content="archify')) throw new Error("viewer invalid");
+    template.value = documentText;
+  } catch { loadError.value = true; }
+});
+onUnmounted(() => {
+  observer.disconnect();
+  motion.removeEventListener("change", syncPreferences);
+});
 </script>
+
 <template>
-  <section
-    v-if="events.length || graph.nodes.length"
-    class="surface relationship-panel evidence-explorer"
-  >
+  <section v-if="events.length || graph.nodes.length" ref="panel" class="surface relationship-panel evidence-explorer archify-workspace" @keydown.esc="closeEvidence(true)">
     <header class="panel-toolbar">
-      <div>
-        <p class="eyebrow">PEOPLE · EVENTS · EVIDENCE</p>
-        <h3>关系与事件</h3>
-      </div>
+      <h3>关系与事件</h3>
       <div class="nav nav-pills graph-tabs" aria-label="图谱视图">
-        <button
-          class="nav-link"
-          :class="{ active: tab === 'events' }"
-          @click="tab = 'events'"
-        >
-          {{ events.some(entry => entry.timestamp !== null) ? "事件时间轴" : "事件顺序" }} <span class="badge">{{ events.length }}</span></button
-        ><button
-          class="nav-link"
-          :class="{ active: tab === 'relations' }"
-          @click="tab = 'relations'"
-        >
-          实体关系图 <span class="badge">{{ graph.nodes.length }}</span>
-        </button>
+        <button class="nav-link" :class="{ active: tab === 'events' }" :aria-pressed="tab === 'events'" @click="chooseTab('events')">事件时间轴 <span class="badge">{{ events.length }}</span></button>
+        <button class="nav-link" :class="{ active: tab === 'relations' }" :aria-pressed="tab === 'relations'" @click="chooseTab('relations')">实体关系图 <span class="badge">{{ graph.nodes.length }}</span></button>
       </div>
     </header>
-    <template v-if="tab === 'events'">
-      <p v-if="!events.length" class="empty-state">本篇暂无已标注事件。</p>
-      <template v-else>
-        <div class="event-timeline-track event-sequence" aria-label="选择事件">
-          <button
-            v-for="entry in events"
-            :key="entry.item.itemId"
-            :class="{ selected: activeEvent?.itemId === entry.item.itemId }"
-            :aria-pressed="activeEvent?.itemId === entry.item.itemId"
-            @click="chosenEvent = entry.item.itemId"
-          >
-            <time>{{ entry.value }}</time
-            ><i></i><strong>{{ entry.item.label }}</strong
-            ><small>{{
-              entry.timestamp === null ? "时间未确定 · 按原文顺序" : "明确日期"
-            }}</small>
-          </button>
-        </div>
-        <article
-          v-if="activeEvent"
-          class="event-story"
-          :key="activeEvent.itemId"
-        >
-          <p class="eyebrow">
-            EVENT /
-            {{ events.findIndex((entry) => entry.item === activeEvent) + 1 }}
-          </p>
-          <h4>{{ activeEvent.label }}</h4>
-          <p class="event-description">{{ activeEvent.itemText }}</p>
-          <dl class="row g-3 event-facts">
-            <div
-              v-for="(name, role) in roleNames"
-              v-show="activeEvent.roles?.[role]?.length"
-              :key="role"
-              class="col-sm-6 col-lg-4"
-            >
-              <dt>{{ name }}</dt>
-              <dd>
-                {{
-                  activeEvent.roles?.[role]
-                    ?.map((entry) => entry.itemText)
-                    .join("、") || "原文未标明"
-                }}
-              </dd>
-            </div>
-          </dl>
-          <details class="event-context">
-            <summary>上下文介绍 <small>来自原文相邻语句</small></summary>
-            <p>{{ eventContext(text, activeEvent) }}</p>
-          </details>
-          <button
-            class="btn btn-outline-primary btn-sm"
-            @click="
-              emit('focus', { task: 'events', itemId: activeEvent.itemId })
-            "
-          >
-            定位原文证据 ↗
-          </button>
-        </article>
-      </template>
-    </template>
-    <template v-else>
-      <div class="graph-toolbar d-flex flex-wrap align-items-center gap-3">
-        <div class="graph-zoom" role="group" aria-label="关系图缩放"><button type="button" aria-label="缩小" @click="zoom = Math.max(.4, zoom - .1)">−</button><span>{{ Math.round(zoom * 100) }}%</span><button type="button" aria-label="放大" @click="zoom = Math.min(2, zoom + .1)">＋</button></div><button
-          class="btn btn-outline-primary btn-sm"
-          @click="
-            positions = {};
-            zoom = 1;
-          "
-        >
-          恢复布局
-        </button>
-      </div>
-      <div class="relationship-scroll network-scroll" ref="board">
-        <div
-          :style="{ width: `${width * zoom}px`, height: `${height * zoom}px` }"
-        >
-          <div
-            class="network-board"
-            :style="{
-              width: `${width}px`,
-              height: `${height}px`,
-              transform: `scale(${zoom})`,
-            }"
-          >
-            <svg
-              class="network-links"
-              :viewBox="`0 0 ${width} ${height}`"
-              aria-label="有向关系连线"
-            >
-              <defs>
-                <marker
-                  id="relationArrow"
-                  markerWidth="9"
-                  markerHeight="9"
-                  refX="8"
-                  refY="4"
-                  orient="auto"
-                >
-                  <path d="M0 0L8 4L0 8" fill="none" stroke="currentColor" />
-                </marker>
-              </defs>
-              <g
-                v-for="edge in edges"
-                :key="edge.itemId"
-                :class="{
-                  active: chosenEdge === edge.itemId,
-                  dimmed:
-                    spotlight &&
-                    edge.subject.itemText !== spotlight &&
-                    edge.object.itemText !== spotlight,
-                }"
-              >
-                <path :d="edge.d" tabindex="0" role="button" :aria-label="`${edge.subject.itemText}与${edge.object.itemText}，${edge.records.length}条关系`" @click="chosenEdge = edge.itemId; chosenPerson = null" @keydown.enter="chosenEdge = edge.itemId; chosenPerson = null" />
-                <foreignObject
-                  :x="edge.x - 58"
-                  :y="edge.y - 16"
-                  width="116"
-                  height="40"
-                  ><button
-                    class="edge-label"
-                    :aria-pressed="chosenEdge === edge.itemId"
-                    @click="
-                      chosenEdge = edge.itemId;
-                      chosenPerson = null;
-                    "
-                  >
-                    {{ edge.records.length }} 条关系
-                  </button></foreignObject
-                >
-              </g>
-            </svg>
-            <button
-              v-for="node in nodes"
-              :key="node.id"
-              class="person-node card"
-              :class="{
-                dimmed: spotlight && spotlight !== node.id,
-                highlighted: spotlight === node.id,
-              }"
-              :style="{ left: `${node.x}px`, top: `${node.y}px` }"
-              @pointerdown="startDrag($event, node)"
-              @pointermove="moveDrag"
-              @pointerup="drag = null"
-              @pointercancel="drag = null"
-              @lostpointercapture="drag = null"
-              @pointerenter="hovered = node.id"
-              @pointerleave="hovered = null"
-              @focus="focusedNode = node.id"
-              @blur="focusedNode = null"
-              @keydown="moveKey($event, node)"
-              @click="choosePerson(node)"
-            >
-              <span class="person-heading"
-                ><span class="person-avatar">{{
-                  node.label === "PERSON" ? Array.from(node.name)[0] : "实"
-                }}</span
-                ><span
-                  ><strong>{{ node.name }}</strong
-                  ><small
-                    >{{ entityNames[node.label] || "关系端点" }} ·
-                    {{
-                      node.count ? `${node.count} 处实体标注` : "原文关系"
-                    }}</small
-                  ></span
-                ></span
-              ><span v-if="node.facts.length" class="person-facts"
-                ><small
-                  v-for="fact in node.facts.slice(0, 2)"
-                  :key="fact.itemId + fact.text"
-                  >{{ fact.text }}</small
-                ></span
-              ><span v-else class="person-evidence">{{
-                node.evidence[0] || "暂无附加原文信息"
-              }}</span
-              ><span class="person-scrim" aria-hidden="true"></span>
-            </button>
-          </div>
-        </div>
-      </div>
-      <div class="network-evidence">
-        <section v-if="activePerson" class="person-dossier">
-          <header>
-            <span class="person-avatar">{{
-              Array.from(activePerson.name)[0]
-            }}</span>
-            <div>
-              <p class="eyebrow">人物信息与原文证据</p>
-              <h4>{{ activePerson.name }}</h4>
-            </div>
-            <button
-              class="btn btn-outline-primary btn-sm ms-auto"
-              @click="chosenPerson = null"
-            >
-              收起信息
-            </button>
-          </header>
-          <div class="row g-4">
-            <div class="col-md-4">
-              <h5>已标注的关系</h5>
-              <button
-                v-for="fact in activePerson.facts"
-                :key="fact.itemId + fact.text"
-                class="dossier-relation"
-                @click="
-                  chosenEdge = fact.itemId;
-                  chosenPerson = null;
-                  scope = 'all';
-                "
-              >
-                {{ fact.text }} ↗
-              </button>
-              <p v-if="!activePerson.facts.length" class="caption muted">
-                尚无明确关系标注
-              </p>
-            </div>
-            <div class="col-md-8">
-              <h5>原文中的人物信息</h5>
-              <blockquote
-                v-for="evidence in activePerson.evidence"
-                :key="evidence"
-              >
-                {{ evidence }}
-              </blockquote>
-            </div>
-          </div>
-        </section>
-        <template v-if="activeEdge"><h4>{{ activeEdge.subject.itemText }} · {{ activeEdge.object.itemText }}</h4><article v-for="record in activeEdge.records" :key="record.itemId"><strong>{{ record.subject.itemText }} → {{ record.object.itemText }} · {{ record.label }}</strong><p>{{ record.itemText }}</p><button class="text-action" @click="emit('focus', { task: 'relations', itemId: record.itemId })">定位原文 ↗</button></article><article v-for="entry in sharedEvents" :key="entry.item.itemId"><strong>{{ entry.item.label }}</strong><p>{{ entry.item.itemText }}</p><button class="text-action" @click="emit('focus', { task: 'events', itemId: entry.item.itemId })">定位事件 ↗</button></article></template>
-      </div>
-    </template>
+    <p v-if="!model.nodes.length" class="empty-state">本篇暂无对应标注。</p>
+    <p v-else-if="loadError" class="empty-state">无法加载 Archify 图谱，请刷新页面重试。</p>
+    <div v-else-if="source" class="workspace-graph-stage">
+      <Transition name="workspace-graph-fade" mode="out-in">
+        <iframe :key="tab" ref="frame" :srcdoc="source" :title="model.title" class="workspace-graph-frame" @load="bindViewer"></iframe>
+      </Transition>
+    </div>
+    <p v-else class="empty-state" role="status">正在加载图谱…</p>
+    <section v-if="active?.entries" class="archify-evidence" :class="{ 'anchored-evidence': detailPosition }" :style="detailPosition" aria-label="标注证据">
+      <header><strong>{{ active.title || active.label }}</strong><button ref="closeButton" type="button" class="archify-evidence-close" aria-label="关闭标注证据" @click.stop="closeEvidence(true)">×</button></header>
+      <ul>
+        <li v-for="(entry, index) in active.entries" :key="entry.itemId + '-' + index">
+          <strong>{{ entry.title }}</strong>
+          <p v-if="entry.text">{{ entry.text }}</p>
+          <ul v-if="entry.facts?.length" class="event-evidence-facts">
+            <li v-for="fact in entry.facts" :key="fact.label"><strong>{{ fact.label }}</strong> {{ fact.text }}</li>
+          </ul>
+          <details v-if="entry.context && entry.context !== entry.text"><summary>原文上下文</summary><p>{{ entry.context }}</p></details>
+          <button v-if="entry.itemId" type="button" class="text-action" @click="emit('focus', { task: entry.task, itemId: entry.itemId, locateSource: true })">定位原文 ↗</button>
+        </li>
+      </ul>
+    </section>
   </section>
 </template>

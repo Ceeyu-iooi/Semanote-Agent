@@ -20,7 +20,7 @@ public class ApiErrors {
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<?> tooLarge() {
-        return known(new ApiFailure(413, "fileTooLarge", "文件超过 5 MiB，请拆分后导入。"));
+        return known(new ApiFailure(413, "fileTooLarge", "文件超过 64 MiB，请拆分后导入。"));
     }
 
     @ExceptionHandler({HttpMessageNotReadableException.class, IllegalArgumentException.class})

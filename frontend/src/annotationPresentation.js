@@ -52,10 +52,10 @@ export function frequencyGroups(items, groupBy = "term") {
 }
 
 /** Sweep annotation boundaries once, instead of scanning every item for every text fragment. */
-export function buildSegments(text, items, breaks = []) {
+export function buildSegments(text, items, breaks = [], extraBoundaries = []) {
   const chars = Array.from(text),
     events = new Map(),
-    boundaries = new Set([0, chars.length, ...breaks]);
+    boundaries = new Set([0, chars.length, ...breaks, ...extraBoundaries]);
   const event = (offset) => {
     if (!events.has(offset)) events.set(offset, { add: [], remove: [] });
     return events.get(offset);

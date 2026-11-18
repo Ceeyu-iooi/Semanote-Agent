@@ -1,17 +1,31 @@
 <script setup>
-import { computed, ref, watch } from "vue";
+import { computed, ref, watch, onMounted, onUnmounted } from "vue";
 import { entityNames, labelNames } from "../api.js";
 import { frequencyGroups } from "../annotationPresentation.js";
 import PointerTip from "./PointerTip.vue";
+import { placeWords } from "../wordCloud.js";
 const props = defineProps({
   rows: Array,
   task: String,
   focusedIds: Array,
-  sort: String,
 });
 const emit = defineEmits(["focus"]);
 const selectedKey = ref(null), tip = ref(null),
   grouping = ref("term");
+const cloud = ref(null), cloudWidth = ref(620);
+let resizeObserver, measureContext;
+onMounted(() => {
+  measureContext = document.createElement("canvas").getContext("2d");
+  resizeObserver = new ResizeObserver(([entry]) => {
+    cloudWidth.value = Math.max(80, entry.contentRect.width);
+  });
+  if (cloud.value) resizeObserver.observe(cloud.value);
+});
+watch(cloud, (element, previous) => {
+  if (previous) resizeObserver?.unobserve(previous);
+  if (element) resizeObserver?.observe(element);
+}, { flush: "post" });
+onUnmounted(() => resizeObserver?.disconnect());
 watch(
   () => props.task,
   (task) => {
@@ -28,15 +42,24 @@ const groups = computed(() => {
     grouping.value,
   );
   return rows.sort((a, b) =>
-    props.sort === "position"
-      ? (a.items[0].spans[0]?.start || 0) - (b.items[0].spans[0]?.start || 0)
-      : b.count - a.count ||
+    b.count - a.count ||
         (a.items[0].spans[0]?.start || 0) - (b.items[0].spans[0]?.start || 0),
   );
 });
 const maximum = computed(() =>
   Math.max(1, ...groups.value.map((row) => row.count)),
 );
+const cloudLayout = computed(() => placeWords(
+  grouping.value === "term" ? groups.value.map(row => ({
+    row, size: 14 + Math.min(46, cloudWidth.value / 14) * Math.sqrt(row.count / maximum.value),
+  })) : [],
+  cloudWidth.value,
+  ({ row, size }) => {
+    if (!measureContext) return Array.from(row.text).length * size;
+    measureContext.font = `650 ${size}px system-ui`;
+    return measureContext.measureText(row.text).width;
+  },
+));
 const total = computed(() =>
   groups.value.reduce((sum, row) => sum + row.count, 0),
 );
@@ -63,48 +86,30 @@ const name = (row) =>
 </script>
 <template>
   <section class="frequency-details" :class="{ 'has-selection': selected }" aria-label="标注频次图">
-    <header v-if="task !== 'keywords'" class="frequency-summary">
-      <div>
-        <strong>{{ groups.length }}</strong
-        ><span
-          >{{ grouping === "label" ? "个类别" : "个不同词项"
-          }}<small>共 {{ total }} 次标注出现</small></span
-        >
+    <div v-if="task !== 'keywords'" class="frequency-chart-column">
+      <header class="frequency-summary">
+        <div>
+          <strong>{{ groups.length }}</strong>
+          <span>{{ grouping === "label" ? "个类别" : "个不同词项" }}<small>共 {{ total }} 次标注出现</small></span>
+        </div>
+      </header>
+      <div class="frequency-caption"><span>{{ grouping === "label" ? "类别分布" : "词项频次" }}</span><span>选择查看原文</span></div>
+      <div v-if="grouping === 'label' && groups.length" class="frequency-donut-layout">
+        <div class="frequency-donut" :style="{ background: ringGradient }"><div><strong>{{ total }}</strong><small>次标注</small></div></div>
+        <div class="frequency-donut-legend"><button v-for="(row, index) in groups" :key="row.key" :class="{ selected: selected?.key === row.key }" :aria-pressed="selected?.key === row.key" @click="selectedKey = row.key"><i :style="{ background: palette[index % palette.length] }"></i><span>{{ name(row) }}</span><strong>{{ row.count }}</strong></button></div>
       </div>
-    </header>
-    <div v-if="task !== 'keywords'" class="frequency-caption"><span>{{ grouping === "label" ? "类别分布" : "词项频次" }}</span><span>选择查看原文</span></div>
-    <div v-if="grouping === 'label' && groups.length" class="frequency-donut-layout">
-      <div class="frequency-donut" :style="{ background: ringGradient }"><div><strong>{{ total }}</strong><small>次标注</small></div></div>
-      <div class="frequency-donut-legend"><button v-for="(row, index) in groups" :key="row.key" :class="{ selected: selected?.key === row.key }" :aria-pressed="selected?.key === row.key" @click="selectedKey = row.key"><i :style="{ background: palette[index % palette.length] }"></i><span>{{ name(row) }}</span><strong>{{ row.count }}</strong></button></div>
     </div>
-    <div v-else class="frequency-rows" :class="{ 'word-cloud': task === 'keywords' }">
+    <div v-else-if="task === 'keywords' && groups.length" ref="cloud" class="frequency-rows word-cloud" :style="{ height: cloudLayout.height + 'px' }">
       <button
-        v-for="(row, index) in groups"
+        v-for="({ row, x, y, w, h, size }) in cloudLayout.words"
         :key="row.key"
         class="frequency-row"
-        :class="{ selected: selected?.key === row.key }"
-        :aria-pressed="task === 'keywords' ? undefined : selected?.key === row.key"
         :aria-label="`${name(row)}，${row.count} 次`"
-        :style="{ '--bubble-size': `${Math.max(48, 48 + 36 * row.count / maximum)}px`, '--word-size': `${16 + 22 * Math.sqrt(row.count / maximum)}px` }"
+        :style="{ left: `calc(50% + ${x}px)`, top: `calc(50% + ${y}px)`, width: w + 'px', height: h + 'px', '--word-size': size + 'px' }"
         @pointermove="showTip(row, $event)" @pointerleave="tip = null" @focus="showTip(row, $event)" @blur="tip = null"
-        @click="task === 'keywords' ? showTip(row, $event) : selectedKey = row.key"
+        @click="showTip(row, $event)"
       >
-        <span class="frequency-name"
-          ><small class="frequency-rank">{{
-            String(index + 1).padStart(2, "0")
-          }}</small
-          ><span
-            ><strong>{{ name(row) }}</strong
-            ><small v-if="grouping === 'term' && row.label">{{
-              entityNames[row.label] || labelNames[row.label] || row.label
-            }}</small></span
-          ></span
-        ><b v-if="task !== 'keywords'"
-          >{{ row.count
-          }}<small
-            >{{ total ? ((row.count / total) * 100).toFixed(1) : 0 }}%</small
-          ></b
-        >
+        <span class="frequency-name"><strong>{{ name(row) }}</strong></span>
       </button>
     </div>
     <section v-if="selected" class="frequency-evidence">
@@ -141,6 +146,6 @@ const name = (row) =>
     <p v-else-if="task !== 'keywords' && groups.length" class="caption muted frequency-guide">
       选择词项查看原文证据。
     </p>
-    <PointerTip :anchor="tip"><strong>{{ tip?.row?.text }}</strong><p>{{ tip?.row?.count }} 次</p></PointerTip>
+    <PointerTip :anchor="tip" variant="compact"><strong>{{ tip?.row?.text }}</strong><p>{{ tip?.row?.count }} 次</p></PointerTip>
   </section>
 </template>

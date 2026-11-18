@@ -31,7 +31,7 @@ node tools/local-web.mjs start
 
 `node tools/local-web.mjs stop` 停止后端并保留数据库；要同时关闭由本工具通过临时盘符启动的数据库并释放盘符，随后运行 `node tools/local-web.mjs stop-database`。该命令核验监听进程和盘符归属，后端仍运行或归属无法确认时拒绝操作。它不会关闭由其他程序管理的数据库。
 
-1. 文本库新建或导入 DOCX、UTF-8 TXT/MD/三列 CSV；TXT/MD/DOCX 各为整份正文，CSV 每格独立并保留来源行列和重复。10000 码点/文本、5 MiB/文件、500 非空文本/批；超限整次拒绝，纯空白跳过并报告。DOCX 只提取正文，不读取外链或宏。
+1. 在文本库选择或拖放 DOCX、UTF-8 TXT、Markdown 和三列 CSV，可一次选择多个文件。TXT、MD 和 DOCX 按文件导入，CSV 按非空单元格导入并保留来源行列和重复项。单文本最多 10,000 码点，CSV 每文件最多 64 MiB 和 50,000 份非空文本，其余文件最多 5 MiB。每个文件单独提交，空白和失败情况会报告。
 2. 在工作台自动标注或直接人工标注。模型会发送文本，须确认有权外发；本轮百炼仅测试原创合成文本；其他真实语料仍按服务和范围授权。在顶部设置中维护供应商、HTTPS 地址、模型和密钥，详见 agent-usage.md；不伪造结果或自动切换。
 3. 自动结果先存候选，显式保存才成为当前快照。人工可划选添加实体/关键词、改标签/移除；分词每行一词，应用后清除不兼容 POS；POS 按词项填写。
 4. 草稿仅当前页面保留，失败不清空；冲突后载入最新版本并保留草稿，原文改变时重新核对。历史快照只读；编辑原文生成新修订，旧区间只留历史。
@@ -52,13 +52,19 @@ Windows 重建前先停止本项目后端：`node tools/local-web.mjs stop`，�
 浏览器所需 Vue/Bootstrap 已编译进 frontend/dist，网页部署不需要 frontend/node_modules；活动智能体仍需要 Node.js 24。确认成品可运行后，可以清除本次 npm 环境，开发时由锁文件恢复：
 
 ```powershell
+# 停止旧后端，释放正在运行的 JAR
 node tools/local-web.mjs stop
+# 下载并校验项目工具，复用已有安装
 node tools/download-web-tools.mjs
+# 恢复构建依赖并生成前后端成品
 node tools/build-web.mjs
+# 启动本机数据库和新版 Web 服务
 node tools/local-web.mjs start
 ```
 
-build-web.mjs 缺 Vite 时执行 npm ci，再构建、同步开发者资料、Maven 编译和测试。JAVA_HOME 需指向 Java 21；不全局改环境/安装系统服务。下载校验官方摘要：Maven SHA-512、MySQL 厂商 MD5 完整性值及 HTTPS 来源。依赖锁定于 pom.xml/package-lock.json，第三方许可见 docs/licenses。
+`JAVA_HOME` 指向 Java 21。下载与构建默认使用华为云的 Maven 和 npm 镜像，加入 `--source=official` 可选择官方源。构建使用项目内配置，依赖版本见 `pom.xml` 和 `package-lock.json`。
+
+Maven 安装包按 Apache 发布的 SHA-512 校验。MySQL 8.4.13 从官方 CDN 获取约 25 MiB 的压缩数据，按项目清单逐文件校验 SHA-256，安装后的运行文件约 81 MiB。清单固定了官方 ZIP 中所需文件的字节范围。已有的便携 MySQL 继续使用，许可证随运行文件保留。如果网络代理拒绝返回字节范围，下载命令会报错，仍可复用已验证的便携安装。
 
 开发前端可在 frontend 执行 npm ci、npm run dev，Vite 只绑定回环并代理 /api；正式运行使用 8080 同源资源。REST 与人工候选格式见 web-contract.md，智能体仍可独立调用。
 
@@ -70,7 +76,7 @@ node tools/local-web.mjs backup
 
 唯一新 SQL 位于 profile/backups，包含结构和数据。备份是敏感资料，只通过受限课程渠道传递。恢复前先停写、核对身份/目标和新数据，恢复到新空库验证，不覆盖当前库；不能把备份复制进公开仓库。
 
-mysql 从 profile/runtime/mysql-client.cnf 读取凭据，密码不放命令行。使用 Python 把备份原始字节送入客户端，避免 PowerShell 管道重编码；示意（NEW_EMPTY_DATABASE 必须先创建并核实为空）：
+mysql 从 profile/runtime/mysql-client.cnf 读取凭据，密码不放命令行。使用客户端的 `source` 命令读取 SQL 文件，先创建并核实恢复目标为空库：
 
 ```powershell
 # 恢复仅面向已核实的新空库；先检查备份与目标，保留当前库。
@@ -85,4 +91,4 @@ profile/tools/mysql/bin/mysql.exe --defaults-file=profile/runtime/mysql-client.c
 
 ### 显式离线构建
 
-本机 Maven Central 返回访问限制时，不自动改镜像或代理。已有核实的本地可执行 JAR 时，可用 node tools/build-web.mjs --offline-from backend/target/semanote-web-0.1.1.jar：原生 JDK 重新编译 Java，重建前端并复用该 JAR 内已验证的依赖，记录依赖摘要。此路径不宣称执行了在线 Maven 解析或 Maven 测试；接口回归独立执行 node tools/verify-web.mjs。
+已有核实的本地可执行 JAR 时，可用 `node tools/build-web.mjs --offline-from backend/target/semanote-web-0.1.2.jar` 复用 JAR 中已验证的 Java 依赖。离线重建前端需要提前安装 npm 依赖。接口回归可独立运行 `node tools/verify-web.mjs`。

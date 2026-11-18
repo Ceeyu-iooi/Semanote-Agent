@@ -1202,12 +1202,8 @@
     gap: 12px 24px;
     align-items: start;
   }
-  .frequency-details.has-selection > .frequency-summary,
-  .frequency-details.has-selection > .frequency-caption,
-  .frequency-details.has-selection > .frequency-rows { grid-column: 1; }
   .frequency-details.has-selection > .frequency-evidence {
     grid-column: 2;
-    grid-row: 1 / span 3;
     max-height: 650px;
     overflow-y: auto;
     margin: 0;
