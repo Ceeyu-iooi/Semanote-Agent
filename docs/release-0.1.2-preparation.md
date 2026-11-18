@@ -4,6 +4,8 @@
 
 ## 本地检查
 
+README 排版修订加入两张图片，已逐图核验。标注示例显示原创合成的读书会文本，SHA-256 为 `75B30E9B20FBB097270AB0FEA37F831D456EDD27A065D8F2F55ADAB67398882D`。Archify 系统图截图的 SHA-256 为 `DA7E0CEB797B6BE25D3532A2C65FEBC5A3CCA7FBC11BA33C8689FBC30477EDFA`。
+
 - JavaScript 智能体、前端数据处理和工具：58 项测试通过。
 - Java 后端：14 项测试通过；前端生产构建通过。
 - 初始化和工作流文档一致性检查通过。

@@ -68,10 +68,11 @@ export async function syncReference() {
   copies.push(
     ["docs/changelog.html", "frontend/dist/reference/changelog.html"],
     ["README.md", "frontend/dist/README.md"],
+    ["frontend/src/assets/semanote-mark.svg", "frontend/dist/frontend/src/assets/semanote-mark.svg"],
   );
   for (const name of await readdir(resolve(projectRoot, "docs/licenses")))
     copies.push([`docs/licenses/${name}`, `frontend/dist/licenses/${name}`]);
-  for (const name of ["workspace.png", "insights.png", "dashboard.png", "system-framework.svg"])
+  for (const name of ["workspace.png", "insights.png", "dashboard.png", "system-framework.svg", "annotation-demo.png", "archify-system.png"])
     copies.push([
       `assets/readme/${name}`,
       `frontend/dist/assets/readme/${name}`,
