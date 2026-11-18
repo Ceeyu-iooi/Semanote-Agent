@@ -96,8 +96,6 @@ const modelTargets = ref([]),
   modelBusy = ref(false),
   retryTarget = ref(null);
 const selectedTasks = ref(Object.keys(taskNames));
-const detailCategory = ref(""),
-  detailSort = ref("frequency");
 const extraEditIndices = reactive({}),
   pendingExtraForms = reactive(new Set());
 const extraEditIndex = computed({
@@ -119,9 +117,7 @@ const detailAllowed = computed(
   () =>
     editing.value || Object.hasOwn(detailTaskNames.value, activeLayer.value),
 );
-const detailCategories = computed(() => [
-  ...new Set(displayItems.value.map((item) => item.label).filter(Boolean)),
-]);
+const detailLayer = computed(() => detailAllowed.value ? activeLayer.value : "ner");
 const frequencyMap = computed(() =>
   displayItems.value.reduce((map, item) => {
     const key = JSON.stringify([item.itemText, item.label]);
@@ -131,23 +127,7 @@ const frequencyMap = computed(() =>
 );
 const itemFrequency = (item) =>
   frequencyMap.value.get(JSON.stringify([item.itemText, item.label])) || 0;
-const detailRows = computed(() =>
-  displayItems.value
-    .map((item, index) => ({ item, index }))
-    .filter(
-      ({ item }) =>
-        !detailCategory.value || item.label === detailCategory.value,
-    )
-    .sort((a, b) =>
-      detailSort.value === "frequency"
-        ? itemFrequency(b.item) - itemFrequency(a.item) ||
-          (a.item.spans[0]?.start ?? 0) - (b.item.spans[0]?.start ?? 0)
-        : (a.item.spans[0]?.start ?? 0) - (b.item.spans[0]?.start ?? 0),
-    ),
-);
-watch(activeLayer, () => {
-  detailCategory.value = "";
-});
+const detailRows = computed(() => displayItems.value.map((item, index) => ({ item, index })));
 watch(editing, (value) => {
   if (!value) pendingExtraForms.clear();
 });
@@ -201,7 +181,7 @@ const visibleLayers = computed(() =>
 );
 const displayItems = computed(() => {
   if (editing.value) return draftItems(activeLayer.value);
-  return visibleLayers.value[activeLayer.value]?.result?.items || [];
+  return visibleLayers.value[detailLayer.value]?.result?.items || [];
 });
 const displayRevisionNumber = computed(
   () =>
@@ -929,6 +909,7 @@ const libraryPage = ref(1),
   settingsError = ref(""),
   settingsBusy = ref(false),
   settingsLoading = ref(false);
+const overlayTasks = ["segmentation", "keywords", "pos", "ner", "paragraphs", "errors"];
 const enabledLayers = ref(["keywords", "ner", "paragraphs"]),
   exportFormat = ref("json");
 const defaultPreferences = {
@@ -1071,7 +1052,7 @@ const visualBreaks = computed(() => [
 ]);
 function revealAnnotation(task, itemId, start = null) {
   const documentId = current.value?.id;
-  if (itemId && !enabledLayers.value.includes(task))
+  if (itemId && overlayTasks.includes(task) && !enabledLayers.value.includes(task))
     enabledLayers.value.push(task);
   nextTick(() => {
     if (
@@ -1101,13 +1082,22 @@ function revealAnnotation(task, itemId, start = null) {
       });
   });
 }
-function focusInsight({ task, itemId }) {
-  if (["relations", "events"].includes(task))
+const sourceEvidence = computed(() => {
+  if (overlayTasks.includes(activeLayer.value)) return null;
+  return insightLayers.value[activeLayer.value]?.result?.items
+    ?.find(item => focusedIds.value.includes(item.itemId))?.spans?.[0];
+});
+function focusInsight({ task, itemId, locateSource = false }) {
+  if (["relations", "events"].includes(task) && !locateSource) {
     graphFocus.value = { task, itemId };
+    activeLayer.value = task;
+    focusedIds.value = [];
+    revealAnnotation(task, null);
+    return;
+  }
   activeLayer.value = task;
-  detailCategory.value = "";
   focusedIds.value = itemId ? [itemId] : [];
-  revealAnnotation(task, itemId);
+  revealAnnotation(task, itemId, sourceEvidence.value?.start ?? null);
 }
 function focusInspector(item) {
   if (focusedIds.value.includes(item.itemId) && item.focusStart === undefined) {
@@ -1115,7 +1105,7 @@ function focusInspector(item) {
     return;
   }
   focusedIds.value = [item.itemId];
-  revealAnnotation(activeLayer.value, item.itemId, item.focusStart ?? null);
+  revealAnnotation(detailLayer.value, item.itemId, item.focusStart ?? null);
 }
 function addExtra(item) {
   if (!draftLayers.value[activeLayer.value])
@@ -1165,8 +1155,6 @@ function focusAnnotations(ids) {
       match.itemId,
       ...ids.filter((id) => id !== match.itemId),
     ];
-    if (detailCategory.value && match.label !== detailCategory.value)
-      detailCategory.value = "";
   } else focusedIds.value = [];
 }
 function pendingExtra({ task, dirty }) {
@@ -1281,10 +1269,6 @@ function nextPage(delta) {
   );
 }
 
-watch(detailCategories, (values) => {
-  if (detailCategory.value && !values.includes(detailCategory.value))
-    detailCategory.value = "";
-});
 </script>
 
 <template>
@@ -1604,8 +1588,7 @@ watch(detailCategories, (values) => {
                   'ner',
                   'keywords',
                   'pos',
-                  'segmentation',
-                  'paragraphs',
+                  'errors',
                 ]"
               :layers="insightLayers"
               side="left"
@@ -1703,12 +1686,20 @@ watch(detailCategories, (values) => {
                   >
                     取消修改
                   </button>
+                  <template v-if="!sourceEditing && canExport()">
+                    <select v-model="exportFormat" class="form-select form-select-sm" aria-label="导出格式">
+                      <option value="json">JSON</option>
+                      <option value="md">Markdown</option>
+                      <option value="txt">TXT</option>
+                    </select>
+                    <a class="tool-button text-action" :href="exportUrl()" download>导出结果 ↗</a>
+                  </template>
                 </div>
               </div>
-              <details class="layer-disclosure"><summary>显示图层 <span>{{ enabledLayers.length }} 层开启</span></summary><div class="layer-toolbar">
+              <div v-if="!sourceEditing" class="layer-toolbar layer-chips" role="group" aria-label="叠加图层">
                 <span class="caption muted">叠加图层</span
                 ><Hint
-                  v-for="(name, task) in taskNames"
+                  v-for="task in overlayTasks"
                   :key="task"
                   :text="
                     {
@@ -1717,7 +1708,7 @@ watch(detailCategories, (values) => {
                       pos: '按词性改变文本颜色',
                       ner: '按实体类别显示背景色',
                       paragraphs: '仅增加视觉换行，原文不变',
-                    }[task] || name + '图层'
+                    }[task] || taskNames[task] + '图层'
                   "
                   ><button
                     class="layer-toggle"
@@ -1725,11 +1716,11 @@ watch(detailCategories, (values) => {
                     :aria-pressed="enabledLayers.includes(task)"
                     @click="toggleLayer(task)"
                   >
-                    <AppIcon :name="task" />{{ name
+                    <AppIcon :name="task" />{{ taskNames[task]
                     }}<span v-if="enabledLayers.includes(task)">✓</span>
                   </button></Hint
                 >
-              </div></details>
+              </div>
               <div v-if="sourceEditing" class="source-edit-area">
                 <input
                   v-model="editor.title"
@@ -1788,6 +1779,7 @@ watch(detailCategories, (values) => {
                   :breaks="visualBreaks"
                   :selectable="editing && !saving"
                   :focused-item="focusedIds[0]"
+                  :focus-range="sourceEvidence"
                   :preferences="preferences"
                   :reveal-key="
                     preferences.reduceMotion
@@ -1890,14 +1882,6 @@ watch(detailCategories, (values) => {
                     >
                       保存标注结果
                     </button></template
-                  ><template v-else-if="canExport()"
-                    ><select v-model="exportFormat" aria-label="导出格式">
-                      <option value="json">JSON</option>
-                      <option value="md">Markdown</option>
-                      <option value="txt">TXT</option></select
-                    ><a class="text-action" :href="exportUrl()" download
-                      >导出结果 ↗</a
-                    ></template
                   >
                 </div>
               </footer>
@@ -1909,8 +1893,6 @@ watch(detailCategories, (values) => {
                 'events',
                 'sentiment',
                 'intent',
-                'semantic',
-                'errors',
               ]"
               :layers="insightLayers"
               side="right"
@@ -1931,7 +1913,7 @@ watch(detailCategories, (values) => {
               @focus="focusInsight"
             />
               <aside
-                v-if="!sourceEditing && (editing || detailAllowed)"
+                v-if="!sourceEditing"
                 class="annotation-inspector"
               >
               <fieldset :disabled="saving" class="inspector-controls">
@@ -1951,8 +1933,8 @@ watch(detailCategories, (values) => {
                     v-for="(name, task) in detailTaskNames"
                     :key="task"
                     role="tab"
-                    :aria-selected="activeLayer === task"
-                    :class="{ selected: activeLayer === task }"
+                    :aria-selected="detailLayer === task"
+                    :class="{ selected: detailLayer === task }"
                     @click="
                       activeLayer = task;
                       focusedIds = [];
@@ -1961,28 +1943,6 @@ watch(detailCategories, (values) => {
                   >
                     {{ name }}
                   </button>
-                </div>
-                <p v-if="!detailAllowed" class="caption muted p-3">
-                  此层请在原文叠加层或关系与事件图谱中查看；人工标注仍可编辑。
-                </p>
-                <div v-if="detailAllowed" class="inspector-filters">
-                  <label
-                    >类别<select v-model="detailCategory" class="form-select">
-                      <option value="">全部类别</option>
-                      <option
-                        v-for="label in detailCategories"
-                        :key="label"
-                        :value="label"
-                      >
-                        {{ entityNames[label] || labelNames[label] || label }}
-                      </option>
-                    </select></label
-                  ><label
-                    >排序<select v-model="detailSort" class="form-select">
-                      <option value="position">原文顺序</option>
-                      <option value="frequency">出现次数优先</option>
-                    </select></label
-                  >
                 </div>
                 <KeepAlive v-if="editing"
                   ><ExtraLayerEditor
@@ -2005,10 +1965,10 @@ watch(detailCategories, (values) => {
                     @pending="pendingExtra"
                 /></KeepAlive>
                 <p
-                  v-if="visibleLayers[activeLayer]?.error"
+                  v-if="visibleLayers[detailLayer]?.error"
                   class="inline-error"
                 >
-                  {{ visibleLayers[activeLayer].error.message }}
+                  {{ visibleLayers[detailLayer].error.message }}
                 </p>
                 <template v-if="editing && activeLayer === 'segmentation'"
                   ><label class="caption" for="segmentationEditor"
@@ -2077,17 +2037,10 @@ watch(detailCategories, (values) => {
                       开始人工标注
                     </button>
                   </div>
-                  <p
-                    v-if="!detailRows.length && displayItems.length"
-                    class="caption muted p-3"
-                  >
-                    没有匹配的类别。
-                  </p>
                   <FrequencyDetails
-                    v-if="!editing && detailAllowed"
+                    v-if="!editing"
                     :rows="detailRows"
-                    :task="activeLayer"
-                      :sort="detailSort"
+                    :task="detailLayer"
                     :focused-ids="focusedIds"
                     @focus="focusInspector"
                   />

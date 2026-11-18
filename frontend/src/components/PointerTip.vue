@@ -1,6 +1,6 @@
 <script setup>
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
-const props = defineProps({ anchor: Object });
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+const props = defineProps({ anchor: Object, variant: String, minHeight: Number });
 const panel = ref(null),
   size = ref({ width: 292, height: 160 }),
   hidden = ref(false);
@@ -13,24 +13,21 @@ const escape = (event) => {
 };
 watch(
   () => props.anchor,
-  async () => {
+  () => {
     hidden.value = false;
-    await nextTick();
-    if (panel.value) {
-      const rectangle = panel.value.getBoundingClientRect();
-      size.value = { width: rectangle.width, height: rectangle.height };
-      observer?.disconnect();
-      observer = new ResizeObserver((entries) => {
-        const rectangle = entries[0].contentRect;
-        size.value = {
-          width: rectangle.width + 34,
-          height: rectangle.height + 34,
-        };
-      });
-      observer.observe(panel.value);
-    }
   },
 );
+watch(panel, element => {
+  observer?.disconnect();
+  if (!element) return;
+  const measure = () => {
+    const { width, height } = element.getBoundingClientRect();
+    size.value = { width, height };
+  };
+  measure();
+  observer = new ResizeObserver(measure);
+  observer.observe(element);
+}, { flush: "post" });
 const position = computed(() => ({
   left: `${Math.max(8, Math.min((props.anchor?.x || 0) + 14, window.innerWidth - size.value.width - 8))}px`,
   top: `${Math.max(8, Math.min((props.anchor?.y || 0) + 18, window.innerHeight - size.value.height - 8))}px`,
@@ -54,7 +51,8 @@ onUnmounted(() => {
       ref="panel"
       class="pointer-tip"
       role="tooltip"
-      :style="position"
+      :class="variant && `pointer-tip--${variant}`"
+      :style="{ ...position, minHeight: minHeight ? `min(${minHeight}px, calc(100dvh - 16px))` : undefined }"
     >
       <slot /></div
   ></Teleport>

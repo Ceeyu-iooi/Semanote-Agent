@@ -258,3 +258,97 @@ img.product-monogram { width: 36px; height: 36px; padding: 0; border-radius: 11p
 .coverage-tile strong { display: grid; place-items: center; width: 76px; height: 76px; border-radius: 50%; font-size: 15px; background: radial-gradient(closest-side, var(--color-canvas) 77%, transparent 80%), conic-gradient(#50bdb5 var(--coverage), var(--color-divider) 0); }
 .coverage-tile:nth-child(3n+2) strong { background: radial-gradient(closest-side, var(--color-canvas) 77%, transparent 80%), conic-gradient(#7986d0 var(--coverage), var(--color-divider) 0); }.coverage-tile:nth-child(3n) strong { background: radial-gradient(closest-side, var(--color-canvas) 77%, transparent 80%), conic-gradient(#d99c58 var(--coverage), var(--color-divider) 0); }
 .keyword-cloud { display: flex; flex-wrap: wrap; align-content: center; gap: 9px; min-height: 190px; padding: 10px 0; list-style: none; }.keyword-cloud li { margin: 0; border: 0; }.statistics-grid .keyword-cloud .keyword-chart-button { display: flex; align-items: baseline; width: auto; gap: 7px; border-radius: 999px; padding: 9px 13px; background: #e1f4f0; color: #174d49; font-size: calc(14px * var(--keyword-scale)); }.keyword-cloud li:nth-child(3n+2) .keyword-chart-button { background: #eeeafb; color: #413566; }.keyword-cloud li:nth-child(3n) .keyword-chart-button { background: #fff0d9; color: #66471f; }.keyword-cloud .keyword-chart-button > small { display: none; }.keyword-cloud .keyword-chart-button.active, .keyword-cloud .keyword-chart-button:focus-visible { outline: 2px solid var(--color-focus); }
+
+/* Usage plots share one baseline for paths, axes and pointer guides. */
+.daily-plot { margin: 20px 10px 26px; border-right: 1px solid var(--color-muted); }
+.daily-plot::before, .daily-plot::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+.daily-plot::before {
+  left: -4px; top: -5px; width: 7px; height: 7px;
+  border: solid var(--color-muted); border-width: 1px 0 0 1px; rotate: 45deg;
+}
+.daily-plot::after {
+  right: -1px; bottom: -4px; width: 7px; height: 7px;
+  border: solid var(--color-muted); border-width: 1px 1px 0 0; rotate: 45deg;
+}
+.daily-plot .usage-rate-line { stroke-dasharray: none; }
+.daily-plot .usage-point:hover::after, .daily-plot .usage-point:focus-visible::after { bottom: 0; }
+.daily-axis.bottom { bottom: 2px; transform: translateY(100%); }
+.daily-axis.right-zero { left: auto; right: 0; }
+.daily-axis:is(.top, .right) { top: -6px; transform: translateY(-100%); }
+.daily-axis.right::after {
+  content: ""; position: absolute; right: -4px; bottom: -9px; width: 7px; height: 7px;
+  border: solid var(--color-muted); border-width: 1px 0 0 1px; rotate: 45deg;
+}
+.daily-plot + .usage-axis { margin-inline: 10px; }
+.usage-series { animation: usage-draw 420ms var(--motion-ease) both; }
+@keyframes usage-draw { from { clip-path: inset(-3px 100% -3px -3px); } to { clip-path: inset(-3px -3px -3px -3px); } }
+@media (prefers-reduced-motion: reduce) { .usage-series { animation: none; } }
+[data-motion="reduced"] .usage-series { animation: none; }
+
+/* Workspace overlay tags stay visible beside the reading controls. */
+.layer-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.layer-chips .layer-toggle { border-radius: 999px; min-height: 36px; }
+.workspace-content, .workspace-content :is(button, a, select, summary, [tabindex], .annotation-canvas, input[type="checkbox"]) {
+  cursor: var(--cursor-annotation);
+}
+.annotation-canvas :is(.focused-text, .has-annotation:focus-visible, [data-start]:focus-visible) {
+  outline: none;
+  box-shadow: none;
+  background: var(--color-selection-strong);
+}
+.annotation-canvas :is(.token-start, .token-end, .mark-segmentation) {
+  border-top: 0; border-inline: 0; border-radius: 0;
+}
+.annotation-canvas .token-end { border-inline-end: 1px dotted var(--color-focus); }
+.pointer-tip--compact { width: 180px; min-height: 76px; padding: 12px; }
+.pointer-tip--annotation { width: 355px; }
+.tip-dot { display: inline-block; width: 7px; height: 7px; margin-inline-end: 6px; border-radius: 50%; background: #6d85ba; }
+.tip-dot--ner { background: #2a9d8f; }
+.tip-dot--keywords { background: #db973a; }
+.tip-dot--paragraphs { background: #9278ce; }
+.tip-dot--errors { background: #d06477; }
+
+.frequency-rows.word-cloud { position: relative; display: block; inline-size: min(100%, 680px); max-height: none; overflow: visible; padding: 0; }
+.frequency-rows.word-cloud .frequency-row { position: absolute; translate: -50% -50%; animation: none; min-height: 0; padding: 0; }
+.frequency-rows.word-cloud .frequency-row:is(:hover, :focus-visible) { transform: scale(1.1); outline: none; text-decoration: none; z-index: 1; }
+.frequency-rows.word-cloud .frequency-row:focus-visible { filter: brightness(1.2); }
+.frequency-rows.word-cloud .frequency-name { max-width: 100%; white-space: nowrap; }
+.frequency-rows.word-cloud .frequency-name strong { font-weight: 650; overflow: hidden; text-overflow: ellipsis; }
+
+.developer-main:has(> .git-explorer) { overflow-y: auto; }
+.developer-main > .git-explorer { height: auto; }
+.git-history-board { min-height: max-content; }
+
+.archify-workspace { position: relative; display: block; min-width: 0; }
+.workspace-graph-frame {
+  display: block;
+  width: 100%;
+  height: clamp(360px, 52vh, 580px);
+  border: 0;
+  background: var(--color-canvas);
+}
+.workspace-graph-frame[title="事件时间轴"] { height: 350px; }
+.archify-evidence {
+  box-sizing: border-box;
+  width: min(348px, calc(100% - 24px));
+  max-height: 300px;
+  overflow: auto;
+  margin: 12px;
+  padding: 14px;
+  color: var(--color-ink);
+  background: var(--color-canvas);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+.archify-evidence.anchored-evidence { position: absolute; z-index: 4; margin: 0; }
+.archify-evidence header { display: flex; justify-content: space-between; gap: 8px; }
+.archify-evidence ul { margin: 12px 0 0; padding-inline-start: 18px; }
+.archify-evidence li { padding-block: 4px; overflow-wrap: anywhere; }
+.archify-evidence li::marker { color: #159b90; }
+.archify-evidence li:nth-child(3n + 2)::marker { color: #8265c5; }
+.archify-evidence li:nth-child(3n + 3)::marker { color: #c5802a; }
+.archify-evidence p { margin: 3px 0; }
