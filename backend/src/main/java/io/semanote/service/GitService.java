@@ -6,6 +6,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
+import java.io.ByteArrayOutputStream;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,7 +19,9 @@ public class GitService {
     private final Path root;
     public GitService(@Value("${semanote.project-root}") String root) { this.root = Path.of(root).toAbsolutePath().normalize(); }
 
-    private String git(String... arguments) {
+    private record GitOutput(String text, boolean truncated) {}
+
+    private GitOutput gitOutput(String... arguments) {
         Process process = null;
         try {
             List<String> command = new ArrayList<>(List.of("git", "--no-pager", "-c", "core.quotepath=false"));
@@ -25,15 +29,29 @@ public class GitService {
             process = new ProcessBuilder(command).directory(root.toFile()).redirectError(ProcessBuilder.Redirect.DISCARD).start();
             Process active = process;
             var output = CompletableFuture.supplyAsync(() -> {
-                try { return active.getInputStream().readNBytes(1024 * 1024 + 1); }
+                try (var input = active.getInputStream(); var buffer = new ByteArrayOutputStream()) {
+                    byte[] block = new byte[8192]; int length; boolean truncated = false;
+                    while ((length = input.read(block)) >= 0) {
+                        int available = Math.max(0, 1024 * 1024 - buffer.size());
+                        if (length > available) truncated = true;
+                        buffer.write(block, 0, Math.min(length, available));
+                    }
+                    return new GitOutput(buffer.toString(StandardCharsets.UTF_8), truncated);
+                }
                 catch (Exception exception) { throw new IllegalStateException(exception); }
             });
             if (!process.waitFor(10, TimeUnit.SECONDS)) throw new IllegalStateException("Git timeout");
-            byte[] bytes = output.get(2, TimeUnit.SECONDS);
-            if (process.exitValue() != 0 || bytes.length > 1024 * 1024) throw new IllegalStateException("Git output unavailable");
-            return new String(bytes, StandardCharsets.UTF_8);
+            GitOutput result = output.get(2, TimeUnit.SECONDS);
+            if (process.exitValue() != 0) throw new IllegalStateException("Git output unavailable");
+            return result;
         } catch (Exception exception) { throw new ApiFailure(503, "gitUnavailable", "Git 记录暂不可读，请确认项目仓库可访问。"); }
         finally { if (process != null && process.isAlive()) process.destroyForcibly(); }
+    }
+
+    private String git(String... arguments) {
+        GitOutput output = gitOutput(arguments);
+        if (output.truncated()) throw new ApiFailure(503, "gitOutputLimit", "Git 记录超出当前展示范围。");
+        return output.text();
     }
 
     public Object history() {
@@ -47,7 +65,18 @@ public class GitService {
 
     public Object changes(String revision) {
         if (!revision.matches("[a-f0-9]{40}")) throw new ApiFailure(400, "invalidRevision", "请选择有效提交。");
-        return Map.of("id", revision, "summary", git("show", "--format=fuller", "--stat", "--no-renames", revision, "--"),
-                "patch", git("show", "--format=", "--first-parent", "--no-ext-diff", "--no-renames", "--unified=3", revision, "--", "README.md", "AGENTS.md", "CHANGELOG.md", "frontend/src", "frontend/tests", "frontend/package.json", "backend/src", "backend/pom.xml", "agent", "semanote_agent", "tools", "docs/*.md", "docs/design/tokens.css", "docs/design/preview.css", "docs/design/preview.js"));
+        List<Map<String, Object>> files = new ArrayList<>();
+        for (String line : git("show", "--format=", "--first-parent", "--root", "--numstat", "--no-renames", "-z", revision, "--").split("\u0000")) {
+            String[] fields = line.split("\\t", 3);
+            if (fields.length != 3) continue;
+            Map<String, Object> file = new HashMap<>();
+            file.put("path", fields[2]); file.put("binary", fields[0].equals("-"));
+            file.put("additions", fields[0].equals("-") ? null : Integer.valueOf(fields[0]));
+            file.put("deletions", fields[1].equals("-") ? null : Integer.valueOf(fields[1]));
+            files.add(file);
+        }
+        GitOutput patch = gitOutput("show", "--format=", "--first-parent", "--no-ext-diff", "--no-renames", "--unified=3", revision, "--", "README.md", "AGENTS.md", "CHANGELOG.md", "frontend/src", "frontend/tests", "frontend/package.json", "backend/src", "backend/pom.xml", "agent", "tools", "docs/*.md", "docs/design/tokens.css", "docs/design/preview.css", "docs/design/preview.js");
+        return Map.of("id", revision, "files", files, "patch", patch.text(), "patchTruncated", patch.truncated(), "comparison", "firstParent",
+                "summary", git("show", "--format=fuller", "--first-parent", "--stat", "--no-renames", revision, "--"));
     }
 }

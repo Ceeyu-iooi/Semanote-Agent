@@ -1,0 +1,224 @@
+/* Top-level project studio and explicit architecture navigation. */
+.developer-shell {
+  min-height: 100dvh;
+}
+.developer-topbar {
+  position: sticky;
+  justify-content: space-between;
+  min-height: 72px;
+}
+.developer-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--color-muted);
+}
+.developer-return {
+  font-size: 12px;
+  color: var(--color-primary);
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+.developer-navigation {
+  position: sticky;
+  top: 72px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow-x: auto;
+  padding: 10px 32px;
+  background: var(--color-canvas);
+  border-bottom: 1px solid var(--color-border);
+  scrollbar-width: thin;
+}
+.developer-navigation button {
+  white-space: nowrap;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-pill);
+  padding: 10px 16px;
+  min-height: 40px;
+  font-size: 12px;
+  color: var(--color-secondary);
+}
+.developer-navigation button.selected {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+.developer-navigation button:hover {
+  background: var(--color-page);
+}
+.developer-main {
+  display: block;
+  min-height: calc(100dvh - 133px);
+  height: auto;
+  min-width: 0;
+  background: var(--color-page);
+  overflow: visible;
+}
+.developer-frame {
+  display: block;
+  width: 100%;
+  height: calc(100dvh - 134px);
+  min-height: 540px;
+  border: 0;
+  background: var(--color-canvas);
+}
+.developer-main > .model-logs {
+  max-width: 1440px;
+  margin: auto;
+  padding: 32px;
+  height: auto;
+  overflow: visible;
+}
+.architecture-explorer {
+  min-width: 0;
+}
+.architecture-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 32px;
+  background: var(--color-canvas);
+  border-bottom: 1px solid var(--color-border);
+  font-size: 12px;
+  min-height: 56px;
+}
+.architecture-breadcrumb button {
+  border: 0;
+  background: transparent;
+  color: var(--color-primary);
+  min-height: 32px;
+  padding: 0;
+}
+.architecture-breadcrumb button.current {
+  color: var(--color-ink);
+  font-weight: 600;
+}
+.architecture-breadcrumb > span:not(.architecture-hint) {
+  color: var(--color-muted);
+}
+.architecture-hint {
+  margin-left: auto;
+  color: var(--color-muted);
+  font-size: 11px;
+}
+.architecture-destinations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 32px;
+  background: var(--color-canvas);
+  border-bottom: 1px solid var(--color-border);
+}
+.architecture-destinations button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 9px 14px;
+  font-size: 12px;
+  min-height: 38px;
+  background: var(--color-canvas);
+  color: var(--color-secondary);
+}
+.architecture-destinations button:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+.architecture-explorer .developer-frame {
+  height: calc(100dvh - 190px);
+  min-height: 540px;
+}
+.architecture-explorer:has(.architecture-destinations) .developer-frame {
+  height: calc(100dvh - 253px);
+}
+.architecture-zoom-enter-active {
+  transition:
+    transform var(--motion-extract) var(--motion-ease),
+    opacity var(--motion-extract);
+}
+.architecture-zoom-leave-active {
+  transition:
+    opacity var(--motion-fast),
+    transform var(--motion-fast);
+}
+.architecture-zoom-enter-from {
+  opacity: 0;
+  transform: scale(0.97);
+}
+.architecture-zoom-leave-to {
+  opacity: 0;
+  transform: scale(1.015);
+}
+@media (max-width: 833px) {
+  .developer-topbar {
+    padding-inline: 17px;
+    min-height: 64px;
+    flex-wrap: nowrap;
+  }
+  .developer-title {
+    display: none;
+  }
+  .developer-return {
+    font-size: 10px;
+  }
+  .developer-navigation {
+    top: 64px;
+    padding: 8px 17px;
+    gap: 3px;
+  }
+  .developer-navigation button {
+    font-size: 11px;
+    padding: 8px 12px;
+  }
+  .developer-frame {
+    height: calc(100dvh - 121px);
+    min-height: 460px;
+  }
+  .architecture-breadcrumb {
+    padding: 10px 17px;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .architecture-hint {
+    display: none;
+  }
+  .architecture-destinations {
+    padding: 10px 17px;
+    gap: 7px;
+  }
+  .architecture-destinations button {
+    font-size: 10px;
+    padding: 8px 10px;
+    gap: 12px;
+  }
+  .developer-main > .model-logs {
+    padding: 24px 17px;
+  }
+  .architecture-explorer .developer-frame {
+    min-height: 460px;
+    height: calc(100dvh - 180px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .architecture-zoom-enter-active,
+  .architecture-zoom-leave-active {
+    transition: none;
+  }
+}
+[data-motion="reduced"] .architecture-zoom-enter-active,
+[data-motion="reduced"] .architecture-zoom-leave-active {
+  transition: none;
+}
+
+.developer-navigation button,
+.architecture-destinations button {
+  min-height: 44px;
+}

@@ -1,4 +1,4 @@
-<!-- Generated from workflow.json; SHA-256: c17549a7cc1015da00a0e6c5eb5dad5ae6b1584bc54be955fea736d02ad65e7a. Do not edit this generated file. -->
+<!-- Generated from workflow.json; SHA-256: 449aa6956af89191d301afe1a658b6d8be95ed6590ad9009b71ae54f561ffe91. Do not edit this generated file. -->
 
 # 五步开发提示词
 
@@ -14,7 +14,7 @@
 请在 Semanote-Agent 项目中执行 P01：设计数据库。
 
 【项目边界】
-通用中文文本标注 B/S 系统；Vue/JavaScript/Bootstrap 前端、Java/Spring Boot 后端、MySQL 存储，活动智能体为 Node.js/JavaScript，Python 保留历史兼容与维护工具。四类核心与分段、关系、事件、情感、意图、语义、错误共十一层，人工修正/JSON/批量纳入；单人工作流，多用户仅扩展设计。维护 Apple 来源设计规范与开发者中心。
+通用中文文本标注 B/S 系统；Vue/JavaScript/Bootstrap 前端、Java/Spring Boot 后端、MySQL 存储，活动智能体为 Node.js/JavaScript，维护、构建和验证均为 Node.js，不保留 Python 实现。四类核心与分段、关系、事件、情感、意图、语义、错误共十一层，人工修正/JSON/批量纳入；单人工作流，多用户仅扩展设计。维护 Apple 来源设计规范与开发者中心。
 
 【本阶段目标】
 设计通用中文文本标注系统的逻辑实体、字段、关系和版本一致性约束，形成 database.md；MySQL 为待核实的优先候选，平台/物理类型/SQL 方言仍按决策清单保留 TBD，不建库、不写业务代码。
@@ -70,7 +70,7 @@ TBD[D03]、TBD[D07]、TBD[D13]、TBD[D14]。只阻止依赖未确认决定的工
 请在 Semanote-Agent 项目中执行 P02：写需求文档。
 
 【项目边界】
-通用中文文本标注 B/S 系统；Vue/JavaScript/Bootstrap 前端、Java/Spring Boot 后端、MySQL 存储，活动智能体为 Node.js/JavaScript，Python 保留历史兼容与维护工具。四类核心与分段、关系、事件、情感、意图、语义、错误共十一层，人工修正/JSON/批量纳入；单人工作流，多用户仅扩展设计。维护 Apple 来源设计规范与开发者中心。
+通用中文文本标注 B/S 系统；Vue/JavaScript/Bootstrap 前端、Java/Spring Boot 后端、MySQL 存储，活动智能体为 Node.js/JavaScript，维护、构建和验证均为 Node.js，不保留 Python 实现。四类核心与分段、关系、事件、情感、意图、语义、错误共十一层，人工修正/JSON/批量纳入；单人工作流，多用户仅扩展设计。维护 Apple 来源设计规范与开发者中心。
 
 【本阶段目标】
 以已获阶段准入的数据库逻辑设计和课程要求为输入，形成可检查的 PRD 并回看数据设计；仅交付需求文档，不构建软件、不安装依赖、不建库。
@@ -127,7 +127,7 @@ TBD[D05]、TBD[D06]、TBD[D07]、TBD[D10]、TBD[D12]、TBD[D13]。只阻止依�
 请在 Semanote-Agent 项目中执行 P03：智能体开发。
 
 【项目边界】
-通用中文文本标注 B/S 系统；Vue/JavaScript/Bootstrap 前端、Java/Spring Boot 后端、MySQL 存储，活动智能体为 Node.js/JavaScript，Python 保留历史兼容与维护工具。四类核心与分段、关系、事件、情感、意图、语义、错误共十一层，人工修正/JSON/批量纳入；单人工作流，多用户仅扩展设计。维护 Apple 来源设计规范与开发者中心。
+通用中文文本标注 B/S 系统；Vue/JavaScript/Bootstrap 前端、Java/Spring Boot 后端、MySQL 存储，活动智能体为 Node.js/JavaScript，维护、构建和验证均为 Node.js，不保留 Python 实现。四类核心与分段、关系、事件、情感、意图、语义、错误共十一层，人工修正/JSON/批量纳入；单人工作流，多用户仅扩展设计。维护 Apple 来源设计规范与开发者中心。
 
 【本阶段目标】
 先实现可独立验证的文本标注智能体，再交由后端集成。
@@ -185,7 +185,7 @@ TBD[D04]、TBD[D07]、TBD[D09]、TBD[D10]、TBD[D13]、TBD[D14]。只阻止依�
 请在 Semanote-Agent 项目中执行 P04：后端开发。
 
 【项目边界】
-通用中文文本标注 B/S 系统；Vue/JavaScript/Bootstrap 前端、Java/Spring Boot 后端、MySQL 存储，活动智能体为 Node.js/JavaScript，Python 保留历史兼容与维护工具。四类核心与分段、关系、事件、情感、意图、语义、错误共十一层，人工修正/JSON/批量纳入；单人工作流，多用户仅扩展设计。维护 Apple 来源设计规范与开发者中心。
+通用中文文本标注 B/S 系统；Vue/JavaScript/Bootstrap 前端、Java/Spring Boot 后端、MySQL 存储，活动智能体为 Node.js/JavaScript，维护、构建和验证均为 Node.js，不保留 Python 实现。四类核心与分段、关系、事件、情感、意图、语义、错误共十一层，人工修正/JSON/批量纳入；单人工作流，多用户仅扩展设计。维护 Apple 来源设计规范与开发者中心。
 
 【本阶段目标】
 按博客顺序初始化后端、实现存储和业务接口，并先验证接口再开发前端。
@@ -249,7 +249,7 @@ TBD[D02]、TBD[D03]、TBD[D06]、TBD[D08]、TBD[D13]、TBD[D14]。只阻止依�
 请在 Semanote-Agent 项目中执行 P05：开发前端。
 
 【项目边界】
-通用中文文本标注 B/S 系统；Vue/JavaScript/Bootstrap 前端、Java/Spring Boot 后端、MySQL 存储，活动智能体为 Node.js/JavaScript，Python 保留历史兼容与维护工具。四类核心与分段、关系、事件、情感、意图、语义、错误共十一层，人工修正/JSON/批量纳入；单人工作流，多用户仅扩展设计。维护 Apple 来源设计规范与开发者中心。
+通用中文文本标注 B/S 系统；Vue/JavaScript/Bootstrap 前端、Java/Spring Boot 后端、MySQL 存储，活动智能体为 Node.js/JavaScript，维护、构建和验证均为 Node.js，不保留 Python 实现。四类核心与分段、关系、事件、情感、意图、语义、错误共十一层，人工修正/JSON/批量纳入；单人工作流，多用户仅扩展设计。维护 Apple 来源设计规范与开发者中心。
 
 【本阶段目标】
 连接已经验证的后端，完成文本管理、交互式标注和系统联调。

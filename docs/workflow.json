@@ -3,7 +3,7 @@
   "projectName": "Semanote-Agent",
   "baselineVersion": "0.1.0-docs.1",
   "updatedOn": "2026-10-29",
-  "scope": "通用中文文本标注 B/S 系统；Vue/JavaScript/Bootstrap 前端、Java/Spring Boot 后端、MySQL 存储，活动智能体为 Node.js/JavaScript，Python 保留历史兼容与维护工具。四类核心与分段、关系、事件、情感、意图、语义、错误共十一层，人工修正/JSON/批量纳入；单人工作流，多用户仅扩展设计。维护 Apple 来源设计规范与开发者中心。",
+  "scope": "通用中文文本标注 B/S 系统；Vue/JavaScript/Bootstrap 前端、Java/Spring Boot 后端、MySQL 存储，活动智能体为 Node.js/JavaScript，维护、构建和验证均为 Node.js，不保留 Python 实现。四类核心与分段、关系、事件、情感、意图、语义、错误共十一层，人工修正/JSON/批量纳入；单人工作流，多用户仅扩展设计。维护 Apple 来源设计规范与开发者中心。",
   "commonRead": [
     "AGENTS.md",
     "README.md",
