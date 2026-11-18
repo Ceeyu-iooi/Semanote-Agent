@@ -6,7 +6,7 @@
 
 Vue 3 · JavaScript · Bootstrap 5 ｜ Java 21 · Spring Boot ｜ JavaScript Agent · MySQL
 
-[开始使用](#开始使用) · [标注能力](#标注能力) · [架构与设计](#架构与设计) · [验证与边界](#验证与边界)
+[下载源码](https://github.com/Ceeyu-iooi/Semanote-Agent/releases/tag/0.1.2) · [开始使用](#开始使用) · [标注能力](#标注能力) · [架构与设计](#架构与设计) · [验证与边界](#验证与边界)
 
 ![工作空间首页：文本、任务和标注统计，使用原创合成示例数据](assets/readme/dashboard.png)
 
