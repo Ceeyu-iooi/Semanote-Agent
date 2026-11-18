@@ -1,6 +1,6 @@
 # Semanote-Agent
 
-> 当前界面调整及验证状态见 [界面调整记录](docs/interface-refinement-report.md)。首页图为上一轮界面，使用原创合成数据。
+> 界面展示使用原创合成示例数据，不包含课程原文。
 
 **以原文为中心，完成可检查、可修正、可追溯的中文文本标注。**
 
@@ -19,7 +19,8 @@ Vue 3 · JavaScript · Bootstrap 5 ｜ Java 21 · Spring Boot ｜ JavaScript Age
 
 - 原文可叠加分词边界、关键词、词性和实体标记；点击结果可定位原文。
 - 自动结果先作为候选，人工修正后可保存快照。原文修改会产生新修订，历史标注保留在对应版本。
-- 统计和逐篇图谱展示当前选定版本；模型日志按日期展示已知 Token 用量和供应商缓存命中率。
+- 统计和逐篇图谱展示当前选定版本；关键词词云以字号表示出现次数，关系图可查看关联证据。
+- 模型日志按日期展示 Token 用量和供应商缓存命中率，支持近 7 天、近 30 天和全部范围。
 - 相同文本块可复用成功结果，失败层需显式重试；未知用量不会当作零。
 
 <a id="开始使用"></a>
@@ -58,8 +59,6 @@ node tools/local-web.mjs start
 
 导入支持 DOCX、UTF-8 TXT、Markdown、三列 CSV。单文本最多 10,000 码点、单文件 5 MiB、单批 500 文本。TXT/MD/DOCX 每文件一份正文，CSV 每格独立，保留来源行列；空白跳过并报告。
 
-![逐篇图谱：当前快照统计与可定位原文的事件角色](assets/readme/insights.png)
-
 <a id="架构与设计"></a>
 ## 架构与设计
 
@@ -72,18 +71,14 @@ node tools/local-web.mjs start
 | 智能体 | Node.js 原生 JavaScript：合并推理、分块、原文定位、依赖校验、缓存与脱敏日志 |
 | 存储 | MySQL 8.4 业务版本；本机文件保存配置、推理缓存与调用元数据 |
 
-[独立开发者中心](http://127.0.0.1:8080/developer) 提供设计规范、Bootstrap 组件展示、系统框架、调用日志和 Git 时间轴。系统图节点可进入前端、后端、智能体和数据库框架。
+[独立开发者中心](http://127.0.0.1:8080/developer) 提供设计规范、系统框架、调用日志和 Git 时间轴。系统图节点可进入前端、后端、智能体和数据库框架。
 
 [系统 Archify](docs/diagrams/system-architecture.html) · [智能体 Archify](docs/diagrams/agent-architecture.html) · [Apple 来源设计规范](docs/design/README.md) · [Web 契约](docs/web-contract.md) · [标注契约](docs/annotation-contract.md)
 
 <a id="验证与边界"></a>
 ## 验证与边界
 
-已发布基线为 [0.1.1](https://github.com/Ceeyu-iooi/Semanote-Agent/releases/tag/0.1.1)；当前沉浸工作区改造的实施与验证单独记录，未创建新版本标签。[0.1.1 验证](docs/0.1.1-report.md) · [本轮实现与验证](docs/immersive-report.md) · [本轮需求](docs/immersive-requirements.md) · [20 篇 README 提炼](docs/readme-research.md)
-
-2026-11-01 继续优化 Bootstrap 手风琴、频次详情、人物关系图、事件时间轴、统计层级、统一动效和真实任务进度。[优化需求](docs/interaction-requirements.md) · [十五轮交互验证与恢复](docs/interaction-report.md)
-
-用户要求重新逐项实施后的补充改动、失败试验与复核记录见 [交互补验报告](docs/interaction-rework-report.md)，当前仍待用户验收。
+查看 [发布准备与验证记录](docs/release-0.1.2-preparation.md)、[交互补验报告](docs/interaction-rework-report.md) 和 [变更记录](CHANGELOG.md)。
 
 - 自动结果为待审阅候选。格式与字符覆盖检查不等于语言学准确率；CSV 没有标准答案，跨块关系和歧义指代仍需人工检查。
 - 当前为单人工作流。局域网访问者共享同一空间，无独立账户、角色权限或任务分配。
