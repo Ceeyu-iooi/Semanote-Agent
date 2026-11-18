@@ -15,7 +15,7 @@ try {
         exit 0
     }
     $taskConfig = Get-Content -LiteralPath (Join-Path $taskRoot 'profile/runtime/local-config.json') -Raw | ConvertFrom-Json
-    if ($taskConfig.networkMode -ne 'lan' -or -not $taskConfig.lanInterfaces) { throw 'Enable LAN mode in local_web.py before configuring its firewall rule.' }
+    if ($taskConfig.networkMode -ne 'lan' -or -not $taskConfig.lanInterfaces) { throw 'Enable LAN mode in local-web.mjs before configuring its firewall rule.' }
     $taskAddresses = @($taskConfig.lanInterfaces | ForEach-Object { $_.address })
     $taskSubnets = @($taskConfig.lanInterfaces | ForEach-Object { $_.subnet })
     $taskAliases = @($taskConfig.lanInterfaces | ForEach-Object { $_.interfaceAlias })

@@ -117,10 +117,14 @@ public class JobService {
                 ObjectNode checkpoint = (ObjectNode) repository.parse("{}");
                 JsonNode previous = progress.get(jobId);
                 ObjectNode layers = previous == null ? (ObjectNode) repository.parse("{}") : (ObjectNode) previous.path("layers").deepCopy();
-                if (event.path("status").asText().equals("success")) layers.set(event.path("taskType").asText(), event.path("layer"));
+                if (List.of("success", "failed").contains(event.path("status").asText())) layers.set(event.path("taskType").asText(), event.path("layer"));
                 checkpoint.put("taskType", event.path("taskType").asText()); checkpoint.put("status", event.path("status").asText());
                 checkpoint.set("layers", layers);
-                for(String field:List.of("completedChunks","totalChunks"))if(event.has(field))checkpoint.set(field,event.get(field));
+                // Layer events retain the last real chunk checkpoint; polling must not reset progress.
+                for (String field : List.of("completedChunks", "totalChunks", "phase", "networkCalls", "localCacheHits")) {
+                    if (event.has(field)) checkpoint.set(field, event.get(field));
+                    else if (previous != null && previous.has(field)) checkpoint.set(field, previous.get(field));
+                }
                 progress.put(jobId, checkpoint);
             });
             repository.jdbc().update("UPDATE annotationJob SET state=?,responseJson=?,updatedAt=? WHERE id=?", response.path("status").asText("failed"), repository.json(response), WorkspaceService.now(), jobId);

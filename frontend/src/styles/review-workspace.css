@@ -1,0 +1,50 @@
+/* Review workspace: continuous result rails and compact, evidence-led controls. */
+.immersive-workspace {gap:17px;grid-template-columns:minmax(210px,260px) minmax(0,1fr) minmax(210px,260px)}
+.extraction-rail.accordion{gap:0;border:1px solid var(--color-border);border-radius:11px;overflow:hidden;background:var(--color-canvas)}
+.extraction-rail>header{padding:15px;margin:0;border-bottom:1px solid var(--color-border)}
+.extraction-card.accordion-item{border:0;border-bottom:1px solid var(--color-border);border-radius:0!important;margin:0;animation:none}
+.extraction-card.accordion-item:last-child{border-bottom:0}
+.extraction-card::after{display:none}
+.extraction-card .accordion-button{min-height:48px;padding:12px 14px}
+.extraction-card-heading strong{font-size:14px}
+.extraction-groups{display:grid;gap:16px}
+.extraction-group h4{font-size:13px;font-weight:600;margin:0 0 8px;display:flex;justify-content:space-between;gap:8px}
+.extraction-group h4 small{color:var(--color-muted);font-weight:400}
+.extraction-group .extraction-chip{display:flex;width:100%;justify-content:space-between;min-height:36px;background:transparent;border-radius:5px;border-bottom:1px solid var(--color-divider);font-size:13px}
+.extraction-chip>span{white-space:normal;max-width:none;overflow-wrap:anywhere}
+.extraction-chip small{font-size:12px;flex-shrink:0}
+.extraction-more{min-height:40px;font-size:13px}
+.inference-progress,.inference-progress.is-processing{padding:14px 17px!important;background:var(--color-canvas);color:var(--color-ink);border:1px solid var(--color-border);border-radius:11px;margin-bottom:17px}
+.compact-progress-label{display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px}
+.inference-progress .progress{height:5px;background:var(--color-page)}
+.inference-progress>.text-action{font-size:12px;min-height:30px;margin-top:4px;color:var(--color-primary)}
+.layer-disclosure{border-bottom:1px solid var(--color-border);background:var(--color-pearl)}
+.layer-disclosure summary{padding:12px 17px;font-size:14px;cursor:pointer;min-height:44px}
+.layer-disclosure summary span{color:var(--color-muted);margin-left:12px;font-size:12px}
+.layer-disclosure .layer-toolbar{border:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding-top:0}
+.layer-disclosure .layer-toggle{width:100%;border-radius:6px;justify-content:start;font-size:13px;min-height:40px}
+.immersive-workspace .document-page{min-height:320px}
+.relationship-panel .panel-toolbar{align-items:center}
+.event-story h4{font-size:26px;font-weight:600;margin-bottom:12px}
+.event-description{font-size:17px;line-height:1.8}
+.event-facts{padding:17px;background:var(--color-pearl);border-radius:11px;margin:17px 0}
+.event-facts dt{font-size:12px;color:var(--color-muted);margin-bottom:8px}
+.event-facts dd{font-size:16px;font-weight:600;overflow-wrap:anywhere}
+.event-sequence button.selected{background:var(--color-primary-soft);border-radius:8px}
+.person-node .person-heading strong{font-size:18px}
+.person-node .person-facts{border-top:1px solid var(--color-border);padding-top:8px}
+.person-node .person-facts small{font-size:12px;line-height:1.7}
+.network-links path{stroke-width:2}
+.log-summary{gap:12px}.log-summary>article{padding:20px;border:1px solid var(--color-border);border-radius:11px;background:var(--color-canvas)}
+.log-summary>article strong{display:block;font-size:30px;margin-top:8px}
+.log-token-chart{display:none}
+.log-activity{display:flex;align-items:end;gap:6px;min-height:110px;padding:17px;border-bottom:1px solid var(--color-border);overflow-x:auto}
+.log-activity button{flex:1;min-width:24px;max-width:56px;border:0;border-radius:5px 5px 0 0;background:var(--color-primary-soft);color:var(--color-primary);min-height:32px;font-size:11px}
+.log-activity button[aria-pressed=true]{background:var(--color-primary);color:white}
+.log-table th{font-size:12px}.log-table td{font-size:13px}.log-table td:nth-child(2){font-weight:600}.log-table td small{font-weight:400;font-size:11px}
+@media(max-width:1068px){.immersive-workspace{grid-template-columns:210px minmax(0,1fr)}}
+@media(max-width:833px){.immersive-workspace{display:flex;flex-direction:column}.immersive-workspace>*{width:100%}.immersive-workspace>.editor-surface{order:0}.immersive-workspace>.document-insights{order:1}.rail-left{order:2}.rail-right{order:3}.immersive-workspace>.annotation-inspector{order:4}.extraction-rail{display:flex!important}.layer-disclosure .layer-toolbar{grid-template-columns:repeat(2,minmax(0,1fr))}.top-navigation button,.tool-button{min-height:44px;font-size:13px}}
+.log-chart-caption{margin:0;padding:17px 17px 0;font-size:13px;font-weight:600}
+.log-state-failed{background:var(--annotation-negative-bg);color:var(--annotation-negative);border-color:var(--annotation-negative)}
+.log-state-success{color:var(--annotation-person);background:var(--annotation-person-bg)}
+.layer-toggle .app-icon,.extraction-kind-mark .app-icon{width:16px;height:16px}

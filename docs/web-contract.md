@@ -5,7 +5,8 @@
 本节优先于下面原 Web 交付记录。Java/Spring Boot 通过 JSON/NDJSON 调用 agent/bridge.mjs（Node.js 24），活动模块契约为 1.1.0。十一层定义见 annotation-contract.md；旧四层快照继续可读。产品 JSON 导出版本仍为 1.0.0，layers 加法扩展，TXT/MD 同步保留主客体、事件角色与修改建议。
 
 - GET/PUT /api/v1/settings/model：provider 默认身份及 providers 数组；每项含 id/name/baseUrl/model/timeoutSeconds/maxOutputTokens/jsonMode。GET 仅给 hasApiKey，PUT 可填写 apiKey，空值保留原密钥，地址变更需重填。入队配置固定在内存，不把凭据写入持久任务请求。
-- GET /api/v1/model-logs：provider/model/state/cache/query/page/size/sort 筛选；返回同一筛选快照的 rows/total/summary 及完整可选供应商/模型。读取本地脱敏元数据，未提供 usage 为未知，不估算货币费用。
+- GET /api/v1/model-logs：provider/model/state/cache/query/page/size/sort 筛选；返回同一筛选快照的 rows/total/summary 及完整可选供应商/模型。`taskSeries` 在表格分页之前按非空 `jobId` 汇总最近最多 50 个标注任务；`dailySeries` 按北京时间日期汇总筛选后的全部调用，按日期升序返回，缓存命中率以缓存 Token 除以输入 Token 计算。远程输入、输出和缓存用量不完整时对应值为 null，本地复用单独计数。读取本地脱敏元数据，不估算货币费用。
+- 每日图表为无调用记录的日期补充零值；只有本地复用、没有远程请求的日期，供应商缓存率按界面约定显示为零。已有远程请求但供应商未报告用量时仍显示未知，不虚构零值。
 - 分块进度反映已实际处理的文本块，成功图层只在完整合并校验后返回。缓存命中也重新建立本次修订/结果身份并验证跨度。
 - 缺省恢复新任务使用当前所选供应商配置；不自动重试或切换。正文、标注草稿、候选、保存快照和历史原文状态互相区分，历史无快照时不可导出当前版本。
 
@@ -15,13 +16,13 @@
 
 ## 需求的准确表述
 
-基于现有 Python 文本标注智能体，构建 Vue 3＋JavaScript＋Bootstrap 5 前端、Java 21＋Spring Boot 3.5 后端和 MySQL 8.4 存储的 B/S 软件。前端承担原文管理、交互标注、结果高亮和统计；后端承担导入校验、智能体调用、不可变修订/快照与恢复。实现“文本录入/导入 → 保存修订 → 自动候选或人工标注 → 显式保存快照 → 统计/JSON 导出”的单人工作流，多用户任务分配只保留扩展设计。
+基于现有 JavaScript 文本标注智能体，构建 Vue 3＋JavaScript＋Bootstrap 5 前端、Java 21＋Spring Boot 3.5 后端和 MySQL 8.4 存储的 B/S 软件。前端承担原文管理、交互标注、结果高亮和统计；后端承担导入校验、智能体调用、不可变修订/快照与恢复。实现“文本录入/导入 → 保存修订 → 自动候选或人工标注 → 显式保存快照 → 统计/JSON 导出”的单人工作流，多用户任务分配只保留扩展设计。
 
 统一沿用 Apple DESIGN.md 与 preview 的视觉语言，维护离线设计 HTML、共享变量及开发者中心。开发者中心提供设计规范、整体/智能体/前端/后端/数据库 Archify 图、Changelog 和 GitFlow 可视化。新增规范登记来源、用途和兼容性，保持既有界面一致。
 
 ## 已确认约束
 
-- Vue 3、Vite/npm、Bootstrap 5；Java 21、Spring Boot 3.5、Maven/JDBC；MySQL 8.4，结构脚本、SQL 备份/恢复；Windows 本地、当前 Chrome/Edge。Java 通过本地 JSON 子进程调用 Python；不改独立模块协议。
+- Vue 3、Vite/npm、Bootstrap 5；Java 21、Spring Boot 3.5、Maven/JDBC；MySQL 8.4，结构脚本、SQL 备份/恢复；Windows 本地、当前 Chrome/Edge。Java 通过本地 JSON 子进程调用 Node.js / JavaScript；活动模块协议为 1.1.0。
 - DOCX、UTF-8（允许 BOM）TXT/MD/CSV。TXT/MD/DOCX 整份正文一文本；CSV 首行三列列名，随后每格独立文本，重复不合并，保留来源逻辑记录号和列号/名。保留原文空格与换行，纯空白跳过并报告；不自动猜编码。
 - 最多 10,000 Unicode 码点/文本、5 MiB/文件、500 个非空白文本/导入或批量操作；超过任何限制整次导入拒绝，不静默截断。常规导入遵循该限制；本轮用户另行授权本地 train.csv 初始语料，在启动时精确去重、幂等加入，保留全部来源位置，不改变常规批量/模型调用上限。
 - 草稿只在当前页面保留；保存文本生成不可变修订，旧标注留历史，新修订当前快照清空。归档代替删除，可恢复；不承诺永久保留期限。
@@ -49,7 +50,7 @@
 | GET /documents/{id}/exports/{snapshotId} | 下载 JSON 1.0.0，固定快照/原文/来源/统计 |
 | GET /statistics | 未归档文档当前修订的已保存快照统计，缺层数量明确 |
 
-人工 layers 使用智能体已存在的候选表达：分词 itemText；关键词 itemText；POS tokenIndex/label；NER itemText/label/occurrence。服务经同一 Python 转换器生成可信位置/身份，不能接收客户端自报可信区间。未包含的层为未执行；合法空关键词/实体层为成功零结果。保存部分层必须 allowPartial=true。
+人工 layers 使用智能体已存在的候选表达：分词 itemText；关键词 itemText；POS tokenIndex/label；NER itemText/label/occurrence。服务经同一 JavaScript 转换器生成可信位置/身份，不能接收客户端自报可信区间。未包含的层为未执行；合法空关键词/实体层为成功零结果。保存部分层必须 allowPartial=true。
 
 ## 存储与运行边界
 

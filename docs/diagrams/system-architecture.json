@@ -8,7 +8,7 @@
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/Ceeyu-iooi/Semanote-Agent.git",
-      "revision": "46d81c19c10180f35e5a2d68a191bca9132056c4",
+      "revision": "78ac3cda29e8db9f39e920c3ee37ba17aa5904df",
       "link_mode": "local-only"
     }
   },
@@ -38,7 +38,7 @@
       "id": "vue",
       "type": "frontend",
       "label": "Vue 工作台",
-      "sublabel": "文本 · 标注 · 统计",
+      "sublabel": "顶部导航 · 沉浸标注 · 逐篇图表",
       "pos": [
         300,
         40

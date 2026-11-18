@@ -8,7 +8,7 @@
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/Ceeyu-iooi/Semanote-Agent.git",
-      "revision": "46d81c19c10180f35e5a2d68a191bca9132056c4",
+      "revision": "78ac3cda29e8db9f39e920c3ee37ba17aa5904df",
       "link_mode": "local-only"
     }
   },
@@ -17,7 +17,7 @@
       "id": "app",
       "type": "frontend",
       "label": "Vue 应用状态",
-      "sublabel": "十一层工作台 · 逐篇统计",
+      "sublabel": "顶部导航 · 中央正文 · 抽取卡片",
       "pos": [
         40,
         220
@@ -29,18 +29,18 @@
       "sources": [
         {
           "path": "frontend/src/App.vue",
-          "line": 8,
-          "end_line": 51
+          "line": 35,
+          "end_line": 59
         },
         {
-          "path": "frontend/src/components/DocumentInsights.vue",
+          "path": "frontend/src/components/ExtractionRail.vue",
           "line": 1,
-          "end_line": 23
+          "end_line": 25
         },
         {
-          "path": "frontend/src/App.vue",
-          "line": 359,
-          "end_line": 373
+          "path": "frontend/src/components/TopNavigation.vue",
+          "line": 1,
+          "end_line": 25
         }
       ]
     },
@@ -113,7 +113,12 @@
         {
           "path": "frontend/src/components/DeveloperCenter.vue",
           "line": 1,
-          "end_line": 23
+          "end_line": 25
+        },
+        {
+          "path": "frontend/src/components/ArchitectureExplorer.vue",
+          "line": 1,
+          "end_line": 25
         }
       ]
     },
