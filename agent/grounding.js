@@ -16,8 +16,7 @@ export function groundTokens(tuples, text) {
     );
     // Whitespace is source layout, not a lexical token. It is retained in the original and spans.
     if (/^\s+$/u.test(tuple[0])) continue;
-    requireValue(!/\s/u.test(tuple[0]), "invalidToken");
-    for (const piece of tuple[0].match(/[^\p{P}]+|\p{P}/gu) || []) {
+    for (const piece of tuple[0].match(/[^\s\p{P}]+|\p{P}/gu) || []) {
       whitespace();
       if (/^\p{P}$/u.test(piece)) {
         if (chars[cursor] === piece) {
@@ -83,4 +82,26 @@ export function sentenceEvidence(raw, text) {
       occurrence: positions(text, itemText).indexOf(start),
     };
   });
+}
+
+/** Stable source sentences used as input identifiers. The original slice is never rewritten. */
+export function sourceSentences(text, boundaries = /[。！？!?\r\n]+[”’」』]*/gu) {
+  const result = [], starts = new Map();
+  let from = 0;
+  const append = (end) => {
+    const piece = text.slice(from, end);
+    const itemText = piece.trim();
+    if (itemText) {
+      if (!starts.has(itemText)) starts.set(itemText, positions(text, itemText));
+      const utf16Start = from + piece.length - piece.trimStart().length;
+      const occurrence = starts.get(itemText).indexOf(Array.from(text.slice(0, utf16Start)).length);
+      result.push({ itemText, occurrence });
+    }
+    from = end;
+  };
+  for (const match of text.matchAll(boundaries)) {
+    append(match.index + match[0].length);
+  }
+  append(text.length);
+  return result;
 }

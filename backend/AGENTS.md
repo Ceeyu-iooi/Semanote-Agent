@@ -2,7 +2,7 @@
 
 先读根 AGENTS.md、docs/web-contract.md、docs/database.md、docs/annotation-contract.md。
 
-- Java 21、Spring Boot 3.5、Maven、JDBC、MySQL 8.4；以 stdin/stdout JSON 通过本地进程调用Node.js/JavaScript 智能体，不拼 shell，不把原文或密钥放命令行。
+- Java 21、Spring Boot 3.5、Maven、JDBC 和 MySQL 8.4。固定 Node.js 智能体通过 JSON/NDJSON 管道运行，原文和密钥不进入命令行。
 - controller 处理 HTTP，service 处理业务与版本，repository 执行参数化 SQL，agent 适配进程/契约。事务明确，乐观冲突返回 409；模型调用期间不持有数据库行锁。
 - 修订/结果不可变，快照绑定修订和有效结果。重推理只新增候选，显式保存才切换快照；人工/自动版不相互覆盖。POS 引用确定分词结果。
 - 服务端校验容量、导入、标签、依赖、码点、重复和覆盖；不信任前端。来源行列保留、不裁剪原文，超限明确拒绝。

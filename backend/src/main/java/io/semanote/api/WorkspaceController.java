@@ -26,7 +26,9 @@ public class WorkspaceController {
     private final ModelLogService modelLogs;
     public WorkspaceController(WorkspaceService workspace, JobService jobs, GitService git, ModelSettingsService modelSettings, ModelLogService modelLogs) { this.workspace = workspace; this.jobs = jobs; this.git = git; this.modelSettings=modelSettings; this.modelLogs=modelLogs; }
 
-    @GetMapping("/health") public Map<String, Object> health() { return Map.of("status", "ready", "contractVersion", "1.0.0"); }
+    private final java.util.concurrent.atomic.AtomicBoolean importing = new java.util.concurrent.atomic.AtomicBoolean();
+    private final java.util.concurrent.ConcurrentMap<String, Map<String, Integer>> imports = new java.util.concurrent.ConcurrentHashMap<>();
+    @GetMapping("/health") public Map<String, Object> health() { return Map.of("status", "ready", "contractVersion", "1.0.0", "runtime", "spring"); }
     @GetMapping("/meta") public Map<String, Object> meta() {
         return Map.of("tasks", WorkspaceService.TASKS,
                 "entityLabels", List.of("PERSON", "LOCATION", "ORGANIZATION", "TIME", "MONEY"),
@@ -41,7 +43,29 @@ public class WorkspaceController {
     @PutMapping("/documents/{id}") public Object update(@PathVariable String id, @RequestBody JsonNode body) { return workspace.update(id, body); }
     @PostMapping("/documents/{id}/archive") public Object archive(@PathVariable String id, @RequestBody JsonNode body) { return workspace.archive(id, body); }
     @GetMapping("/documents/{id}/revisions") public Object history(@PathVariable String id) { return workspace.history(id); }
-    @PostMapping("/imports") public Object importFile(@RequestParam("file") MultipartFile file) throws IOException { return workspace.importFile(file.getOriginalFilename() == null ? "upload" : file.getOriginalFilename(), file.getBytes()); }
+    @PostMapping("/imports")
+    public Object importFile(@RequestParam("file") MultipartFile file, @RequestParam(required = false) Integer limit,
+                             @RequestParam(defaultValue = "") String requestId) throws IOException {
+        if (!requestId.isEmpty() && !requestId.matches("[A-Za-z0-9_-]{1,36}"))
+            throw new ApiFailure(400, "invalidRequestId", "导入请求身份不正确。");
+        if (!importing.compareAndSet(false, true))
+            throw new ApiFailure(409, "importBusy", "另一份文件正在导入，请稍后重试。");
+        try {
+            return workspace.importFile(file.getOriginalFilename() == null ? "upload" : file.getOriginalFilename(),
+                    file.getBytes(), limit, (completed, total) -> {
+                        if (!requestId.isEmpty()) imports.put(requestId, Map.of("completed", completed, "total", total));
+                    });
+        } finally {
+            imports.remove(requestId);
+            importing.set(false);
+        }
+    }
+
+    @GetMapping("/imports/{requestId}")
+    public Object importProgress(@PathVariable String requestId) {
+        var checkpoint = imports.get(requestId);
+        return checkpoint == null ? com.fasterxml.jackson.databind.node.NullNode.getInstance() : checkpoint;
+    }
     @PostMapping("/jobs") public ResponseEntity<?> start(@RequestBody JsonNode body) { return ResponseEntity.accepted().body(jobs.start(body)); }
     @GetMapping("/jobs") public Object jobs() { return jobs.list(); }
     @GetMapping("/jobs/{id}") public Object job(@PathVariable String id) { return jobs.job(id); }

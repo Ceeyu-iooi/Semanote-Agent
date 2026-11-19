@@ -335,3 +335,81 @@ test("model whitespace tokens do not remove source layout or shift emoji offsets
   assert.equal(result.layers.segmentation.result.items[3].spans[0].start, 6);
   validateResponse(request, result);
 });
+
+test("POS retry accepts compact tags while preserving original word identities", async () => {
+  const request = input(["pos"], "昨天上午，顾晓禾看书。");
+  const first = await annotate(request, config, {
+    useCache: false,
+    providerCall: async () => ({
+      payload: { segmentation: ["昨天", "上午", "顾晓禾", "看书"] },
+      log: usage,
+    }),
+  });
+  assert.equal(first.layers.segmentation.status, "success");
+  assert.equal(first.layers.pos.status, "failed");
+  const fixed = await annotate(request, config, {
+    previousResponse: first, useCache: false,
+    providerCall: async (_config, _text, _tasks, context) => {
+      assert.deepEqual(context.segmentation, ["昨天", "上午", "，", "顾晓禾", "看书", "。"]);
+      return { payload: { posLabels: [" noun ", "TIME", "PUNCT", "PROPN", "VERB", "PUNCT"] }, log: usage };
+    },
+  });
+  assert.equal(fixed.layers.pos.status, "success");
+  assert.deepEqual(fixed.layers.segmentation.result, first.layers.segmentation.result);
+  assert.deepEqual(fixed.layers.pos.result.items.map(({ label }) => label), ["NOUN", "NOUN", "PUNCT", "PROPN", "VERB", "PUNCT"]);
+});
+
+test("small output budgets split long POS requests without dropping code points", async () => {
+  const text = "甲乙丙丁。".repeat(45), request = input(["pos"], text);
+  let calls = 0;
+  const result = await annotate(request, { ...config, maxOutputTokens: 512 }, {
+    useCache: false,
+    providerCall: async (_config, chunk) => {
+      calls++;
+      assert.ok(Array.from(chunk).length <= 40);
+      return { payload: { tokens: Array.from(chunk, (word) => [word, "NOUN"]) }, log: usage };
+    },
+  });
+  assert.ok(calls > 1);
+  assert.equal(result.layers.pos.status, "success");
+  assert.equal(result.layers.pos.result.items.map(({ itemText }) => itemText).join(""), text);
+});
+
+test("indexed evidence selects the right repeated subject and restores complete intent coverage", async () => {
+  const text = "顾晓禾借了地图。她说：“请登记归还。”顾晓禾去买书。";
+  const request = input(["relations", "events", "intent", "sentiment"], text);
+  const result = await annotate(request, config, {
+    useCache: false,
+    providerCall: async (_config, _source, _tasks, { sentences }) => {
+      assert.equal(sentences.length, 3);
+      const referent = { itemText: "顾晓禾", occurrences: [0] };
+      return { log: usage, payload: {
+        relations: [{ sentenceIndex: 1, label: "请求登记", subject: referent, object: "归还" }],
+        events: [{ sentenceIndex: 1, label: "请求", roles: { subject: [referent], object: ["归还"] } }],
+        intentLabels: ["INFORM", "REQUEST", "INFORM"],
+        sentimentLabels: ["NEUTRAL", "NEUTRAL", "NEUTRAL"],
+      } };
+    },
+  });
+  assert.equal(result.status, "success");
+  assert.equal(result.layers.events.result.items[0].roles.subject[0].spans[0].start, 0);
+  assert.equal(result.layers.relations.result.items[0].subject.spans[0].start, 0);
+  assert.equal(result.layers.intent.result.items.map(({ itemText }) => itemText).join(""), text);
+});
+
+test("long source keeps identical cache boundaries across different task sets", async () => {
+  const text = "请把青石镇新地图交给工作人员。".repeat(51);
+  const full = await annotate(input(["intent", "relations", "events"], text), config, {
+    providerCall: async (_config, _text, _tasks, { sentences }) => ({
+      payload: { intentLabels: sentences.map(() => "REQUEST"), events: [], relations: [] }, log: usage,
+    }),
+  });
+  assert.equal(full.status, "success");
+  assert.ok(full.execution.networkCalls > 1);
+  const subset = await annotate(input(["intent"], text), config, {
+    providerCall: async () => { throw Error("Validated cache should cover every chunk"); },
+  });
+  assert.equal(subset.status, "success");
+  assert.equal(subset.execution.networkCalls, 0);
+  assert.equal(subset.execution.localCacheHits, full.execution.networkCalls + full.execution.localCacheHits);
+});

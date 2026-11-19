@@ -23,6 +23,7 @@ const paths = {
   plus: "M12 4v16 M4 12h16",
   import: "M12 2v13 M7 10l5 5 5-5 M4 16v6h16v-6",
   arrow: "M4 12h16 M14 6l6 6-6 6",
+  exit: "M11 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h6 M9 12h12m-4-4 4 4-4 4",
   close: "M5 5l14 14 M19 5L5 19",
   check: "M4 12l5 5L20 6",
   play: "M7 3l14 9-14 9z",

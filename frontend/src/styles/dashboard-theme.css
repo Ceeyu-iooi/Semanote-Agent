@@ -418,3 +418,31 @@ img.product-monogram { width: 36px; height: 36px; padding: 0; border-radius: 11p
 .annotation-provider-option .provider-icon { flex: 0 0 32px; width: 32px; height: 32px; }
 .annotation-provider-option strong, .annotation-provider-option small { display: block; overflow-wrap: anywhere; }
 .annotation-provider-option small { color: var(--color-secondary); }
+/* Workspace controls use the shared surfaces and focus colors. */
+.side-navigation.side-exit { top: auto; bottom: 22px; }
+.navigation-utilities .mobile-exit { display: none; }
+.side-exit button:hover, .navigation-utilities .mobile-exit:hover { background: var(--color-primary-soft); color: var(--color-primary); }
+@media (max-width: 833px), (max-height: 520px) {
+  .side-navigation.side-exit { display: none; }
+  .navigation-utilities .mobile-exit { display: inline-flex; }
+}
+.workspace-stopped { max-width: 640px; margin: 48px auto; padding: 32px; }
+.import-progress { display: grid; gap: 8px; margin-bottom: 12px; padding: 14px 18px; }
+.import-progress progress { width: 100%; accent-color: var(--color-primary); }
+.archify-evidence header { cursor: grab; touch-action: none; user-select: none; }
+.archify-evidence header:active { cursor: grabbing; }
+.log-summary { grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); }
+.daily-plot:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 4px; }
+.usage-selection { position: absolute; inset-block: 0; border-left: 1px dashed var(--color-muted); pointer-events: none; }
+.usage-marker { position: absolute; width: 11px; height: 11px; transform: translate(-55%, -50%); border: 2px solid var(--color-canvas); border-radius: 50%; box-shadow: 0 0 0 2px currentColor; background: currentColor; }
+.token-marker { color: #159b90; }
+.rate-marker { color: #6289df; width: 8px; height: 8px; }
+
+.action-dialog { width: min(440px, calc(100vw - 32px)); }
+.action-dialog h2 { font-size: 22px; }
+.action-dialog-body { display: grid; gap: 14px; }
+.action-dialog-body p { margin: 0; line-height: 1.6; }
+.import-file-summary { display: grid; gap: 4px; overflow-wrap: anywhere; }
+.import-count-field { display: grid; gap: 6px; }
+.import-count-field input { max-width: 12rem; }
+.action-dialog footer { flex-wrap: wrap; }

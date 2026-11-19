@@ -40,7 +40,7 @@ export async function exists(path) {
   }
 }
 
-/** Command arguments are separate; .cmd launch is limited to known npm/Maven build commands. */
+/** Command arguments are separate; .cmd launch is limited to the npm build command. */
 export function run(command, args = [], options = {}) {
   const {
     check = true,

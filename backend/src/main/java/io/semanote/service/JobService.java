@@ -25,6 +25,7 @@ public class JobService {
     private final AgentBridge bridge;
     private final ModelSettingsService modelSettings;
     private final Map<String, JsonNode> progress = new ConcurrentHashMap<>();
+    private final java.util.concurrent.atomic.AtomicInteger scheduled = new java.util.concurrent.atomic.AtomicInteger();
     private final ThreadPoolExecutor executor = new ThreadPoolExecutor(1, 1, 0, TimeUnit.SECONDS, new ArrayBlockingQueue<>(500));
 
     public JobService(WorkspaceRepository repository, WorkspaceService workspace, AgentBridge bridge, ModelSettingsService modelSettings) {
@@ -38,6 +39,8 @@ public class JobService {
 
     @PreDestroy
     public void stop() { executor.shutdownNow(); }
+
+    public boolean busy() { return scheduled.get() > 0; }
 
     public List<Map<String, Object>> list() {
         return repository.jdbc().queryForList("SELECT j.id,j.documentId,j.revisionId,j.previousJobId,j.provider,j.state,j.errorMessage,j.createdAt,j.updatedAt,d.title FROM annotationJob j JOIN textDocument d ON d.id=j.documentId ORDER BY j.createdAt DESC,j.id");
@@ -99,14 +102,26 @@ public class JobService {
 
     private Map<String, Object> enqueue(String id, String documentId, String revisionId, String provider, Object request, String previousId, JsonNode previousResponse) {
         if (executor.getQueue().remainingCapacity() == 0) throw new ApiFailure(503, "queueFull", "队列已满，请等待当前任务完成。");
-        JsonNode providerConfig=modelSettings.executionConfig(provider);
+        JsonNode tasks = repository.parse(repository.json(request)).path("tasks");
+        JsonNode providerConfig = tasks.size() == 1 && "paragraphs".equals(tasks.get(0).asText())
+                ? repository.parse(repository.json(Map.of("id", provider))) : modelSettings.executionConfig(provider);
         String timestamp = WorkspaceService.now();
         repository.jdbc().update("INSERT INTO annotationJob(id,documentId,revisionId,previousJobId,provider,state,requestJson,createdAt,updatedAt) VALUES (?,?,?,?,?,'queued',?,?,?)", id, documentId, revisionId, previousId, provider, repository.json(request), timestamp, timestamp);
         Map<String, Object> envelope = new LinkedHashMap<>();
         envelope.put("action", "annotate"); envelope.put("remoteConsent", true); envelope.put("streamProgress", true); envelope.put("request", request); envelope.put("provider", provider);
         envelope.put("providerConfig", providerConfig);
         if (previousResponse != null && !previousResponse.isNull()) envelope.put("previousResponse", previousResponse);
-        executor.execute(() -> execute(id, envelope));
+        scheduled.incrementAndGet();
+        try {
+            executor.execute(() -> {
+                try { execute(id, envelope); }
+                finally { scheduled.decrementAndGet(); }
+            });
+        } catch (java.util.concurrent.RejectedExecutionException rejected) {
+            scheduled.decrementAndGet();
+            repository.jdbc().update("UPDATE annotationJob SET state='interrupted',updatedAt=? WHERE id=?", WorkspaceService.now(), id);
+            throw new ApiFailure(503, "queueUnavailable", "任务队列暂不可用，请稍后重试。");
+        }
         return job(id);
     }
 

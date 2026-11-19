@@ -23,7 +23,9 @@ public class ApiErrors {
         return known(new ApiFailure(413, "fileTooLarge", "文件超过 64 MiB，请拆分后导入。"));
     }
 
-    @ExceptionHandler({HttpMessageNotReadableException.class, IllegalArgumentException.class})
+    @ExceptionHandler({HttpMessageNotReadableException.class, IllegalArgumentException.class,
+            org.springframework.web.bind.ServletRequestBindingException.class,
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class})
     public ResponseEntity<?> invalid() {
         return known(new ApiFailure(400, "invalidRequest", "请求格式不正确，请检查输入。"));
     }

@@ -75,7 +75,7 @@ public class GitService {
             file.put("deletions", fields[1].equals("-") ? null : Integer.valueOf(fields[1]));
             files.add(file);
         }
-        GitOutput patch = gitOutput("show", "--format=", "--first-parent", "--no-ext-diff", "--no-renames", "--unified=3", revision, "--", "README.md", "AGENTS.md", "CHANGELOG.md", "frontend/src", "frontend/tests", "frontend/package.json", "backend/src", "backend/pom.xml", "agent", "tools", "docs/*.md", "docs/design/tokens.css", "docs/design/preview.css", "docs/design/preview.js");
+        GitOutput patch = gitOutput("show", "--format=", "--first-parent", "--no-ext-diff", "--no-renames", "--unified=3", revision, "--", "README.md", "AGENTS.md", "CHANGELOG.md", "frontend/src", "frontend/tests", "frontend/package.json", "backend/src", "backend/pom.xml", "start.bat", "agent", "tools", "docs/*.md", "docs/design/tokens.css", "docs/design/preview.css", "docs/design/preview.js");
         return Map.of("id", revision, "files", files, "patch", patch.text(), "patchTruncated", patch.truncated(), "comparison", "firstParent",
                 "summary", git("show", "--format=fuller", "--first-parent", "--stat", "--no-renames", revision, "--"));
     }

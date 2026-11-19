@@ -103,7 +103,7 @@ export async function generate(config, text, tasks, context = {}) {
     tasks,
     startedAt,
     state: "running",
-    cache: "miss",
+    cache: "unknown",
     inputCodePoints: Array.from(text).length,
     promptTokens: null,
     completionTokens: null,
@@ -127,15 +127,15 @@ export async function generate(config, text, tasks, context = {}) {
     const body = {
       model: config.model,
       messages: [
-        { role: "system", content: promptForTasks(tasks) },
+        { role: "system", content: promptForTasks(tasks, Boolean(context.segmentation), Boolean(context.sentences || context.semanticSegments)) },
         {
           role: "user",
           content: JSON.stringify({
             tasks,
+            ...(context.segmentation ? { segmentation: context.segmentation } : {}),
+            ...(context.sentences ? { sentences: context.sentences } : {}),
+            ...(context.semanticSegments ? { semanticSegments: context.semanticSegments } : {}),
             text,
-            ...(context.segmentation
-              ? { segmentation: context.segmentation }
-              : {}),
           }),
         },
       ],
@@ -189,11 +189,15 @@ export async function generate(config, text, tasks, context = {}) {
       Number.isSafeInteger(value) && value >= 0 ? value : null;
     log.promptTokens = count(usage.prompt_tokens);
     log.completionTokens = count(usage.completion_tokens);
-    log.cachedTokens =
-      count(usage.prompt_tokens_details?.cached_tokens) ??
-      count(usage.prompt_cache_hit_tokens);
-    if (log.promptTokens !== null && log.cachedTokens > log.promptTokens)
-      log.cachedTokens = null;
+    const hit = count(usage.prompt_cache_hit_tokens);
+    const miss = count(usage.prompt_cache_miss_tokens);
+    log.cachedTokens = (config.id === "deepseek" ? hit : null) ??
+      count(usage.prompt_tokens_details?.cached_tokens) ?? hit ??
+      (log.promptTokens !== null && miss !== null && miss <= log.promptTokens ? log.promptTokens - miss : null);
+    if (log.promptTokens === null && hit !== null && miss !== null)
+      log.promptTokens = count(hit + miss);
+    if (log.promptTokens !== null && log.cachedTokens > log.promptTokens) log.cachedTokens = null;
+    log.cache = log.cachedTokens === null ? "unknown" : log.cachedTokens > 0 ? "hit" : "miss";
     log.totalTokens = count(usage.total_tokens);
     log.providerRequestId =
       typeof data.id === "string" ? data.id.slice(0, 200) : null;
@@ -268,7 +272,7 @@ export function cacheIdentity(config, text) {
       config.model,
       config.jsonMode,
       config.maxOutputTokens || 8192,
-      promptVersion,
+      "2.6.0", // Same validated candidate shape and grounding policy as the previous cache.
       hash(systemPrompt),
       hash(text),
     ]),

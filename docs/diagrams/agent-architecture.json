@@ -8,7 +8,7 @@
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/Ceeyu-iooi/Semanote-Agent.git",
-      "revision": "78ac3cda29e8db9f39e920c3ee37ba17aa5904df",
+      "revision": "5ec94e4e1823d0fe644782f613682ecf0d5099fa",
       "link_mode": "local-only"
     }
   },
@@ -50,8 +50,8 @@
       "sources": [
         {
           "path": "agent/contract.js",
-          "line": 317,
-          "end_line": 347
+          "line": 320,
+          "end_line": 350
         }
       ]
     },
@@ -71,8 +71,8 @@
       "sources": [
         {
           "path": "agent/agent.js",
-          "line": 166,
-          "end_line": 196
+          "line": 196,
+          "end_line": 226
         }
       ]
     },
@@ -92,8 +92,8 @@
       "sources": [
         {
           "path": "agent/provider.js",
-          "line": 261,
-          "end_line": 276
+          "line": 265,
+          "end_line": 280
         }
       ]
     },
@@ -113,8 +113,8 @@
       "sources": [
         {
           "path": "agent/agent.js",
-          "line": 279,
-          "end_line": 309
+          "line": 338,
+          "end_line": 368
         }
       ]
     },
@@ -197,8 +197,8 @@
       "sources": [
         {
           "path": "agent/agent.js",
-          "line": 470,
-          "end_line": 500
+          "line": 551,
+          "end_line": 581
         }
       ]
     }

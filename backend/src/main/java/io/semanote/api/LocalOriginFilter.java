@@ -37,7 +37,8 @@ public class LocalOriginFilter extends OncePerRequestFilter {
         String origin = request.getHeader("Origin");
         boolean writes = !Set.of("GET", "HEAD", "OPTIONS").contains(request.getMethod());
         Set<String> authorities = new HashSet<>();
-        Set<String> allowedOrigins = new HashSet<>(Set.of("http://127.0.0.1:5173", "http://localhost:5173"));
+        Set<String> allowedOrigins = new HashSet<>();
+        if (request.getLocalPort() == 8081) allowedOrigins.addAll(Set.of("http://127.0.0.1:5173", "http://localhost:5173"));
         for (String allowedHost : allowedHosts) {
             String authority = allowedHost + ":" + request.getLocalPort();
             authorities.add(authority);

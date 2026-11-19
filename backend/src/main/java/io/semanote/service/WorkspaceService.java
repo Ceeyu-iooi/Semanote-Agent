@@ -116,22 +116,33 @@ public class WorkspaceService {
     }
 
     public Map<String, Object> importFile(String fileName, byte[] bytes) {
+        return importFile(fileName, bytes, null, (completed, total) -> {});
+    }
+
+    public Map<String, Object> importFile(String fileName, byte[] bytes, Integer limit,
+                                          java.util.function.BiConsumer<Integer, Integer> progress) {
         ImportParser.ImportResult parsed = ImportParser.parse(fileName, bytes);
+        if (limit != null && (!fileName.toLowerCase(java.util.Locale.ROOT).endsWith(".csv")
+                || limit < 1 || limit > parsed.texts().size())) {
+            throw new ApiFailure(400, "invalidImportLimit", "导入数量必须在该 CSV 的有效文本范围内。");
+        }
+        var selected = limit == null ? parsed.texts() : parsed.texts().subList(0, limit);
+        progress.accept(0, selected.size());
         String safeName = fileName.replace('\\', '/'); safeName = safeName.substring(safeName.lastIndexOf('/') + 1);
         if (safeName.length() > 255) throw new ApiFailure(400, "invalidFileName", "文件名过长。");
         String batchId = identity();
         Map<String, Object> summary = new LinkedHashMap<>();
-        summary.put("batchId", batchId); summary.put("importedCount", parsed.texts().size()); summary.put("skippedCount", parsed.skippedCount());
+        summary.put("batchId", batchId); summary.put("importedCount", selected.size()); summary.put("skippedCount", parsed.skippedCount());
         String finalName = safeName;
         List<String> documentIds = transaction.execute(status -> {
             repository.jdbc().update("INSERT INTO importBatch(id,fileName,summaryJson,createdAt) VALUES (?,?,?,?)", batchId, finalName, repository.json(summary), now());
-            List<String> ids = new ArrayList<>(parsed.texts().size());
+            List<String> ids = new ArrayList<>(selected.size());
             String timestamp = now();
             // Bound each JDBC batch while keeping the whole file in one transaction.
-            for (int offset = 0; offset < parsed.texts().size(); offset += 200) {
+            for (int offset = 0; offset < selected.size(); offset += 200) {
                 List<Object[]> documents = new ArrayList<>();
                 List<Object[]> revisions = new ArrayList<>();
-                for (var item : parsed.texts().subList(offset, Math.min(offset + 200, parsed.texts().size()))) {
+                for (var item : selected.subList(offset, Math.min(offset + 200, selected.size()))) {
                     String documentId = identity(), revisionId = identity();
                     Map<String, Object> source = Map.of("kind", "import", "batchId", batchId, "fileName", finalName,
                             "rowNumber", item.rowNumber(), "columnNumber", item.columnNumber(), "columnName", item.columnName());
@@ -143,6 +154,7 @@ public class WorkspaceService {
                 }
                 repository.jdbc().batchUpdate("INSERT INTO textDocument(id,title,currentRevisionId,sourceJson,createdAt,updatedAt) VALUES (?,?,?,?,?,?)", documents);
                 repository.jdbc().batchUpdate("INSERT INTO textRevision(id,documentId,revisionNumber,textBody,textHash,createdAt) VALUES (?,?,?,?,?,?)", revisions);
+                progress.accept(ids.size(), selected.size());
             }
             return ids;
         });

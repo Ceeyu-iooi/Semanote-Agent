@@ -11,7 +11,7 @@ const props = defineProps({
   hasDocument: Boolean,
 });
 const { nav, indicator, update } = useNavIndicator(toRef(props, "page"));
-defineEmits(["navigate", "settings"]);
+defineEmits(["navigate", "settings", "exit"]);
 const entries = [
   ["dashboard", "总览", "chart"],
   ["library", "文本库", "library"],
@@ -53,9 +53,13 @@ const entries = [
       ><button aria-label="设置" @click="$emit('settings')">
         <AppIcon name="settings" :size="18" /><span>设置</span>
       </button>
+      <button class="mobile-exit" aria-label="退出工作区" @click="$emit('exit')"><AppIcon name="exit" /></button>
     </div>
   </header>
   <aside class="side-navigation" aria-label="快捷导航">
     <button v-for="[id, name, icon] in entries" :key="id" :class="{ active: page === id }" :aria-label="name" :title="name" :aria-current="page === id ? 'page' : undefined" :disabled="id === 'workspace' && !hasDocument" @click="$emit('navigate', id)"><AppIcon :name="icon" /></button>
+  </aside>
+  <aside class="side-navigation side-exit" aria-label="本机服务">
+    <button type="button" title="退出工作区" aria-label="退出工作区" @click="$emit('exit')"><AppIcon name="exit" /></button>
   </aside>
 </template>
