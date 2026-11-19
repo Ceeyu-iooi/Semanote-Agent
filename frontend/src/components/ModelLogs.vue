@@ -89,7 +89,13 @@ const displayTime = (value) =>
             : "—"
         }}</strong>
       </article>
+      <article>
+        <span>等效 API 价值</span>
+        <strong>{{ summary.equivalentApiValue == null ? "—" : "￥" + summary.equivalentApiValue.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 6 }) }}</strong>
+        <small class="muted"><a :href="summary.pricingSource" target="_blank" rel="noreferrer">DeepSeek 峰谷估算</a><template v-if="summary.unpricedCalls"> · {{ summary.unpricedCalls }} 次未计价</template></small>
+      </article>
     </div>
+    <p v-if="data" class="caption muted">本地结果复用 {{ summary.localHits }} 次 · 远程请求 {{ summary.calls }} 次</p>
     <TaskUsageChart v-if="data" :series="data.dailySeries || []" />
     <section class="surface">
       <div class="log-filters">
@@ -117,7 +123,10 @@ const displayTime = (value) =>
         ><label
           >来源<select v-model="filters.cache" class="form-select">
             <option value="">全部</option>
-            <option value="miss">远程调用</option>
+            <option value="remote">远程调用</option>
+            <option value="hit">供应商缓存命中</option>
+            <option value="miss">供应商缓存未命中</option>
+            <option value="unknown">供应商缓存用量未知</option>
             <option value="local">本地缓存</option>
           </select></label
         ><label

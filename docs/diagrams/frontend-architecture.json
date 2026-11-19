@@ -8,7 +8,7 @@
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/Ceeyu-iooi/Semanote-Agent.git",
-      "revision": "78ac3cda29e8db9f39e920c3ee37ba17aa5904df",
+      "revision": "1bab9f031dc61c80c8a13be539ea1b6dc048b107",
       "link_mode": "local-only"
     }
   },
@@ -29,8 +29,8 @@
       "sources": [
         {
           "path": "frontend/src/App.vue",
-          "line": 35,
-          "end_line": 59
+          "line": 38,
+          "end_line": 62
         },
         {
           "path": "frontend/src/components/ExtractionRail.vue",
@@ -137,9 +137,9 @@
       ],
       "sources": [
         {
-          "path": "backend/src/main/java/io/semanote/api/WorkspaceController.java",
-          "line": 15,
-          "end_line": 47
+          "path": "backend/server.mjs",
+          "line": 86,
+          "end_line": 99
         }
       ]
     },

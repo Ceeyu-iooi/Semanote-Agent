@@ -52,23 +52,6 @@ for (const name of paths.filter((name) => !selected || name === selected)) {
       await source("frontend/src/components/ArchitectureExplorer.vue"),
     ];
   }
-  if (name === "backend-architecture")
-    for (const component of components)
-      if (
-        component.sources?.some((entry) =>
-          entry.path.endsWith("/GitService.java"),
-        )
-      )
-        component.sources = [
-          await source(
-            "backend/src/main/java/io/semanote/service/GitService.java",
-            "public Object history",
-          ),
-          await source(
-            "backend/src/main/java/io/semanote/service/GitService.java",
-            "public Object changes",
-          ),
-        ];
   if (name === "agent-architecture") {
     const anchors = {
       input: ["agent/contract.js", "export function validateRequest"],

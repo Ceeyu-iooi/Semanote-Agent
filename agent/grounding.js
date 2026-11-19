@@ -16,8 +16,7 @@ export function groundTokens(tuples, text) {
     );
     // Whitespace is source layout, not a lexical token. It is retained in the original and spans.
     if (/^\s+$/u.test(tuple[0])) continue;
-    requireValue(!/\s/u.test(tuple[0]), "invalidToken");
-    for (const piece of tuple[0].match(/[^\p{P}]+|\p{P}/gu) || []) {
+    for (const piece of tuple[0].match(/[^\s\p{P}]+|\p{P}/gu) || []) {
       whitespace();
       if (/^\p{P}$/u.test(piece)) {
         if (chars[cursor] === piece) {

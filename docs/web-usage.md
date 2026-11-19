@@ -1,11 +1,11 @@
 # Web 系统运行、备份与开发恢复
 
-Windows 本地 Java 21、Node.js 24；Node 负责智能体及全部构建、启动与维护工具。默认 [本地工作台](http://127.0.0.1:8080)，MySQL 为 127.0.0.1:3307。当前无登录，不应直接公网开放；本地构建不自动提升发布版本。
+需要 Windows x64、Git、Node.js 24。发布入口为 [本地工作台](http://127.0.0.1:8090)，MySQL 为 127.0.0.1:3307。开发使用 5173（Vite）和 8081（后端），默认绑定回环。
 
 <a id="局域网访问"></a>
 ## 局域网访问
 
-2026-10-28 用户已授权本工作空间开放局域网。启用后，同网段设备访问启动工具显示的 `http://本机内网IP:8080`，共享同一文本库、标注、模型配置和操作能力；这不会创建多用户账户或权限体系。原始语料外发限制继续有效。
+2026-10-28 用户已授权本工作空间开放局域网。启用后，同网段设备访问启动工具显示的 `http://本机内网IP:8090`，共享同一文本库、标注、模型配置和操作能力；这不会创建多用户账户或权限体系。原始语料外发限制继续有效。
 
 ```powershell
 node tools/local-web.mjs lan
@@ -13,7 +13,7 @@ node tools/local-web.mjs lan
 & .\tools\configure_lan.ps1
 ```
 
-模式保存在忽略的 profile/runtime/local-config.json，后续 start 沿用。网页监听所有 IPv4 接口，但仅接受本机回环及已配置物理网卡私网 IP 的 Host/Origin；防火墙限定 Java 程序、当前物理网卡/地址、其内网网段、TCP 8080，不修改网络类别或其他防火墙规则。MySQL 始终监听 127.0.0.1:3307。
+模式保存在忽略的 profile/runtime/local-config.json，后续 start 沿用。网页监听所有 IPv4 接口，但仅接受本机回环及已配置物理网卡私网 IP 的 Host/Origin；防火墙限定 Node.js 程序、当前物理网卡/地址、其内网网段、TCP 8090，不修改网络类别或其他防火墙规则。MySQL 始终监听 127.0.0.1:3307。
 
 关闭共享：`node tools/local-web.mjs local`；管理员 PowerShell 7 执行 `& .\tools\configure_lan.ps1 -Disable` 可停用项目规则。换 Wi-Fi 或内网 IP 改变后，重新运行 lan 和规则配置。服务/本机内网地址检查通过不等同于已从另一台设备验证；若网络启用了设备隔离，需要使用允许设备互访的网络。
 
@@ -21,17 +21,13 @@ node tools/local-web.mjs lan
 
 ## 启动与操作
 
-在项目根目录运行：
-
-```powershell
-node tools/local-web.mjs start
-```
+已完成首次构建时，双击根目录 `start.bat`。它在本机启动 MySQL 与 Node.js 后端，并打开浏览器。左下角的退出按钮会在确认后关闭本项目后端和 MySQL。进行中的导入、保存或标注会暂缓退出。
 
 工具只管理本项目进程，复用 profile/tools 便携 MySQL；初次创建 profile/runtime/mysql-data、随机密码和本地配置，不接管系统数据库。配置/数据被忽略，不公开。项目路径含非 ASCII 字符时，MySQL 启动器自动分配并校验一个项目专用临时盘符，以兼容 Windows 路径；数据库仍位于原目录，业务文本严格 UTF-8。盘符会在数据库运行期间保留，不覆盖已有盘符。
 
 `node tools/local-web.mjs stop` 停止后端并保留数据库；要同时关闭由本工具通过临时盘符启动的数据库并释放盘符，随后运行 `node tools/local-web.mjs stop-database`。该命令核验监听进程和盘符归属，后端仍运行或归属无法确认时拒绝操作。它不会关闭由其他程序管理的数据库。
 
-1. 在文本库选择或拖放 DOCX、UTF-8 TXT、Markdown 和三列 CSV，可一次选择多个文件。TXT、MD 和 DOCX 按文件导入，CSV 按非空单元格导入并保留来源行列和重复项。单文本最多 10,000 码点，CSV 每文件最多 64 MiB 和 50,000 份非空文本，其余文件最多 5 MiB。每个文件单独提交，空白和失败情况会报告。
+1. 在文本库选择或拖放 DOCX、UTF-8 TXT、Markdown 和三列 CSV，可一次选择多个文件。TXT、MD 和 DOCX 按文件导入，CSV 弹窗里选择导入前多少份非空文本，按原文件行列顺序处理并保留来源和重复项。进度显示实际数据库写入，整份文件提交成功后刷新文本库。单文本最多 10,000 码点，CSV 每文件最多 64 MiB 和 50,000 份非空文本，其余文件最多 5 MiB。每个文件单独提交，空白和失败情况会报告。
 2. 在工作台自动标注或直接人工标注。模型会发送文本，须确认有权外发；本轮百炼仅测试原创合成文本；其他真实语料仍按服务和范围授权。在顶部设置中维护供应商、HTTPS 地址、模型和密钥，详见 agent-usage.md；不伪造结果或自动切换。
 3. 自动结果先存候选，显式保存才成为当前快照。人工可划选添加实体/关键词、改标签/移除；分词每行一词，应用后清除不兼容 POS；POS 按词项填写。
 4. 草稿仅当前页面保留，失败不清空；冲突后载入最新版本并保留草稿，原文改变时重新核对。历史快照只读；编辑原文生成新修订，旧区间只留历史。
@@ -47,26 +43,26 @@ node tools/local-web.mjs start
 
 ## 构建和开发依赖恢复
 
-Windows 重建前先停止本项目后端：`node tools/local-web.mjs stop`，避免运行中的 JAR 被锁定；构建通过后重新 start。
+重建前可用 `node tools/local-web.mjs stop` 关闭后端并保留 MySQL。构建完成后双击 `start.bat`。
 
-浏览器所需 Vue/Bootstrap 已编译进 frontend/dist，网页部署不需要 frontend/node_modules；活动智能体仍需要 Node.js 24。确认成品可运行后，可以清除本次 npm 环境，开发时由锁文件恢复：
+Vue 和 Bootstrap 已编译进 frontend/dist。backend/node_modules 保留 Node.js 后端运行依赖。开发依赖由锁文件恢复。
 
 ```powershell
-# 停止旧后端，释放正在运行的 JAR
+# 停止当前后端
 node tools/local-web.mjs stop
 # 下载并校验项目工具，复用已有安装
 node tools/download-web-tools.mjs
-# 恢复构建依赖并生成前后端成品
+# 安装后端运行依赖并构建前端
 node tools/build-web.mjs
 # 启动本机数据库和新版 Web 服务
 node tools/local-web.mjs start
 ```
 
-`JAVA_HOME` 指向 Java 21。下载与构建默认使用华为云的 Maven 和 npm 镜像，加入 `--source=official` 可选择官方源。构建使用项目内配置，依赖版本见 `pom.xml` 和 `package-lock.json`。
+构建默认使用华为云 npm 镜像，`--source=official` 可选择官方源。锁文件位于 `frontend/package-lock.json` 和 `backend/package-lock.json`。
 
-Maven 安装包按 Apache 发布的 SHA-512 校验。MySQL 8.4.13 从官方 CDN 获取约 25 MiB 的压缩数据，按项目清单逐文件校验 SHA-256，安装后的运行文件约 81 MiB。清单固定了官方 ZIP 中所需文件的字节范围。已有的便携 MySQL 继续使用，许可证随运行文件保留。如果网络代理拒绝返回字节范围，下载命令会报错，仍可复用已验证的便携安装。
+MySQL 8.4.13 从官方 CDN 获取约 25 MiB 的压缩数据，按项目清单逐文件校验 SHA-256，安装后的运行文件约 81 MiB。清单固定了官方 ZIP 中所需文件的字节范围。已有的便携 MySQL 继续使用，许可证随运行文件保留。如果网络代理拒绝返回字节范围，下载命令会报错，仍可复用已验证的便携安装。
 
-开发前端可在 frontend 执行 npm ci、npm run dev，Vite 只绑定回环并代理 /api；正式运行使用 8080 同源资源。REST 与人工候选格式见 web-contract.md，智能体仍可独立调用。
+开发时先执行 `node tools/build-web.mjs` 恢复环境，再用 `node tools/local-web.mjs dev` 启动 8081 后端，并在另一终端执行 `npm --prefix frontend run dev` 启动 5173。切换运行模式前先停止现有后端。构建后可执行 `npm --prefix frontend prune --omit=dev` 裁剪开发依赖，`npm --prefix frontend ci` 恢复。
 
 ## SQL 备份与恢复
 
@@ -83,12 +79,10 @@ mysql 从 profile/runtime/mysql-client.cnf 读取凭据，密码不放命令行�
 profile/tools/mysql/bin/mysql.exe --defaults-file=profile/runtime/mysql-client.cnf --database=your_verified_empty_database --execute="source profile/backups/your-verified-backup.sql"
 ```
 
-隔离备份/恢复验证见 tools/verify-web.mjs。自定义数据库通过 SEMANOTE_DB_URL/USER/PASSWORD、项目根目录与 Node 路径通过 SEMANOTE_PROJECT_ROOT/NODE 配置后直接 java -jar 启动；local-web.mjs 只管理默认本地库，不接管其他实例。
+隔离备份/恢复验证见 tools/verify-web.mjs。自定义数据库通过 SEMANOTE_DB_URL、SEMANOTE_DB_USER 和 SEMANOTE_DB_PASSWORD 配置后在项目根目录执行 `node backend/server.mjs`。local-web.mjs 只负责项目管理的默认本地 MySQL 实例。
 
 ## 检查与保留
 
-统计是条目数量，不是准确率/F1；尚无金标准或质量/性能阈值验收。保留源码、锁、许可、frontend/dist、最新 Spring JAR、本地 MySQL 运行组件/库/配置、正式资料和最终回执。仅清理本次已知临时测试库、中间文件和 npm 构建环境，不删原件、用户数据、外部日志或全局缓存。初始化 Git 标签仍为恢复基线；先看 git status，不硬重置或复制整仓。
+统计是条目数量，不是准确率/F1；尚无金标准或质量/性能阈值验收。保留源码、锁、许可、frontend/dist、Node.js 后端运行依赖、本地 MySQL 运行组件/库/配置、正式资料和最终回执。仅清理本次已知临时测试库、中间文件和 npm 构建环境，不删原件、用户数据、外部日志或全局缓存。初始化 Git 标签仍为恢复基线；先看 git status，不硬重置或复制整仓。
 
-### 显式离线构建
-
-已有核实的本地可执行 JAR 时，可用 `node tools/build-web.mjs --offline-from backend/target/semanote-web-0.1.2.jar` 复用 JAR 中已验证的 Java 依赖。离线重建前端需要提前安装 npm 依赖。接口回归可独立运行 `node tools/verify-web.mjs`。
+接口回归可单独执行 `node tools/verify-web.mjs`。调用日志的等效价值按调用发生时的北京时间、DeepSeek 峰谷和实际输入/输出/供应商缓存 Token 估算。其他供应商按 Flash 参考，同一筛选范围内无法计价的记录单独显示。价表核验于 2026-11-19，节假日日历覆盖 2026 和 2027 年。详见 [官方定价](https://api-docs.deepseek.com/zh-cn/quick_start/pricing/)、[2026 年放假安排](https://www.beijing.gov.cn/zhengce/zhengcefagui/202511/t20251104_4258873.html) 和 [2027 年放假安排](https://www.gov.cn/zhengce/content/202611/content_7085101.htm)。

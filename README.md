@@ -4,7 +4,7 @@
   <p><em>在原文旁查看、修正和保存中文标注。</em></p>
   <a href="https://github.com/Ceeyu-iooi/Semanote-Agent/releases/latest"><img src="https://img.shields.io/github/v/release/Ceeyu-iooi/Semanote-Agent?style=flat-square&amp;color=25203f" alt="最新发布"></a>
   <img src="https://img.shields.io/badge/平台-Windows%20x64-25203f?style=flat-square" alt="Windows x64">
-  <img src="https://img.shields.io/badge/技术栈-Vue%20%2B%20Spring%20Boot%20%2B%20Node.js-117e79?style=flat-square" alt="Vue、Spring Boot 和 Node.js">
+  <img src="https://img.shields.io/badge/技术栈-Vue%20%2B%20Node.js%20%2B%20MySQL-117e79?style=flat-square" alt="Vue、Node.js 和 MySQL">
   <a href="LICENSE"><img src="https://img.shields.io/badge/许可证-MIT-64748b?style=flat-square" alt="MIT 许可证"></a>
 </div>
 
@@ -40,32 +40,25 @@ Semanote-Agent 是一个在本机运行的中文文本标注工作台。导入�
 
 ### 1. 安装
 
-需要 Windows x64、Git、JDK 21 或更高版本，以及 Node.js 24 或更高版本。在 PowerShell 中检查并安装缺少的环境。
+需要 Windows x64、Git 和 Node.js 24 或更高版本。在 PowerShell 中检查并安装缺少的环境。
 
 ~~~powershell
-if (-not (Get-Command javac -ErrorAction SilentlyContinue) -or -not ((javac -version 2>&1 | Out-String) -match 'javac (2[1-9]|[3-9][0-9])\b')) {
-  winget install --id Microsoft.OpenJDK.21 --exact --source winget
-}
 if (-not (Get-Command node -ErrorAction SilentlyContinue) -or [int]((node --version).TrimStart('v').Split('.')[0]) -lt 24) {
-  winget install --id OpenJS.NodeJS --exact --version 24.10.0 --source winget
+  winget install --id OpenJS.NodeJS.LTS --exact --source winget
 }
 ~~~
 
-重启 PowerShell 后：
+重启 PowerShell 后，从 `develop` 安装 Node.js 版。
 
 ~~~powershell
-git clone https://github.com/Ceeyu-iooi/Semanote-Agent.git
+git clone --branch develop https://github.com/Ceeyu-iooi/Semanote-Agent.git
 cd Semanote-Agent
 node tools/setup.mjs
 ~~~
 
-[打开工作台](http://127.0.0.1:8080/)
+[打开工作台](http://127.0.0.1:8090/)
 
-（下面这条命令，是在已有构建环境时的直接启动命令）
-
-~~~powershell
-node tools/local-web.mjs start
-~~~
+完成构建后，双击项目根目录的 [start.bat](start.bat) 即可启动本机 MySQL 和 Web 服务，并打开工作台。点击左下角的退出按钮并确认，即可关闭后台服务和数据库。
 
 ### 2. 更新
 
@@ -86,10 +79,10 @@ node tools/setup.mjs
 
 ## 架构与设计
 
-[![Archify 系统框架，展示浏览器、Vue 工作台、Spring Boot、JavaScript 智能体和 MySQL 的连接](assets/readme/archify-system.png)](docs/diagrams/system-architecture.html)
+[查看当前 Archify 系统框架](docs/diagrams/system-architecture.html)
 
 - **工作台。** Vue 和 Bootstrap 构建文本库、标注编辑器与统计界面。选中标注可回到原文位置。
-- **服务与存储。** Spring Boot 提供 API、管理导入和标注任务，MySQL 保存原文修订、候选和快照。
+- **服务与存储。** Node.js 提供 API、管理导入和标注任务，MySQL 保存原文修订、候选和快照。
 - **标注智能体。** Node.js 按任务调用所选模型，并在本地校验返回的标注与原文位置。
 - **开发者中心。** 可从系统图进入各模块架构，也可查看设计规范、模型调用日志和 Git 时间轴。
 
@@ -105,14 +98,14 @@ node tools/setup.mjs
 
 | 问题 | 处理方式 |
 | --- | --- |
-| 页面打不开 | 运行 `node tools/local-web.mjs start` 查看启动结果，再按 [运行手册](docs/web-usage.md) 排查。 |
+| 页面打不开 | 双击 `start.bat` 查看启动结果，再按 [运行手册](docs/web-usage.md) 排查。 |
 | 模型调用失败 | 核对供应商地址、模型和 API Key，在「调用日志」查看状态，然后重试任务。 |
 | 没有 API Key 能用吗？ | 可以使用文本管理、人工标注和本地分段。 |
 | 导出怎么没有刚修改的内容？ | 先保存当前修订的标注快照，再导出该快照。 |
 
 ## 致谢
 
-感谢 Vue、Bootstrap、Spring Boot、Node.js 和 MySQL 社区。
+感谢 Vue、Bootstrap、Node.js 和 MySQL 社区。
 
 ## 许可证
 

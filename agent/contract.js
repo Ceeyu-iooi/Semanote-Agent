@@ -93,7 +93,9 @@ export function positions(text, word) {
   return found;
 }
 export function span(text, start, end) {
-  const chars = Array.from(text);
+  return spanFromChars(Array.from(text), start, end);
+}
+function spanFromChars(chars, start, end) {
   requireValue(
     Number.isInteger(start) &&
       Number.isInteger(end) &&
@@ -123,11 +125,12 @@ function sourceItem(text, raw, task) {
     "invalidOccurrence",
   );
   const selected = task === "keywords" ? starts : [starts[occurrence]];
+  const chars = Array.from(text), wordLength = Array.from(raw.itemText).length;
   const item = {
     itemId: randomUUID(),
     itemText: raw.itemText,
     spans: selected.map((start) =>
-      span(text, start, start + Array.from(raw.itemText).length),
+      spanFromChars(chars, start, start + wordLength),
     ),
   };
   if (task !== "keywords" && task !== "paragraphs") {
@@ -202,7 +205,7 @@ export function convertItems(task, raw, text, tokens = []) {
         result.push({
           itemId: randomUUID(),
           itemText: piece,
-          spans: [span(text, cursor, end)],
+          spans: [spanFromChars(chars, cursor, end)],
         });
         cursor = end;
       }
@@ -247,7 +250,7 @@ export function convertItems(task, raw, text, tokens = []) {
       const item = {
         itemId: randomUUID(),
         itemText: value.itemText,
-        spans: [span(text, cursor, end)],
+        spans: [spanFromChars(chars, cursor, end)],
       };
       cursor = end;
       return item;

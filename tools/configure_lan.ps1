@@ -19,16 +19,16 @@ try {
     $taskAddresses = @($taskConfig.lanInterfaces | ForEach-Object { $_.address })
     $taskSubnets = @($taskConfig.lanInterfaces | ForEach-Object { $_.subnet })
     $taskAliases = @($taskConfig.lanInterfaces | ForEach-Object { $_.interfaceAlias })
-    $taskJava = (Get-Command java.exe -ErrorAction Stop).Source
+    $taskNode = (Get-Command node.exe -ErrorAction Stop).Source
     $taskParameters = @{
         Direction='Inbound'; Action='Allow'; Enabled='True'; Profile='Any';
-        Protocol='TCP'; LocalPort=8080; LocalAddress=$taskAddresses;
+        Protocol='TCP'; LocalPort=8090; LocalAddress=$taskAddresses;
         RemoteAddress=$taskSubnets; InterfaceAlias=$taskAliases;
-        Program=$taskJava; EdgeTraversalPolicy='Block'
+        Program=$taskNode; EdgeTraversalPolicy='Block'
     }
     if ($taskExisting) { Set-NetFirewallRule -Name $taskRuleName @taskParameters | Out-Null }
-    else { New-NetFirewallRule -Name $taskRuleName -DisplayName 'Semanote Web (LAN TCP 8080)' -Group $taskGroup -Description ('Project-scoped LAN access for ' + $taskRoot) @taskParameters | Out-Null }
-    @{ status='enabled'; ruleName=$taskRuleName; localAddresses=$taskAddresses; remoteSubnets=$taskSubnets; port=8080 } | ConvertTo-Json | Set-Content -LiteralPath $taskReceipt -Encoding utf8
+    else { New-NetFirewallRule -Name $taskRuleName -DisplayName 'Semanote Web (LAN TCP 8090)' -Group $taskGroup -Description ('Project-scoped LAN access for ' + $taskRoot) @taskParameters | Out-Null }
+    @{ status='enabled'; ruleName=$taskRuleName; localAddresses=$taskAddresses; remoteSubnets=$taskSubnets; port=8090 } | ConvertTo-Json | Set-Content -LiteralPath $taskReceipt -Encoding utf8
 } catch {
     @{ status='failed'; message=$_.Exception.Message } | ConvertTo-Json | Set-Content -LiteralPath $taskReceipt -Encoding utf8
     throw

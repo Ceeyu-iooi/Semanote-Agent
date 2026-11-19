@@ -8,7 +8,8 @@ const props = defineProps({ layers: Object, text: String, activeTask: String, gr
 const emit = defineEmits(["focus"]);
 const tab = ref("events"), selection = ref(null), template = ref(""), loadError = ref(false);
 const frame = ref(null), panel = ref(null), detailPosition = ref(null);
-const closeButton = ref(null);
+const closeButton = ref(null), evidence = ref(null);
+let drag;
 let evidenceTrigger;
 const theme = ref(document.documentElement.dataset.theme || "light");
 const reduced = ref(document.documentElement.dataset.motion === "reduced");
@@ -103,6 +104,35 @@ function closeEvidence(restoreFocus = false) {
   if (restoreFocus && evidenceTrigger?.isConnected) evidenceTrigger.focus({ preventScroll: true });
   evidenceTrigger = null;
 }
+function placeEvidence(left, top) {
+  const outer = panel.value, popup = evidence.value;
+  if (!outer || !popup) return;
+  const clamp = (value, maximum) => Math.max(8, Math.min(value, maximum - 8));
+  detailPosition.value = {
+    left: clamp(left, outer.clientWidth - popup.offsetWidth) + "px",
+    top: clamp(top, outer.clientHeight - popup.offsetHeight) + "px",
+  };
+}
+function startDrag(event) {
+  if (event.button !== 0 || event.target.closest("button")) return;
+  const outer = panel.value.getBoundingClientRect(), bounds = evidence.value.getBoundingClientRect();
+  drag = { id: event.pointerId, left: bounds.left - outer.left, top: bounds.top - outer.top, x: event.clientX, y: event.clientY };
+  event.currentTarget.setPointerCapture(event.pointerId);
+  event.preventDefault();
+}
+function moveDrag(event) {
+  if (drag?.id === event.pointerId)
+    placeEvidence(drag.left + event.clientX - drag.x, drag.top + event.clientY - drag.y);
+}
+function finishDrag() { drag = null; }
+function moveEvidenceByKey(event) {
+  const deltas = { ArrowLeft: [-16, 0], ArrowRight: [16, 0], ArrowUp: [0, -16], ArrowDown: [0, 16] };
+  if (event.target !== event.currentTarget || !deltas[event.key]) return;
+  event.preventDefault();
+  const popup = evidence.value.getBoundingClientRect(), outer = panel.value.getBoundingClientRect();
+  const [x, y] = deltas[event.key];
+  placeEvidence(popup.left - outer.left + x, popup.top - outer.top + y);
+}
 function bindViewer() {
   const viewer = frame.value;
   const doc = viewer?.contentDocument;
@@ -126,7 +156,11 @@ function bindViewer() {
       top: Math.round(iframe.top - outer.top + Math.max(12, Math.min(y + 12, iframe.height - 360))) + "px",
     };
     selection.value = id;
-    if (event.type === "keydown") nextTick(() => closeButton.value?.focus({ preventScroll: true }));
+    nextTick(() => {
+      if (selection.value !== id || !detailPosition.value) return;
+      placeEvidence(parseFloat(detailPosition.value.left), parseFloat(detailPosition.value.top));
+      if (event.type === "keydown") closeButton.value?.focus({ preventScroll: true });
+    });
   };
   doc.addEventListener("click", open, true);
   doc.addEventListener("keydown", open, true);
@@ -169,8 +203,10 @@ onUnmounted(() => {
       </Transition>
     </div>
     <p v-else class="empty-state" role="status">正在加载图谱…</p>
-    <section v-if="active?.entries" class="archify-evidence" :class="{ 'anchored-evidence': detailPosition }" :style="detailPosition" aria-label="标注证据">
-      <header><strong>{{ active.title || active.label }}</strong><button ref="closeButton" type="button" class="archify-evidence-close" aria-label="关闭标注证据" @click.stop="closeEvidence(true)">×</button></header>
+    <section v-if="active?.entries" ref="evidence" class="archify-evidence" :class="{ 'anchored-evidence': detailPosition }" :style="detailPosition" aria-label="标注证据">
+      <header tabindex="0" aria-label="移动证据面板，可使用方向键"
+        @pointerdown="startDrag" @pointermove="moveDrag" @lostpointercapture="finishDrag" @keydown="moveEvidenceByKey">
+        <strong>{{ active.title || active.label }}</strong><button ref="closeButton" type="button" class="archify-evidence-close" aria-label="关闭标注证据" @click.stop="closeEvidence(true)">×</button></header>
       <ul>
         <li v-for="(entry, index) in active.entries" :key="entry.itemId + '-' + index">
           <strong>{{ entry.title }}</strong>
