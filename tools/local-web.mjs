@@ -250,7 +250,7 @@ export async function backendEnvironment() {
     });
   return env;
 }
-const releasePort = 8080, developmentPort = 8081;
+const releasePort = 8090, developmentPort = 8081;
 const backendRecord = resolve(runtimeRoot, "backend-pid.json");
 const serviceEntry = resolve(projectRoot, "backend/server.mjs");
 const healthUrl = (port) => "http://127.0.0.1:" + port + "/api/v1/health";

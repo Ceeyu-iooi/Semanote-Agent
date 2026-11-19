@@ -2,7 +2,7 @@
 
 ## 当前实现
 
-Node.js 24 通过 Express 提供原 REST 契约，通过 mysql2 复用现有 MySQL 8.4 表，直接调用 JavaScript 智能体模块。独立智能体 JSON/NDJSON 契约保持。发布端口 8080，开发后端 8081，Vite 5173。
+Node.js 24 通过 Express 提供原 REST 契约，通过 mysql2 复用现有 MySQL 8.4 表，直接调用 JavaScript 智能体模块。独立智能体 JSON/NDJSON 契约保持。发布端口 8090，开发后端 8081，Vite 5173。
 
 - POST /imports 的 multipart 可附带 `limit` 和 `requestId`。`limit` 限 CSV，按来源顺序选择指定数量的非空单元，整份文件仍校验。GET /imports/{requestId} 返回正在写入的 `{completed,total}`，最终提交结果以原 POST 回执为准。
 - POST /shutdown 接受 `{confirm:true}`，由启动工具管理且从本机页面执行。正在写入、导入或标注时返回 409。正常完成后关闭本项目数据库和 HTTP 服务。

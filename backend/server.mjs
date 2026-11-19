@@ -15,7 +15,7 @@ import { jobService } from "./jobs.mjs";
 import { taskTypes, entityLabels, posLabels } from "../agent/contract.js";
 import { runtimeRoot } from "../agent/provider.js";
 
-const port = Number(process.env.SEMANOTE_PORT || 8080);
+const port = Number(process.env.SEMANOTE_PORT || 8090);
 const hostname = process.env.SEMANOTE_BIND_ADDRESS || "127.0.0.1";
 const managedToken = process.env.SEMANOTE_MANAGED_TOKEN;
 const localHosts = ["127.0.0.1", "localhost"];

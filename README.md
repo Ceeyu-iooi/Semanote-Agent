@@ -48,15 +48,15 @@ if (-not (Get-Command node -ErrorAction SilentlyContinue) -or [int]((node --vers
 }
 ~~~
 
-重启 PowerShell 后：
+重启 PowerShell 后，从 `develop` 安装 Node.js 版。
 
 ~~~powershell
-git clone https://github.com/Ceeyu-iooi/Semanote-Agent.git
+git clone --branch develop https://github.com/Ceeyu-iooi/Semanote-Agent.git
 cd Semanote-Agent
 node tools/setup.mjs
 ~~~
 
-[打开工作台](http://127.0.0.1:8080/)
+[打开工作台](http://127.0.0.1:8090/)
 
 完成构建后，双击项目根目录的 [start.bat](start.bat) 即可启动本机 MySQL 和 Web 服务，并打开工作台。点击左下角的退出按钮并确认，即可关闭后台服务和数据库。
 

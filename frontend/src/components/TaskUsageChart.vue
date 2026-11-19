@@ -6,6 +6,7 @@ const range = ref(30), tip = ref(null), plot = ref(null), activeIndex = ref(0);
 let pinned = false;
 const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 const dayNumber = value => Math.floor(Date.parse(`${value}T00:00:00Z`) / 86400000);
+const dateLabel = day => new Date(day * 86400000).toISOString().slice(0, 10);
 const endDay = dayNumber(today);
 const firstDay = computed(() => range.value ? endDay - range.value + 1 : dayNumber(props.series[0]?.date || today));
 const lastDay = computed(() => range.value ? endDay : dayNumber(props.series.at(-1)?.date || today));
@@ -67,7 +68,6 @@ function outside(event) { if (!plot.value?.contains(event.target)) clear(); }
 watch(points, () => { clear(); activeIndex.value = 0; });
 onMounted(() => document.addEventListener('pointerdown', outside));
 onUnmounted(() => document.removeEventListener('pointerdown', outside));
-const dateLabel = day => new Date(day * 86400000).toISOString().slice(0, 10);
 </script>
 <template>
   <section class="task-usage-chart">

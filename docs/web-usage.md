@@ -1,11 +1,11 @@
 # Web 系统运行、备份与开发恢复
 
-需要 Windows x64、Git、Node.js 24。发布入口为 [本地工作台](http://127.0.0.1:8080)，MySQL 为 127.0.0.1:3307。开发使用 5173（Vite）和 8081（后端），默认绑定回环。
+需要 Windows x64、Git、Node.js 24。发布入口为 [本地工作台](http://127.0.0.1:8090)，MySQL 为 127.0.0.1:3307。开发使用 5173（Vite）和 8081（后端），默认绑定回环。
 
 <a id="局域网访问"></a>
 ## 局域网访问
 
-2026-10-28 用户已授权本工作空间开放局域网。启用后，同网段设备访问启动工具显示的 `http://本机内网IP:8080`，共享同一文本库、标注、模型配置和操作能力；这不会创建多用户账户或权限体系。原始语料外发限制继续有效。
+2026-10-28 用户已授权本工作空间开放局域网。启用后，同网段设备访问启动工具显示的 `http://本机内网IP:8090`，共享同一文本库、标注、模型配置和操作能力；这不会创建多用户账户或权限体系。原始语料外发限制继续有效。
 
 ```powershell
 node tools/local-web.mjs lan
@@ -13,7 +13,7 @@ node tools/local-web.mjs lan
 & .\tools\configure_lan.ps1
 ```
 
-模式保存在忽略的 profile/runtime/local-config.json，后续 start 沿用。网页监听所有 IPv4 接口，但仅接受本机回环及已配置物理网卡私网 IP 的 Host/Origin；防火墙限定 Node.js 程序、当前物理网卡/地址、其内网网段、TCP 8080，不修改网络类别或其他防火墙规则。MySQL 始终监听 127.0.0.1:3307。
+模式保存在忽略的 profile/runtime/local-config.json，后续 start 沿用。网页监听所有 IPv4 接口，但仅接受本机回环及已配置物理网卡私网 IP 的 Host/Origin；防火墙限定 Node.js 程序、当前物理网卡/地址、其内网网段、TCP 8090，不修改网络类别或其他防火墙规则。MySQL 始终监听 127.0.0.1:3307。
 
 关闭共享：`node tools/local-web.mjs local`；管理员 PowerShell 7 执行 `& .\tools\configure_lan.ps1 -Disable` 可停用项目规则。换 Wi-Fi 或内网 IP 改变后，重新运行 lan 和规则配置。服务/本机内网地址检查通过不等同于已从另一台设备验证；若网络启用了设备隔离，需要使用允许设备互访的网络。
 
