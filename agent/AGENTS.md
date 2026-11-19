@@ -1,6 +1,6 @@
 # JavaScript 智能体
 
-先读根 AGENTS.md 与 docs/annotation-contract.md。本目录是 0.1.1 起活动智能体，Node.js 24 原生 ESM，无运行时第三方依赖；Node.js 后端可调用同一模块。
+先读根 AGENTS.md 与 docs/annotation-contract.md。本目录是 0.1.1 起活动智能体，Node.js 24 原生 ESM，无运行时第三方依赖；Java 后端通过固定的本地 Node.js 进程调用。
 
 - 独立运行通过 JSON/NDJSON 管道收发，不执行原文或模型输出；凭据来自本地配置，不写命令行或回执。
 - 所有位置为 Unicode 码点，原文无损；模型候选经本地转换和依赖校验后才可保存。缺失信息不虚构。

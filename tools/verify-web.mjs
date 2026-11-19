@@ -1,4 +1,4 @@
-/** Exercise the real Node.js/MySQL/JavaScript chain in databases created solely for this run. */
+/** Exercise the real Spring Boot/MySQL/JavaScript chain in databases created solely for this run. */
 import { spawn } from "node:child_process";
 import { request as httpRequest } from "node:http";
 import { mkdir } from "node:fs/promises";
@@ -12,6 +12,7 @@ import {
   startDatabase,
   mysql,
   backendEnvironment,
+  releaseArtifact,
 } from "./local-web.mjs";
 import { writeJson, delay, run } from "./lib/project.mjs";
 const databaseName =
@@ -81,12 +82,12 @@ async function start() {
     SEMANOTE_PORT: "18081",
     SEMANOTE_BIND_ADDRESS: "127.0.0.1",
     SEMANOTE_LAN_HOSTS: "",
-    SEMANOTE_DB_URL: `mysql://127.0.0.1:3307/${databaseName}`,
+    SEMANOTE_DB_URL: `jdbc:mysql://127.0.0.1:3307/${databaseName}?characterEncoding=UTF-8&serverTimezone=UTC`,
   };
   const log = createWriteStream(resolve(receiptRoot, "isolated-backend.log"), {
     flags: "a",
   });
-  processHandle = spawn(process.execPath, ["backend/server.mjs"], {
+  processHandle = spawn("java", ["-jar", await releaseArtifact()], {
     cwd: projectRoot,
     env: environment,
     windowsHide: true,
@@ -384,7 +385,7 @@ try {
     await delay(60);
     receipt = (await call("/jobs/" + localJob.data.id)).data;
   }
-  check("local paragraph job runs through Node and persists progress result", localJob.code === 202 && receipt.state === "success" && receipt.response.execution.networkCalls === 0);
+  check("local paragraph job runs through the agent bridge and persists progress result", localJob.code === 202 && receipt.state === "success" && receipt.response.execution.networkCalls === 0);
   const history = (await call("/development/git")).data,
     changes = (await call("/development/git/" + history.head)).data;
   check(

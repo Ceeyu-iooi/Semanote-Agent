@@ -4,7 +4,7 @@
   <p><em>在原文旁查看、修正和保存中文标注。</em></p>
   <a href="https://github.com/Ceeyu-iooi/Semanote-Agent/releases/latest"><img src="https://img.shields.io/github/v/release/Ceeyu-iooi/Semanote-Agent?style=flat-square&amp;color=25203f" alt="最新发布"></a>
   <img src="https://img.shields.io/badge/平台-Windows%20x64-25203f?style=flat-square" alt="Windows x64">
-  <img src="https://img.shields.io/badge/技术栈-Vue%20%2B%20Node.js%20%2B%20MySQL-117e79?style=flat-square" alt="Vue、Node.js 和 MySQL">
+  <img src="https://img.shields.io/badge/技术栈-Vue%20%2B%20Spring%20Boot%20%2B%20MySQL-117e79?style=flat-square" alt="Vue、Spring Boot 和 MySQL">
   <a href="LICENSE"><img src="https://img.shields.io/badge/许可证-MIT-64748b?style=flat-square" alt="MIT 许可证"></a>
 </div>
 
@@ -40,7 +40,7 @@ Semanote-Agent 是一个在本机运行的中文文本标注工作台。导入�
 
 ### 1. 安装
 
-需要 Windows x64、Git 和 Node.js 24 或更高版本。
+需要 Windows x64、Git、JDK 21 和 Node.js 24。
 
 ~~~powershell
 git clone --branch develop https://github.com/Ceeyu-iooi/Semanote-Agent.git
@@ -69,10 +69,10 @@ node tools/setup.mjs
 
 ## 架构与设计
 
-[![Archify 系统架构图，展示 Vue 工作台、Node.js 后端、JavaScript 智能体与 MySQL](assets/readme/archify-system.png)](docs/diagrams/system-architecture.html)
+[![Archify 系统架构图，展示 Vue 工作台、Spring Boot 后端、JavaScript 智能体与 MySQL](assets/readme/archify-system.png)](docs/diagrams/system-architecture.html)
 
 - **工作台。** Vue 和 Bootstrap 构建文本库、标注编辑器与统计界面。选中标注可回到原文位置。
-- **服务与存储。** Node.js 提供 API、管理导入和标注任务，MySQL 保存原文修订、候选和快照。
+- **服务与存储。** Spring Boot 提供 API、管理导入和标注任务，MySQL 保存原文修订、候选和快照。
 - **标注智能体。** Node.js 按任务调用所选模型，并在本地校验返回的标注与原文位置。
 - **开发者中心。** 可从系统图进入各模块架构，也可查看设计规范、模型调用日志和 Git 时间轴。
 
@@ -95,7 +95,7 @@ node tools/setup.mjs
 
 ## 致谢
 
-感谢 Vue、Bootstrap、Node.js 和 MySQL 社区。
+感谢 Vue、Bootstrap、Spring Boot、Node.js 和 MySQL 社区。
 
 ## 许可证
 

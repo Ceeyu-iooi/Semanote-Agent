@@ -22,11 +22,11 @@ import {
   validateProvider,
 } from "./provider.js";
 import { promptVersion } from "./prompts.js";
-import { groundTokens, groundOrdered, sentenceEvidence } from "./grounding.js";
+import { groundTokens, groundOrdered, sentenceEvidence, sourceSentences } from "./grounding.js";
 
 import { lockCache } from './cacheLock.js';
 
-export const adapterVersion = "2.2.0";
+export const adapterVersion = "2.3.0";
 /** Bounded, lossless chunks; only source boundaries are used and no text is trimmed. */
 export function chunks(text, limit = 650, retained = []) {
   const chars = Array.from(text),
@@ -51,10 +51,12 @@ export function chunks(text, limit = 650, retained = []) {
   }
   return result;
 }
-function candidate(task, payload) {
+function candidate(task, payload, sentences, semanticSegments) {
   const value = payload[task];
   const evidence = (reference) => {
     if (typeof reference === "string") return reference;
+    if (Number.isSafeInteger(reference) && !Array.isArray(payload.evidence) && sentences[reference])
+      return sentences[reference].itemText;
     requireValue(
       Number.isSafeInteger(reference) &&
         reference >= 0 &&
@@ -74,6 +76,12 @@ function candidate(task, payload) {
       return { tokenIndex, label: /^\p{P}$/u.test(itemText) ? "PUNCT" :
         normalized === "TIME" && /^(?:凌晨|早晨|早上|上午|中午|下午|晚上|夜间|午夜|今天|昨日|昨天|明天|近日)$/u.test(itemText) ? "NOUN" : normalized };
     });
+  const sentenceLabels = payload[task + "Labels"];
+  if (["intent", "sentiment", "semantic"].includes(task) && Array.isArray(sentenceLabels)) {
+    const source = task === "semantic" ? semanticSegments : sentences;
+    requireValue(sentenceLabels.length === source.length, "incompleteSentenceLabels");
+    return source.map((sentence, index) => ({ ...sentence, label: normalizeSentenceLabel(sentenceLabels[index]) }));
+  }
   requireValue(Array.isArray(value), "missingLayer", "模型缺少所选标注层。");
   if (task === "keywords") return value.map((itemText) => ({ itemText }));
   if (task === "ner")
@@ -85,15 +93,20 @@ function candidate(task, payload) {
   if (["sentiment", "intent", "semantic"].includes(task))
     return value.map((tuple) => ({
       itemText: evidence(tuple[0]),
-      label: tuple[1],
+      label: normalizeSentenceLabel(tuple[1]),
       occurrence: tuple[2] ?? 0,
     }));
   if (["relations", "events"].includes(task))
-    return value.map((item) => ({
-      ...item,
-      itemText: evidence(item.itemText),
-    }));
+    return value.map((item) => {
+      if (!Object.hasOwn(item, "sentenceIndex")) return { ...item, itemText: evidence(item.itemText) };
+      const { sentenceIndex, ...entry } = item;
+      requireValue(Number.isInteger(sentenceIndex) && sentences[sentenceIndex], "invalidSentenceIndex");
+      return { ...entry, ...sentences[sentenceIndex], sentenceIndex };
+    });
   return value;
+}
+function normalizeSentenceLabel(value) {
+  return typeof value === "string" ? value.trim().toUpperCase() : value;
 }
 function expandNer(raw, text) {
   const seen = new Set();
@@ -247,7 +260,8 @@ export async function annotate(
     // Bound dense joint output before a request is made. Truncated calls
     // remain explicit failures; neither shortening nor retries occur after billing.
     tokenBudget = config?.maxOutputTokens || 8192,
-    tokensPerChar = 8 + remoteTasks.filter((task) => !["segmentation", "pos"].includes(task)).length * 2,
+    // The same source/config must have the same boundaries across task selections.
+    tokensPerChar = 8 + taskTypes.filter((task) => !["segmentation", "pos", "paragraphs"].includes(task)).length * 2,
     chunkLimit = Math.min(650, Math.max(32, Math.floor((tokenBudget - 192) / tokensPerChar))),
     textChunks = chunks(request.text, chunkLimit, layers.segmentation.result?.items);
   onProgress({
@@ -344,8 +358,14 @@ export async function annotate(
         localCacheHits: counters.localCacheHits,
       });
       try {
+        const sentences = modelTasks.some((task) => ["relations", "events", "intent", "sentiment"].includes(task))
+          ? sourceSentences(chunk.text) : [];
+        const semanticSegments = modelTasks.includes("semantic")
+          ? sourceSentences(chunk.text, /[，,；;：:。！？!?\r\n]+[”’」』]*/gu) : [];
         reply = await providerCall(config, chunk.text, modelTasks, {
           jobId: request.requestId,
+          ...(sentences.length ? { sentences: sentences.map(({ itemText }) => itemText) } : {}),
+          ...(semanticSegments.length ? { semanticSegments: semanticSegments.map(({ itemText }) => itemText) } : {}),
           ...(missing.includes("pos") && retainedTokens?.length
             ? { segmentation: retainedTokens }
             : {}),
@@ -383,12 +403,13 @@ export async function annotate(
           (a, b) => taskTypes.indexOf(a) - taskTypes.indexOf(b),
         )) {
           try {
-            let raw = candidate(task, reply.payload);
+            let raw = candidate(task, reply.payload, sentences, semanticSegments);
             if (task === "ner") raw = expandNer(raw, chunk.text);
             if (["sentiment", "intent", "semantic"].includes(task))
               raw = groundOrdered(raw, chunk.text);
             if (["relations", "events"].includes(task)) {
-              raw = sentenceEvidence(raw, chunk.text);
+              raw = raw.map(({ sentenceIndex, ...item }) => sentenceIndex === undefined
+                ? sentenceEvidence([item], chunk.text)[0] : item);
               const seen = new Set();
               raw = raw.filter((item) => {
                 const key = JSON.stringify([

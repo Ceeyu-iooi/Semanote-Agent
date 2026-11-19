@@ -374,3 +374,42 @@ test("small output budgets split long POS requests without dropping code points"
   assert.equal(result.layers.pos.status, "success");
   assert.equal(result.layers.pos.result.items.map(({ itemText }) => itemText).join(""), text);
 });
+
+test("indexed evidence selects the right repeated subject and restores complete intent coverage", async () => {
+  const text = "顾晓禾借了地图。她说：“请登记归还。”顾晓禾去买书。";
+  const request = input(["relations", "events", "intent", "sentiment"], text);
+  const result = await annotate(request, config, {
+    useCache: false,
+    providerCall: async (_config, _source, _tasks, { sentences }) => {
+      assert.equal(sentences.length, 3);
+      const referent = { itemText: "顾晓禾", occurrences: [0] };
+      return { log: usage, payload: {
+        relations: [{ sentenceIndex: 1, label: "请求登记", subject: referent, object: "归还" }],
+        events: [{ sentenceIndex: 1, label: "请求", roles: { subject: [referent], object: ["归还"] } }],
+        intentLabels: ["INFORM", "REQUEST", "INFORM"],
+        sentimentLabels: ["NEUTRAL", "NEUTRAL", "NEUTRAL"],
+      } };
+    },
+  });
+  assert.equal(result.status, "success");
+  assert.equal(result.layers.events.result.items[0].roles.subject[0].spans[0].start, 0);
+  assert.equal(result.layers.relations.result.items[0].subject.spans[0].start, 0);
+  assert.equal(result.layers.intent.result.items.map(({ itemText }) => itemText).join(""), text);
+});
+
+test("long source keeps identical cache boundaries across different task sets", async () => {
+  const text = "请把青石镇新地图交给工作人员。".repeat(51);
+  const full = await annotate(input(["intent", "relations", "events"], text), config, {
+    providerCall: async (_config, _text, _tasks, { sentences }) => ({
+      payload: { intentLabels: sentences.map(() => "REQUEST"), events: [], relations: [] }, log: usage,
+    }),
+  });
+  assert.equal(full.status, "success");
+  assert.ok(full.execution.networkCalls > 1);
+  const subset = await annotate(input(["intent"], text), config, {
+    providerCall: async () => { throw Error("Validated cache should cover every chunk"); },
+  });
+  assert.equal(subset.status, "success");
+  assert.equal(subset.execution.networkCalls, 0);
+  assert.equal(subset.execution.localCacheHits, full.execution.networkCalls + full.execution.localCacheHits);
+});

@@ -8,7 +8,7 @@
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/Ceeyu-iooi/Semanote-Agent.git",
-      "revision": "1bab9f031dc61c80c8a13be539ea1b6dc048b107",
+      "revision": "5ec94e4e1823d0fe644782f613682ecf0d5099fa",
       "link_mode": "local-only"
     }
   },
@@ -17,7 +17,7 @@
       "id": "caller",
       "type": "external",
       "label": "Java 调用方",
-      "sublabel": "模块与独立 CLI",
+      "sublabel": "JSON / NDJSON",
       "pos": [
         40,
         220
@@ -28,9 +28,9 @@
       ],
       "sources": [
         {
-          "path": "backend/jobs.mjs",
-          "line": 19,
-          "end_line": 32
+          "path": "backend/src/main/java/io/semanote/agent/AgentBridge.java",
+          "line": 28,
+          "end_line": 65
         }
       ]
     },
@@ -71,8 +71,8 @@
       "sources": [
         {
           "path": "agent/agent.js",
-          "line": 183,
-          "end_line": 213
+          "line": 196,
+          "end_line": 226
         }
       ]
     },
@@ -92,8 +92,8 @@
       "sources": [
         {
           "path": "agent/provider.js",
-          "line": 263,
-          "end_line": 278
+          "line": 265,
+          "end_line": 280
         }
       ]
     },
@@ -113,8 +113,8 @@
       "sources": [
         {
           "path": "agent/agent.js",
-          "line": 324,
-          "end_line": 354
+          "line": 338,
+          "end_line": 368
         }
       ]
     },
@@ -197,8 +197,8 @@
       "sources": [
         {
           "path": "agent/agent.js",
-          "line": 530,
-          "end_line": 560
+          "line": 551,
+          "end_line": 581
         }
       ]
     }

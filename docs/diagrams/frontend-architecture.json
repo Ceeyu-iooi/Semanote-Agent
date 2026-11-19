@@ -8,7 +8,7 @@
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/Ceeyu-iooi/Semanote-Agent.git",
-      "revision": "1bab9f031dc61c80c8a13be539ea1b6dc048b107",
+      "revision": "5ec94e4e1823d0fe644782f613682ecf0d5099fa",
       "link_mode": "local-only"
     }
   },
@@ -137,9 +137,9 @@
       ],
       "sources": [
         {
-          "path": "backend/server.mjs",
-          "line": 86,
-          "end_line": 99
+          "path": "backend/src/main/java/io/semanote/api/WorkspaceController.java",
+          "line": 15,
+          "end_line": 47
         }
       ]
     },
