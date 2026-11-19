@@ -127,12 +127,14 @@ export async function generate(config, text, tasks, context = {}) {
     const body = {
       model: config.model,
       messages: [
-        { role: "system", content: promptForTasks(tasks, Boolean(context.segmentation)) },
+        { role: "system", content: promptForTasks(tasks, Boolean(context.segmentation), Boolean(context.sentences || context.semanticSegments)) },
         {
           role: "user",
           content: JSON.stringify({
             tasks,
             ...(context.segmentation ? { segmentation: context.segmentation } : {}),
+            ...(context.sentences ? { sentences: context.sentences } : {}),
+            ...(context.semanticSegments ? { semanticSegments: context.semanticSegments } : {}),
             text,
           }),
         },
@@ -270,7 +272,7 @@ export function cacheIdentity(config, text) {
       config.model,
       config.jsonMode,
       config.maxOutputTokens || 8192,
-      promptVersion,
+      "2.6.0", // Same validated candidate shape and grounding policy as the previous cache.
       hash(systemPrompt),
       hash(text),
     ]),

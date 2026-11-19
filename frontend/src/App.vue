@@ -2564,22 +2564,33 @@ function nextPage(delta) {
     <h1>工作区已退出</h1>
     <p>本地服务和数据库已关闭。可关闭此页面，或双击 start.bat 重新启动。</p>
   </main>
-  <dialog ref="importDialog" class="workspace-dialog" aria-labelledby="import-dialog-title">
+  <dialog ref="importDialog" class="workspace-dialog action-dialog" aria-labelledby="import-dialog-title" aria-describedby="import-dialog-description">
     <form v-if="importChoice" method="dialog">
       <header><h2 id="import-dialog-title">选择 CSV 导入数量</h2></header>
-      <p>{{ importChoice.name }} 有 {{ importChoice.count.toLocaleString() }} 份非空文本。按原文件行列顺序导入。</p>
-      <label>导入数量<input v-model.number="importChoice.limit" class="form-control" type="number" min="1" :max="importChoice.count" required autofocus></label>
+      <div class="dialog-body action-dialog-body">
+        <div class="import-file-summary">
+          <strong>{{ importChoice.name }}</strong>
+          <span class="muted">共 {{ importChoice.count.toLocaleString() }} 份非空文本</span>
+        </div>
+        <label class="import-count-field">
+          <span>导入数量</span>
+          <input v-model.number="importChoice.limit" class="form-control" type="number" min="1" :max="importChoice.count" required autofocus aria-describedby="import-dialog-description">
+        </label>
+        <p id="import-dialog-description" class="muted">从文件开头按行列顺序导入。</p>
+      </div>
       <footer>
         <button type="button" class="btn btn-outline-secondary" @click="importDialog.close()">取消</button>
         <button class="btn btn-primary" value="import">开始导入</button>
       </footer>
     </form>
   </dialog>
-  <dialog ref="exitDialog" class="workspace-dialog" aria-labelledby="exit-dialog-title" @cancel="exitBusy && $event.preventDefault()">
+  <dialog ref="exitDialog" class="workspace-dialog action-dialog" aria-labelledby="exit-dialog-title" aria-describedby="exit-dialog-description" @cancel="exitBusy && $event.preventDefault()">
     <form @submit.prevent="stopWorkspace">
       <header><h2 id="exit-dialog-title">退出工作区？</h2></header>
-      <p>这会关闭本机网站后端和 MySQL 数据库，其他已打开的页面也会断开。</p>
-      <p v-if="exitError" class="feedback error-feedback" role="alert">{{ exitError }}</p>
+      <div class="dialog-body action-dialog-body">
+        <p id="exit-dialog-description">退出会关闭本机后端和 MySQL 数据库。其他已打开的工作区页面也会断开。</p>
+        <p v-if="exitError" class="feedback error-feedback" role="alert">{{ exitError }}</p>
+      </div>
       <footer>
         <button type="button" class="btn btn-outline-secondary" :disabled="exitBusy" autofocus @click="exitDialog.close()">取消</button>
         <button class="btn btn-danger" :disabled="exitBusy">{{ exitBusy ? "正在关闭…" : "退出并关闭服务" }}</button>

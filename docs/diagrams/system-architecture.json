@@ -8,7 +8,7 @@
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/Ceeyu-iooi/Semanote-Agent.git",
-      "revision": "1bab9f031dc61c80c8a13be539ea1b6dc048b107",
+      "revision": "78ac3cda29e8db9f39e920c3ee37ba17aa5904df",
       "link_mode": "local-only"
     }
   },
@@ -61,9 +61,9 @@
       ]
     },
     {
-      "id": "node-service",
+      "id": "spring",
       "type": "backend",
-      "label": "Node.js Web 服务",
+      "label": "Spring Boot 服务",
       "sublabel": "REST /api/v1 · 版本与任务",
       "pos": [
         640,
@@ -75,14 +75,14 @@
       ],
       "sources": [
         {
-          "path": "backend/server.mjs",
-          "line": 86,
-          "end_line": 99
+          "path": "backend/src/main/java/io/semanote/api/WorkspaceController.java",
+          "line": 15,
+          "end_line": 47
         },
         {
-          "path": "backend/jobs.mjs",
-          "line": 16,
-          "end_line": 29
+          "path": "backend/src/main/java/io/semanote/service/JobService.java",
+          "line": 95,
+          "end_line": 115
         }
       ]
     },
@@ -101,9 +101,9 @@
       ],
       "sources": [
         {
-          "path": "backend/jobs.mjs",
-          "line": 19,
-          "end_line": 32
+          "path": "backend/src/main/java/io/semanote/agent/AgentBridge.java",
+          "line": 28,
+          "end_line": 56
         },
         {
           "path": "agent/bridge.mjs",
@@ -158,9 +158,9 @@
           "end_line": 63
         },
         {
-          "path": "backend/workspace.mjs",
-          "line": 64,
-          "end_line": 77
+          "path": "backend/src/main/java/io/semanote/service/WorkspaceService.java",
+          "line": 143,
+          "end_line": 191
         }
       ]
     },
@@ -200,17 +200,17 @@
       "variant": "emphasis"
     },
     {
-      "id": "vue-node-service",
+      "id": "vue-spring",
       "from": "vue",
-      "to": "node-service",
+      "to": "spring",
       "label": "HTTP JSON",
       "variant": "emphasis"
     },
     {
-      "id": "node-service-agent",
-      "from": "node-service",
+      "id": "spring-agent",
+      "from": "spring",
       "to": "agent",
-      "label": "模块调用",
+      "label": "stdin / stdout",
       "variant": "default"
     },
     {
@@ -221,10 +221,10 @@
       "variant": "default"
     },
     {
-      "id": "node-service-mysql",
-      "from": "node-service",
+      "id": "spring-mysql",
+      "from": "spring",
       "to": "mysql",
-      "label": "MySQL 事务",
+      "label": "JDBC 事务",
       "variant": "default"
     },
     {

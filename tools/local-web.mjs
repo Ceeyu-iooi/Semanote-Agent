@@ -1,4 +1,4 @@
-/** Windows project-local MySQL, Node.js, backup and explicitly authorized LAN lifecycle. */
+/** Windows project-local MySQL, Spring Boot, backup and explicitly authorized LAN lifecycle. */
 import { spawn } from "node:child_process";
 import {
   open,
@@ -230,6 +230,7 @@ export async function backendEnvironment() {
   const env = {
     ...process.env,
     SEMANOTE_PROJECT_ROOT: projectRoot,
+    SEMANOTE_NODE: process.execPath,
     SEMANOTE_DB_PASSWORD: config.appPassword,
     SEMANOTE_DB_USER: "semanote",
   };
@@ -252,7 +253,18 @@ export async function backendEnvironment() {
 }
 const releasePort = 8090, developmentPort = 8081;
 const backendRecord = resolve(runtimeRoot, "backend-pid.json");
-const serviceEntry = resolve(projectRoot, "backend/server.mjs");
+const previousNodeEntry = resolve(projectRoot, "backend/server.mjs");
+export async function releaseArtifact() {
+  const version = (await readFile(resolve(projectRoot, "VERSION"), "utf8")).trim();
+  if (!/^\d+\.\d+\.\d+(?:\.\d+)?$/.test(version)) throw new Error("Invalid release version");
+  return resolve(projectRoot, "backend/target/semanote-web-" + version + ".jar");
+}
+function ownedBackend(record, command) {
+  const artifact = record?.artifact;
+  if (!artifact) return command.includes(previousNodeEntry);
+  return typeof artifact === "string" && resolve(artifact).startsWith(resolve(projectRoot, "backend/target") + sep)
+    && command.includes(artifact);
+}
 const healthUrl = (port) => "http://127.0.0.1:" + port + "/api/v1/health";
 async function printWebAddresses(port) {
   console.log("Web ready: http://127.0.0.1:" + port);
@@ -270,54 +282,52 @@ async function activeProcess(record) {
 }
 export async function startBackend(port = releasePort) {
   const record = await readJson(backendRecord, null);
-  if (record && (await activeProcess(record)).includes(serviceEntry)) {
+  const artifact = await releaseArtifact();
+  if (record && ownedBackend(record, await activeProcess(record))) {
+    if (record.artifact !== artifact) throw new Error("Stop the previous Semanote backend before upgrading");
     if (record.port !== port) throw new Error("Stop the existing Semanote backend before switching modes");
     const health = await getJson(healthUrl(port));
-    if (health.runtime !== "node") throw new Error("The port is not serving the Node backend");
+    if (health.runtime !== "spring") throw new Error("The port is not serving Spring Boot");
     await printWebAddresses(port);
     return;
   }
-  if (record?.artifact && (await activeProcess(record)).includes(record.artifact))
-    throw new Error("Stop the previous Semanote backend before starting the Node backend");
   for (const candidate of [releasePort, developmentPort]) {
     const health = await getJson(healthUrl(candidate)).catch(() => null);
     if (health?.status === "ready") throw new Error("A Semanote process already uses port " + candidate);
   }
   if (!(await exists(resolve(projectRoot, "frontend/dist/index.html"))) ||
-      !(await exists(resolve(projectRoot, "backend/node_modules/mysql2"))))
+      !(await exists(artifact)))
     throw new Error("Build the project first: node tools/build-web.mjs");
   await startDatabase();
   const env = await backendEnvironment();
   if (port === developmentPort) Object.assign(env, { SEMANOTE_BIND_ADDRESS: "127.0.0.1", SEMANOTE_LAN_HOSTS: "" });
   const token = randomBytes(32).toString("hex");
-  const pid = await launchManaged(process.execPath, [serviceEntry], "backend-node.log", {
+  const pid = await launchManaged("java", ["-jar", artifact], "backend-spring.log", {
     ...env, SEMANOTE_PORT: String(port), SEMANOTE_MANAGED_TOKEN: token,
   });
-  await writeJson(backendRecord, { pid, port, token });
+  await writeJson(backendRecord, { pid, port, token, artifact });
   for (let i = 0; i < 100; i++) {
     const health = await getJson(healthUrl(port), { signal: AbortSignal.timeout(1000) }).catch(() => null);
-    if (health?.runtime === "node") { await printWebAddresses(port); return; }
+    if (health?.runtime === "spring") { await printWebAddresses(port); return; }
     await delay(300);
   }
-  throw new Error("Backend did not become ready; inspect profile/runtime/backend-node.log");
+  throw new Error("Backend did not become ready; inspect profile/runtime/backend-spring.log");
 }
 export async function stopBackend() {
   const record = await readJson(backendRecord, null);
   if (!record) return;
   const command = await activeProcess(record);
-  if (command.includes(serviceEntry) && [releasePort, developmentPort].includes(record.port) && /^[a-f0-9]{64}$/.test(record.token)) {
+  if (ownedBackend(record, command) && [releasePort, developmentPort].includes(record.port) && /^[a-f0-9]{64}$/.test(record.token)) {
     const url = healthUrl(record.port).replace("/health", "/shutdown");
     const response = await fetch(url, {
       method: "POST", headers: { "Content-Type": "application/json", "X-Semanote-Managed-Token": record.token },
       body: JSON.stringify({ confirm: true, database: false }), signal: AbortSignal.timeout(10000),
     });
     if (!response.ok) throw new Error("The backend did not stop. Wait for current jobs or imports to finish.");
-    for (let attempt = 0; attempt < 30 && (await activeProcess(record)).includes(serviceEntry); attempt++) await delay(100);
-    if ((await activeProcess(record)).includes(serviceEntry)) throw new Error("The backend is still stopping");
+    for (let attempt = 0; attempt < 30 && ownedBackend(record, await activeProcess(record)); attempt++) await delay(100);
+    if (ownedBackend(record, await activeProcess(record))) throw new Error("The backend is still stopping");
     console.log("Project backend stopped");
-  } else if (typeof record.artifact === "string" &&
-      resolve(record.artifact).startsWith(resolve(projectRoot, "backend/target") + sep) &&
-      command.includes(record.artifact)) {
+  } else if (record.artifact && ownedBackend(record, command)) {
     // Compatibility for an active process recorded by a previous release.
     process.kill(record.pid);
     console.log("Previous project backend stopped");
@@ -416,6 +426,13 @@ if (
     dev: () => startBackend(developmentPort),
     stop: stopBackend,
     "stop-database": stopDatabase,
+    "shutdown-managed-database": async () => {
+      const record = await readJson(backendRecord, null);
+      if (!record?.artifact || record.pid !== process.ppid || record.token !== process.env.SEMANOTE_MANAGED_TOKEN
+          || !/^[a-f0-9]{64}$/.test(record.token) || !ownedBackend(record, await activeProcess(record)))
+        throw new Error("Managed database shutdown requires the verified backend process");
+      await stopDatabase({ backendDrained: true });
+    },
     backup: backupDatabase,
     lan: () => setNetworkMode("lan"),
     local: () => setNetworkMode("local"),

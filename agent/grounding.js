@@ -83,3 +83,25 @@ export function sentenceEvidence(raw, text) {
     };
   });
 }
+
+/** Stable source sentences used as input identifiers. The original slice is never rewritten. */
+export function sourceSentences(text, boundaries = /[。！？!?\r\n]+[”’」』]*/gu) {
+  const result = [], starts = new Map();
+  let from = 0;
+  const append = (end) => {
+    const piece = text.slice(from, end);
+    const itemText = piece.trim();
+    if (itemText) {
+      if (!starts.has(itemText)) starts.set(itemText, positions(text, itemText));
+      const utf16Start = from + piece.length - piece.trimStart().length;
+      const occurrence = starts.get(itemText).indexOf(Array.from(text.slice(0, utf16Start)).length);
+      result.push({ itemText, occurrence });
+    }
+    from = end;
+  };
+  for (const match of text.matchAll(boundaries)) {
+    append(match.index + match[0].length);
+  }
+  append(text.length);
+  return result;
+}
