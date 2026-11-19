@@ -17,7 +17,7 @@
       "id": "caller",
       "type": "external",
       "label": "Java 调用方",
-      "sublabel": "JSON / NDJSON",
+      "sublabel": "模块与独立 CLI",
       "pos": [
         40,
         220
@@ -28,9 +28,9 @@
       ],
       "sources": [
         {
-          "path": "backend/src/main/java/io/semanote/agent/AgentBridge.java",
-          "line": 28,
-          "end_line": 65
+          "path": "backend/jobs.mjs",
+          "line": 19,
+          "end_line": 32
         }
       ]
     },

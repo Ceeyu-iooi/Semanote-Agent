@@ -335,3 +335,42 @@ test("model whitespace tokens do not remove source layout or shift emoji offsets
   assert.equal(result.layers.segmentation.result.items[3].spans[0].start, 6);
   validateResponse(request, result);
 });
+
+test("POS retry accepts compact tags while preserving original word identities", async () => {
+  const request = input(["pos"], "昨天上午，顾晓禾看书。");
+  const first = await annotate(request, config, {
+    useCache: false,
+    providerCall: async () => ({
+      payload: { segmentation: ["昨天", "上午", "顾晓禾", "看书"] },
+      log: usage,
+    }),
+  });
+  assert.equal(first.layers.segmentation.status, "success");
+  assert.equal(first.layers.pos.status, "failed");
+  const fixed = await annotate(request, config, {
+    previousResponse: first, useCache: false,
+    providerCall: async (_config, _text, _tasks, context) => {
+      assert.deepEqual(context.segmentation, ["昨天", "上午", "，", "顾晓禾", "看书", "。"]);
+      return { payload: { posLabels: [" noun ", "TIME", "PUNCT", "PROPN", "VERB", "PUNCT"] }, log: usage };
+    },
+  });
+  assert.equal(fixed.layers.pos.status, "success");
+  assert.deepEqual(fixed.layers.segmentation.result, first.layers.segmentation.result);
+  assert.deepEqual(fixed.layers.pos.result.items.map(({ label }) => label), ["NOUN", "NOUN", "PUNCT", "PROPN", "VERB", "PUNCT"]);
+});
+
+test("small output budgets split long POS requests without dropping code points", async () => {
+  const text = "甲乙丙丁。".repeat(45), request = input(["pos"], text);
+  let calls = 0;
+  const result = await annotate(request, { ...config, maxOutputTokens: 512 }, {
+    useCache: false,
+    providerCall: async (_config, chunk) => {
+      calls++;
+      assert.ok(Array.from(chunk).length <= 40);
+      return { payload: { tokens: Array.from(chunk, (word) => [word, "NOUN"]) }, log: usage };
+    },
+  });
+  assert.ok(calls > 1);
+  assert.equal(result.layers.pos.status, "success");
+  assert.equal(result.layers.pos.result.items.map(({ itemText }) => itemText).join(""), text);
+});

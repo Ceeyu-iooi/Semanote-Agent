@@ -61,9 +61,9 @@
       ]
     },
     {
-      "id": "spring",
+      "id": "node-service",
       "type": "backend",
-      "label": "Spring Boot 服务",
+      "label": "Node.js Web 服务",
       "sublabel": "REST /api/v1 · 版本与任务",
       "pos": [
         640,
@@ -75,14 +75,14 @@
       ],
       "sources": [
         {
-          "path": "backend/src/main/java/io/semanote/api/WorkspaceController.java",
-          "line": 15,
-          "end_line": 47
+          "path": "backend/server.mjs",
+          "line": 86,
+          "end_line": 99
         },
         {
-          "path": "backend/src/main/java/io/semanote/service/JobService.java",
-          "line": 95,
-          "end_line": 115
+          "path": "backend/jobs.mjs",
+          "line": 16,
+          "end_line": 29
         }
       ]
     },
@@ -101,9 +101,9 @@
       ],
       "sources": [
         {
-          "path": "backend/src/main/java/io/semanote/agent/AgentBridge.java",
-          "line": 28,
-          "end_line": 56
+          "path": "backend/jobs.mjs",
+          "line": 19,
+          "end_line": 32
         },
         {
           "path": "agent/bridge.mjs",
@@ -158,9 +158,9 @@
           "end_line": 63
         },
         {
-          "path": "backend/src/main/java/io/semanote/service/WorkspaceService.java",
-          "line": 143,
-          "end_line": 191
+          "path": "backend/workspace.mjs",
+          "line": 64,
+          "end_line": 77
         }
       ]
     },
@@ -200,15 +200,15 @@
       "variant": "emphasis"
     },
     {
-      "id": "vue-spring",
+      "id": "vue-node-service",
       "from": "vue",
-      "to": "spring",
+      "to": "node-service",
       "label": "HTTP JSON",
       "variant": "emphasis"
     },
     {
-      "id": "spring-agent",
-      "from": "spring",
+      "id": "node-service-agent",
+      "from": "node-service",
       "to": "agent",
       "label": "stdin / stdout",
       "variant": "default"
@@ -221,10 +221,10 @@
       "variant": "default"
     },
     {
-      "id": "spring-mysql",
-      "from": "spring",
+      "id": "node-service-mysql",
+      "from": "node-service",
       "to": "mysql",
-      "label": "JDBC 事务",
+      "label": "MySQL 事务",
       "variant": "default"
     },
     {

@@ -419,6 +419,66 @@ function selectImportFiles(event) {
   event.target.value = "";
   void importFiles(files);
 }
+const importDialog = ref(null), importChoice = ref(null), importProgress = ref(null);
+const exitDialog = ref(null), exitBusy = ref(false), exitError = ref(""), stopped = ref(false);
+function previewCsv(file) {
+  const worker = new Worker(new URL("./csvPreview.js", import.meta.url), { type: "module" });
+  return new Promise((resolve, reject) => {
+    worker.onmessage = ({ data }) => data.error ? reject(new Error(data.error)) : resolve(data.count);
+    worker.onerror = () => reject(new Error("CSV 预览无法读取。"));
+    worker.postMessage(file);
+  }).finally(() => worker.terminate());
+}
+async function chooseCsvLimit(file) {
+  const count = await previewCsv(file);
+  if (!count) return 0;
+  importChoice.value = { name: file.name, count, limit: count };
+  await nextTick();
+  const dialog = importDialog.value;
+  dialog.returnValue = "";
+  const result = new Promise((resolve) => dialog.addEventListener("close", () => {
+    resolve(dialog.returnValue === "import" ? importChoice.value.limit : null);
+  }, { once: true }));
+  dialog.showModal();
+  return result;
+}
+async function uploadFile(file, limit) {
+  const form = new FormData(), id = createRequestId();
+  form.append("file", file);
+  form.append("requestId", id);
+  if (limit) form.append("limit", String(limit));
+  importProgress.value = { name: file.name, completed: 0, total: null };
+  const controller = new AbortController();
+  let pending = false;
+  const poll = setInterval(async () => {
+    if (pending) return;
+    pending = true;
+    try {
+      const checkpoint = await request("/imports/" + id, { signal: controller.signal });
+      if (!controller.signal.aborted && checkpoint) importProgress.value = { name: file.name, ...checkpoint };
+    } catch { /* A progress read can fail independently of the import. */ }
+    finally { pending = false; }
+  }, 180);
+  try { return await request("/imports", { method: "POST", body: form }); }
+  finally { clearInterval(poll); controller.abort(); importProgress.value = null; }
+}
+function openExit() {
+  exitError.value = "";
+  exitDialog.value.showModal();
+}
+async function stopWorkspace() {
+  if (exitBusy.value || !leaveDraft()) return;
+  exitBusy.value = true;
+  exitError.value = "";
+  try {
+    await send("/shutdown", { confirm: true });
+    exitDialog.value.close();
+    stopped.value = true;
+    clearInterval(pollTimer);
+    window.removeEventListener("beforeunload", beforeUnload);
+  } catch (error) { exitError.value = message(error); }
+  finally { exitBusy.value = false; }
+}
 async function importFiles(files) {
   if (!files.length || importBusy.value) return;
   importBusy.value = true;
@@ -429,9 +489,9 @@ async function importFiles(files) {
   try {
     for (const file of files) {
       try {
-        const form = new FormData();
-        form.append("file", file);
-        const result = await request("/imports", { method: "POST", body: form });
+        const limit = /\.csv$/i.test(file.name) ? await chooseCsvLimit(file) : undefined;
+        if (limit === null) continue;
+        const result = await uploadFile(file, limit);
         imported += result.importedCount;
         skipped += result.skippedCount;
         completed++;
@@ -1309,7 +1369,7 @@ function nextPage(delta) {
 </script>
 
 <template>
-  <div class="workspace-app" :class="{ 'compact-mode': preferences.compact }">
+  <div v-if="!stopped" class="workspace-app" :class="{ 'compact-mode': preferences.compact }">
     <TopNavigation
       :page="page"
       :active-count="activeCount"
@@ -1317,6 +1377,7 @@ function nextPage(delta) {
       :has-document="Boolean(current)"
       @navigate="navigate"
       @settings="openSettings"
+      @exit="openExit"
     />
     <div class="app-layout">
       <main class="main-content" :class="{ 'workspace-content': page === 'workspace' }">
@@ -1338,6 +1399,13 @@ function nextPage(delta) {
         <div v-if="notice" role="status" class="feedback">
           <span>{{ notice }}</span
           ><button class="text-action" @click="notice = ''">知道了</button>
+        </div>
+        <div v-if="importProgress" class="surface import-progress" role="status">
+          <strong>正在导入 {{ importProgress.name }}</strong>
+          <progress v-if="importProgress.total" :value="importProgress.completed" :max="importProgress.total" aria-label="导入进度"></progress>
+          <progress v-else aria-label="正在上传和检查文件"></progress>
+          <span v-if="importProgress.total">{{ importProgress.completed.toLocaleString() }} / {{ importProgress.total.toLocaleString() }} 份，提交后完成</span>
+          <span v-else>正在上传和检查文件…</span>
         </div>
         <div v-if="loading" class="empty-state">
           <span class="loading-indicator"></span>
@@ -2492,4 +2560,30 @@ function nextPage(delta) {
       </form>
     </dialog>
   </div>
+  <main v-else class="surface empty-state workspace-stopped" role="status">
+    <h1>工作区已退出</h1>
+    <p>本地服务和数据库已关闭。可关闭此页面，或双击 start.bat 重新启动。</p>
+  </main>
+  <dialog ref="importDialog" class="workspace-dialog" aria-labelledby="import-dialog-title">
+    <form v-if="importChoice" method="dialog">
+      <header><h2 id="import-dialog-title">选择 CSV 导入数量</h2></header>
+      <p>{{ importChoice.name }} 有 {{ importChoice.count.toLocaleString() }} 份非空文本。按原文件行列顺序导入。</p>
+      <label>导入数量<input v-model.number="importChoice.limit" class="form-control" type="number" min="1" :max="importChoice.count" required autofocus></label>
+      <footer>
+        <button type="button" class="btn btn-outline-secondary" @click="importDialog.close()">取消</button>
+        <button class="btn btn-primary" value="import">开始导入</button>
+      </footer>
+    </form>
+  </dialog>
+  <dialog ref="exitDialog" class="workspace-dialog" aria-labelledby="exit-dialog-title" @cancel="exitBusy && $event.preventDefault()">
+    <form @submit.prevent="stopWorkspace">
+      <header><h2 id="exit-dialog-title">退出工作区？</h2></header>
+      <p>这会关闭本机网站后端和 MySQL 数据库，其他已打开的页面也会断开。</p>
+      <p v-if="exitError" class="feedback error-feedback" role="alert">{{ exitError }}</p>
+      <footer>
+        <button type="button" class="btn btn-outline-secondary" :disabled="exitBusy" autofocus @click="exitDialog.close()">取消</button>
+        <button class="btn btn-danger" :disabled="exitBusy">{{ exitBusy ? "正在关闭…" : "退出并关闭服务" }}</button>
+      </footer>
+    </form>
+  </dialog>
 </template>

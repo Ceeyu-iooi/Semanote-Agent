@@ -1,4 +1,4 @@
-/** Windows project-local MySQL, Spring Boot, backup and explicitly authorized LAN lifecycle. */
+/** Windows project-local MySQL, Node.js, backup and explicitly authorized LAN lifecycle. */
 import { spawn } from "node:child_process";
 import {
   open,
@@ -8,7 +8,7 @@ import {
   unlink,
   stat,
 } from "node:fs/promises";
-import { resolve } from "node:path";
+import { resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { randomBytes } from "node:crypto";
 import {
@@ -230,7 +230,6 @@ export async function backendEnvironment() {
   const env = {
     ...process.env,
     SEMANOTE_PROJECT_ROOT: projectRoot,
-    SEMANOTE_NODE: process.execPath,
     SEMANOTE_DB_PASSWORD: config.appPassword,
     SEMANOTE_DB_USER: "semanote",
   };
@@ -251,111 +250,115 @@ export async function backendEnvironment() {
     });
   return env;
 }
-async function printWebAddresses() {
-  console.log("Web ready: http://127.0.0.1:8080");
+const releasePort = 8080, developmentPort = 8081;
+const backendRecord = resolve(runtimeRoot, "backend-pid.json");
+const serviceEntry = resolve(projectRoot, "backend/server.mjs");
+const healthUrl = (port) => "http://127.0.0.1:" + port + "/api/v1/health";
+async function printWebAddresses(port) {
+  console.log("Web ready: http://127.0.0.1:" + port);
   const { config } = await paths();
-  if (config.networkMode === "lan")
+  if (port === releasePort && config.networkMode === "lan")
     for (const item of config.lanInterfaces || [])
-      console.log(`LAN address: http://${item.address}:8080`);
+      console.log(`LAN address: http://${item.address}:${port}`);
 }
-export async function releaseArtifact() {
-  const version = (
-    await readFile(resolve(projectRoot, "VERSION"), "utf8")
-  ).trim();
-  if (!/^\d+\.\d+\.\d+(?:\.\d+)?(?:-[\w.-]+)?$/.test(version))
-    throw new Error("Invalid product version");
-  return resolve(projectRoot, `backend/target/semanote-web-${version}.jar`);
-}
-export async function startBackend() {
-  await startDatabase();
-  try {
-    if (
-      (await getJson("http://127.0.0.1:8080/api/v1/health")).status === "ready"
-    ) {
-      await printWebAddresses();
-      return;
-    }
-  } catch {}
-  const artifact = await releaseArtifact();
-  if (!(await exists(artifact)))
-    throw new Error("Build the project first: node tools/build-web.mjs");
-  const pid = await launchManaged(
-    "java",
-    ["-jar", artifact],
-    "backend.log",
-    await backendEnvironment(),
-  );
-  await writeJson(resolve(runtimeRoot, "backend-pid.json"), { pid, artifact });
-  for (let i = 0; i < 100; i++) {
-    try {
-      if (
-        (
-          await getJson("http://127.0.0.1:8080/api/v1/health", {
-            signal: AbortSignal.timeout(2000),
-          })
-        ).status === "ready"
-      ) {
-        await printWebAddresses();
-        return;
-      }
-    } catch {}
-    await delay(300);
-  }
-  throw new Error(
-    "Backend did not become ready; inspect profile/runtime/backend.log",
-  );
-}
-export async function stopBackend() {
-  const recordPath = resolve(runtimeRoot, "backend-pid.json"),
-    record = await readJson(recordPath, null);
-  if (!record) return;
-  if (
-    !Number.isInteger(record.pid) ||
-    record.pid < 1 ||
-    !resolve(record.artifact).startsWith(projectRoot + "\\")
-  )
-    throw new Error("Invalid managed backend identity");
-  const output = await powershell(
+async function activeProcess(record) {
+  if (!Number.isInteger(record?.pid) || record.pid < 1) return "";
+  const result = await powershell(
     `Get-CimInstance Win32_Process -Filter 'ProcessId=${record.pid}' | Select-Object -ExpandProperty CommandLine`,
   );
-  if (output.stdout.toString("utf8").includes(record.artifact)) {
-    process.kill(record.pid);
-    console.log("Project backend stopped");
+  return result.stdout.toString("utf8");
+}
+export async function startBackend(port = releasePort) {
+  const record = await readJson(backendRecord, null);
+  if (record && (await activeProcess(record)).includes(serviceEntry)) {
+    if (record.port !== port) throw new Error("Stop the existing Semanote backend before switching modes");
+    const health = await getJson(healthUrl(port));
+    if (health.runtime !== "node") throw new Error("The port is not serving the Node backend");
+    await printWebAddresses(port);
+    return;
   }
-  await unlink(recordPath);
+  if (record?.artifact && (await activeProcess(record)).includes(record.artifact))
+    throw new Error("Stop the previous Semanote backend before starting the Node backend");
+  for (const candidate of [releasePort, developmentPort]) {
+    const health = await getJson(healthUrl(candidate)).catch(() => null);
+    if (health?.status === "ready") throw new Error("A Semanote process already uses port " + candidate);
+  }
+  if (!(await exists(resolve(projectRoot, "frontend/dist/index.html"))) ||
+      !(await exists(resolve(projectRoot, "backend/node_modules/mysql2"))))
+    throw new Error("Build the project first: node tools/build-web.mjs");
+  await startDatabase();
+  const env = await backendEnvironment();
+  if (port === developmentPort) Object.assign(env, { SEMANOTE_BIND_ADDRESS: "127.0.0.1", SEMANOTE_LAN_HOSTS: "" });
+  const token = randomBytes(32).toString("hex");
+  const pid = await launchManaged(process.execPath, [serviceEntry], "backend-node.log", {
+    ...env, SEMANOTE_PORT: String(port), SEMANOTE_MANAGED_TOKEN: token,
+  });
+  await writeJson(backendRecord, { pid, port, token });
+  for (let i = 0; i < 100; i++) {
+    const health = await getJson(healthUrl(port), { signal: AbortSignal.timeout(1000) }).catch(() => null);
+    if (health?.runtime === "node") { await printWebAddresses(port); return; }
+    await delay(300);
+  }
+  throw new Error("Backend did not become ready; inspect profile/runtime/backend-node.log");
+}
+export async function stopBackend() {
+  const record = await readJson(backendRecord, null);
+  if (!record) return;
+  const command = await activeProcess(record);
+  if (command.includes(serviceEntry) && [releasePort, developmentPort].includes(record.port) && /^[a-f0-9]{64}$/.test(record.token)) {
+    const url = healthUrl(record.port).replace("/health", "/shutdown");
+    const response = await fetch(url, {
+      method: "POST", headers: { "Content-Type": "application/json", "X-Semanote-Managed-Token": record.token },
+      body: JSON.stringify({ confirm: true, database: false }), signal: AbortSignal.timeout(10000),
+    });
+    if (!response.ok) throw new Error("The backend did not stop. Wait for current jobs or imports to finish.");
+    for (let attempt = 0; attempt < 30 && (await activeProcess(record)).includes(serviceEntry); attempt++) await delay(100);
+    if ((await activeProcess(record)).includes(serviceEntry)) throw new Error("The backend is still stopping");
+    console.log("Project backend stopped");
+  } else if (typeof record.artifact === "string" &&
+      resolve(record.artifact).startsWith(resolve(projectRoot, "backend/target") + sep) &&
+      command.includes(record.artifact)) {
+    // Compatibility for an active process recorded by a previous release.
+    process.kill(record.pid);
+    console.log("Previous project backend stopped");
+  }
+  await unlink(backendRecord);
 }
 
-/** Stop only the MySQL instance started with our recorded compatibility drive. */
-export async function stopDatabase() {
-  try {
-    if ((await getJson("http://127.0.0.1:8080/api/v1/health")).status === "ready")
+/** Stop only the MySQL listener launched by this checkout. */
+export async function stopDatabase({ backendDrained = false } = {}) {
+  if (!backendDrained) for (const port of [releasePort, developmentPort]) {
+    if ((await getJson(healthUrl(port)).catch(() => null))?.status === "ready")
       throw new Error("Stop the project backend before stopping MySQL");
-  } catch (error) {
-    if (error.message === "Stop the project backend before stopping MySQL") throw error;
   }
   const recordPath = resolve(runtimeRoot, "mysql-pid.json");
   const record = await readJson(recordPath, null);
-  const mapping = await readJson(mysqlDriveRecord, null);
-  if (!record || !Number.isInteger(record.pid) || record.pid < 1 ||
-      !mapping || mapping.projectRoot !== projectRoot ||
-      !/^[D-Z]$/.test(mapping.letter) || record.drive !== `${mapping.letter}:` ||
-      await driveState(mapping.letter) !== "match")
+  if (!Number.isInteger(record?.pid) || record.pid < 1)
     throw new Error("Cannot verify ownership of the project MySQL instance");
+  const mapping = record.drive ? await readJson(mysqlDriveRecord, null) : null;
+  if (record.drive && (!mapping || mapping.projectRoot !== projectRoot ||
+      !/^[D-Z]$/.test(mapping.letter) || record.drive !== `${mapping.letter}:` ||
+      await driveState(mapping.letter) !== "match"))
+    throw new Error("Cannot verify ownership of the project MySQL drive");
+  const toolDirectory = mapping ? `${record.drive}\\profile\\tools\\mysql\\bin` : resolve(toolRoot, "mysql/bin");
+  const optionName = mapping ? "mysql-managed.cnf" : "mysql.cnf";
   const check = await powershell(
-    `$listener=Get-NetTCPConnection -LocalAddress '127.0.0.1' -LocalPort 3307 -State Listen -ErrorAction Stop | Select-Object -First 1; $p=Get-CimInstance Win32_Process -Filter ('ProcessId='+$listener.OwningProcess); if ($p -and ($p.ProcessId -eq [int]$env:SEMANOTE_MYSQL_PID -or $p.ParentProcessId -eq [int]$env:SEMANOTE_MYSQL_PID) -and $p.CommandLine -like ($env:SEMANOTE_MYSQL_EXE+'*') -and $p.CommandLine -like '*mysql-managed.cnf*') { 'owned' } else { 'other' }`,
-    { env: { ...process.env, SEMANOTE_MYSQL_PID: String(record.pid), SEMANOTE_MYSQL_EXE: `${record.drive}\\profile\\tools\\mysql\\bin\\mysqld.exe` } },
+    `$listener=Get-NetTCPConnection -LocalAddress '127.0.0.1' -LocalPort 3307 -State Listen -ErrorAction Stop | Select-Object -First 1; $p=Get-CimInstance Win32_Process -Filter ('ProcessId='+$listener.OwningProcess); if ($p -and ($p.ProcessId -eq [int]$env:SEMANOTE_MYSQL_PID -or $p.ParentProcessId -eq [int]$env:SEMANOTE_MYSQL_PID) -and $p.CommandLine.TrimStart([char]34).StartsWith($env:SEMANOTE_MYSQL_EXE,[StringComparison]::OrdinalIgnoreCase) -and $p.CommandLine.Contains($env:SEMANOTE_MYSQL_OPTION)) { 'owned' } else { 'other' }`,
+    { env: { ...process.env, SEMANOTE_MYSQL_PID: String(record.pid), SEMANOTE_MYSQL_EXE: resolve(toolDirectory, "mysqld.exe"), SEMANOTE_MYSQL_OPTION: optionName } },
   );
   if (check.stdout.toString("utf8").trim() !== "owned")
     throw new Error("The MySQL listener does not match the managed process");
-  await run(`${record.drive}\\profile\\tools\\mysql\\bin\\mysqladmin.exe`,
-    [`--defaults-file=${record.drive}/profile/runtime/mysql-client.cnf`, "shutdown"],
-    { cwd: `${record.drive}\\` });
-  if (await driveState(mapping.letter) !== "match")
-    throw new Error("MySQL stopped, but its drive mapping changed and was retained");
-  await run("subst.exe", [`${mapping.letter}:`, "/D"]);
+  await run(resolve(toolDirectory, "mysqladmin.exe"),
+    [`--defaults-file=${mapping ? record.drive + "/" : ""}profile/runtime/mysql-client.cnf`, "shutdown"],
+    { cwd: mapping ? `${record.drive}\\` : projectRoot });
+  if (mapping) {
+    if (await driveState(mapping.letter) !== "match")
+      throw new Error("MySQL stopped, but its drive mapping changed and was retained");
+    await run("subst.exe", [`${mapping.letter}:`, "/D"]);
+    await unlink(mysqlDriveRecord);
+  }
   await unlink(recordPath);
-  await unlink(mysqlDriveRecord);
-  console.log("Project MySQL stopped and its verified drive mapping released");
+  console.log("Project MySQL stopped");
 }
 export async function backupDatabase() {
   await startDatabase();
@@ -410,6 +413,7 @@ if (
   const actions = {
     database: startDatabase,
     start: startBackend,
+    dev: () => startBackend(developmentPort),
     stop: stopBackend,
     "stop-database": stopDatabase,
     backup: backupDatabase,
@@ -419,7 +423,7 @@ if (
   try {
     const action = actions[process.argv[2]];
     if (!action)
-      throw new Error("Use database, start, stop, stop-database, backup, lan or local");
+      throw new Error("Use database, start, dev, stop, stop-database, backup, lan or local");
     await action();
   } catch (error) {
     console.error(error.message);

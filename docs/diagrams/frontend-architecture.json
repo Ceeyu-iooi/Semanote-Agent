@@ -137,9 +137,9 @@
       ],
       "sources": [
         {
-          "path": "backend/src/main/java/io/semanote/api/WorkspaceController.java",
-          "line": 15,
-          "end_line": 47
+          "path": "backend/server.mjs",
+          "line": 86,
+          "end_line": 99
         }
       ]
     },

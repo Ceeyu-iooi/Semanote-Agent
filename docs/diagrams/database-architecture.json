@@ -75,9 +75,9 @@
           "end_line": 62
         },
         {
-          "path": "backend/src/main/java/io/semanote/service/WorkspaceService.java",
-          "line": 143,
-          "end_line": 191
+          "path": "backend/workspace.mjs",
+          "line": 64,
+          "end_line": 77
         }
       ]
     },
@@ -122,9 +122,9 @@
           "end_line": 11
         },
         {
-          "path": "backend/src/main/java/io/semanote/service/WorkspaceService.java",
-          "line": 114,
-          "end_line": 134
+          "path": "backend/workspace.mjs",
+          "line": 64,
+          "end_line": 77
         }
       ]
     }

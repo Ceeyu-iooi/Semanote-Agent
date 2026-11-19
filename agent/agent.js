@@ -26,12 +26,13 @@ import { groundTokens, groundOrdered, sentenceEvidence } from "./grounding.js";
 
 import { lockCache } from './cacheLock.js';
 
-export const adapterVersion = "2.1.0";
+export const adapterVersion = "2.2.0";
 /** Bounded, lossless chunks; only source boundaries are used and no text is trimmed. */
-export function chunks(text, limit = 650) {
+export function chunks(text, limit = 650, retained = []) {
   const chars = Array.from(text),
     result = [];
   let start = 0;
+  let tokenIndex = 0;
   while (start < chars.length) {
     let end = Math.min(chars.length, start + limit);
     if (end < chars.length) {
@@ -41,6 +42,10 @@ export function chunks(text, limit = 650) {
           break;
         }
     }
+    // Explicit retries can use a different output budget. Keep retained words whole.
+    while (retained[tokenIndex]?.spans[0].end <= end) tokenIndex++;
+    const crossing = retained[tokenIndex]?.spans[0];
+    if (crossing?.start < end) end = crossing.start > start ? crossing.start : crossing.end;
     result.push({ text: chars.slice(start, end).join(""), start });
     start = end;
   }
@@ -62,17 +67,13 @@ function candidate(task, payload) {
   if (task === "segmentation")
     return (payload.tokens || []).map((tuple) => ({ itemText: tuple[0] }));
   if (task === "pos")
-    return (payload.tokens || [])
-      .flatMap((tuple) => {
-        const pieces =
-          typeof tuple[0] === "string"
-            ? tuple[0].match(/[^\p{P}]+|\p{P}/gu) || []
-            : [];
-        return pieces.map((piece) => ({
-          label: /^\p{P}$/u.test(piece) ? "PUNCT" : tuple[1],
-        }));
-      })
-      .map((item, tokenIndex) => ({ ...item, tokenIndex }));
+    return (payload.tokens || []).map(([itemText, label], tokenIndex) => {
+      const normalized = typeof label === "string" ? label.trim().toUpperCase() : "";
+      // A model can confuse the NER TIME tag with POS. Other unknown labels
+      // remain invalid rather than silently becoming a guessed part of speech.
+      return { tokenIndex, label: /^\p{P}$/u.test(itemText) ? "PUNCT" :
+        normalized === "TIME" && /^(?:凌晨|早晨|早上|上午|中午|下午|晚上|夜间|午夜|今天|昨日|昨天|明天|近日)$/u.test(itemText) ? "NOUN" : normalized };
+    });
   requireValue(Array.isArray(value), "missingLayer", "模型缺少所选标注层。");
   if (task === "keywords") return value.map((itemText) => ({ itemText }));
   if (task === "ner")
@@ -243,7 +244,12 @@ export async function annotate(
   }
   const startedAt = new Date().toISOString(),
     start = performance.now(),
-    textChunks = chunks(request.text);
+    // Bound dense joint output before a request is made. Truncated calls
+    // remain explicit failures; neither shortening nor retries occur after billing.
+    tokenBudget = config?.maxOutputTokens || 8192,
+    tokensPerChar = 8 + remoteTasks.filter((task) => !["segmentation", "pos"].includes(task)).length * 2,
+    chunkLimit = Math.min(650, Math.max(32, Math.floor((tokenBudget - 192) / tokensPerChar))),
+    textChunks = chunks(request.text, chunkLimit, layers.segmentation.result?.items);
   onProgress({
     event: "progress",
     taskType: "joint",
@@ -348,10 +354,17 @@ export async function annotate(
         let chunkTokens = [];
         if (modelTasks.includes("segmentation") || modelTasks.includes("pos")) {
           try {
-            reply.payload.tokens = groundTokens(
-              reply.payload.tokens,
-              chunk.text,
-            );
+            const labels = reply.payload.posLabels;
+            if (retainedTokens?.length && Array.isArray(labels)) {
+              requireValue(labels.length === retainedTokens.length, "posCountMismatch");
+              reply.payload.tokens = retainedTokens.map((word, index) => [word, labels[index]]);
+            } else {
+              const separateWords = reply.payload.segmentation;
+              const tuples = reply.payload.tokens ?? (Array.isArray(separateWords) && separateWords.every((word) => typeof word === "string")
+                ? separateWords.map((word, index) => [word, Array.isArray(labels) && labels.length === separateWords.length ? labels[index] : undefined])
+                : undefined);
+              reply.payload.tokens = groundTokens(tuples, chunk.text);
+            }
             if (missing.includes("pos") && retainedTokens?.length)
               requireValue(
                 isDeepStrictEqual(

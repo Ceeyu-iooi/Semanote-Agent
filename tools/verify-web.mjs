@@ -1,4 +1,4 @@
-/** Exercise the real Java/JDBC/JavaScript chain in databases created solely for this run. */
+/** Exercise the real Node.js/MySQL/JavaScript chain in databases created solely for this run. */
 import { spawn } from "node:child_process";
 import { request as httpRequest } from "node:http";
 import { mkdir } from "node:fs/promises";
@@ -12,7 +12,6 @@ import {
   startDatabase,
   mysql,
   backendEnvironment,
-  releaseArtifact,
 } from "./local-web.mjs";
 import { writeJson, delay, run } from "./lib/project.mjs";
 const databaseName =
@@ -36,7 +35,7 @@ function call(path, body = null, method = "GET", headers = {}, raw = null) {
       request = httpRequest(
         {
           hostname: "127.0.0.1",
-          port: 8081,
+          port: 18081,
           path: "/api/v1" + path,
           method: body !== null && method === "GET" ? "POST" : method,
           headers: {
@@ -79,15 +78,15 @@ async function start() {
   const environment = {
     ...(await backendEnvironment()),
     SEMANOTE_SEED_CORPUS: "false",
-    SEMANOTE_PORT: "8081",
+    SEMANOTE_PORT: "18081",
     SEMANOTE_BIND_ADDRESS: "127.0.0.1",
     SEMANOTE_LAN_HOSTS: "",
-    SEMANOTE_DB_URL: `jdbc:mysql://127.0.0.1:3307/${databaseName}?characterEncoding=UTF-8&serverTimezone=UTC`,
+    SEMANOTE_DB_URL: `mysql://127.0.0.1:3307/${databaseName}`,
   };
   const log = createWriteStream(resolve(receiptRoot, "isolated-backend.log"), {
     flags: "a",
   });
-  processHandle = spawn("java", ["-jar", await releaseArtifact()], {
+  processHandle = spawn(process.execPath, ["backend/server.mjs"], {
     cwd: projectRoot,
     env: environment,
     windowsHide: true,
@@ -133,9 +132,12 @@ async function stop() {
     child.kill();
   });
 }
-function upload(name, data) {
+function upload(name, data, fields = {}) {
   const boundary = "semanote" + randomUUID().replaceAll("-", "");
   const body = Buffer.concat([
+    ...Object.entries(fields).map(([key,value]) => Buffer.from(
+      `--${boundary}\r\nContent-Disposition: form-data; name="${key}"\r\n\r\n${value}\r\n`,
+    )),
     Buffer.from(
       `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${name}"\r\nContent-Type: application/octet-stream\r\n\r\n`,
     ),
@@ -310,6 +312,10 @@ try {
       (await call("/documents/" + imported.data.documentIds[0])).data.source
         .rowNumber === 2,
   );
+  const limited = await upload("limited.csv", "A,B,C\na,,b\nc,d,e\n", { limit: "3", requestId: randomUUID() });
+  const selected = await call("/documents/" + limited.data.documentIds?.at(-1));
+  check("CSV choice limits insertion in source order", limited.code === 200 && limited.data.importedCount === 3 && selected.data.source?.rowNumber === 3 && selected.data.source?.columnNumber === 1);
+  check("invalid CSV limit rejects without a partial write", (await upload("invalid-limit.csv", "A,B,C\na,b,c\n", { limit: "4" })).code === 400);
   const count = (await call("/documents")).data.length;
   check(
     "malformed CSV and UTF8 imports are atomic",
@@ -347,7 +353,7 @@ try {
   );
   check(
     "nonlocal Host cannot read workspace",
-    (await call("/documents", null, "GET", { Host: "example.com:8081" }))
+    (await call("/documents", null, "GET", { Host: "example.com:18081" }))
       .code === 403,
   );
   const job = {
@@ -372,6 +378,13 @@ try {
       })
     ).code === 400,
   );
+  const localJob = await call("/jobs", { ...job, requestId: randomUUID(), remoteConsent: true, tasks: ["paragraphs"] });
+  let receipt = localJob.data;
+  for (let attempt = 0; attempt < 20 && ["queued", "running"].includes(receipt.state); attempt++) {
+    await delay(60);
+    receipt = (await call("/jobs/" + localJob.data.id)).data;
+  }
+  check("local paragraph job runs through Node and persists progress result", localJob.code === 202 && receipt.state === "success" && receipt.response.execution.networkCalls === 0);
   const history = (await call("/development/git")).data,
     changes = (await call("/development/git/" + history.head)).data;
   check(
