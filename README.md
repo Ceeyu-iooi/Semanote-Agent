@@ -43,7 +43,7 @@ Semanote-Agent 是一个在本机运行的中文文本标注工作台。导入�
 需要 Windows x64、Git、JDK 21 和 Node.js 24。
 
 ~~~powershell
-git clone --branch develop https://github.com/Ceeyu-iooi/Semanote-Agent.git
+git clone https://github.com/Ceeyu-iooi/Semanote-Agent.git
 cd Semanote-Agent
 node tools/setup.mjs
 ~~~
