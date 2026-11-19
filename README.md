@@ -40,15 +40,7 @@ Semanote-Agent 是一个在本机运行的中文文本标注工作台。导入�
 
 ### 1. 安装
 
-需要 Windows x64、Git 和 Node.js 24 或更高版本。在 PowerShell 中检查并安装缺少的环境。
-
-~~~powershell
-if (-not (Get-Command node -ErrorAction SilentlyContinue) -or [int]((node --version).TrimStart('v').Split('.')[0]) -lt 24) {
-  winget install --id OpenJS.NodeJS.LTS --exact --source winget
-}
-~~~
-
-重启 PowerShell 后，从 `develop` 安装 Node.js 版。
+需要 Windows x64、Git 和 Node.js 24 或更高版本。
 
 ~~~powershell
 git clone --branch develop https://github.com/Ceeyu-iooi/Semanote-Agent.git
@@ -56,9 +48,7 @@ cd Semanote-Agent
 node tools/setup.mjs
 ~~~
 
-[打开工作台](http://127.0.0.1:8090/)
-
-完成构建后，双击项目根目录的 [start.bat](start.bat) 即可启动本机 MySQL 和 Web 服务，并打开工作台。点击左下角的退出按钮并确认，即可关闭后台服务和数据库。
+安装后，双击项目根目录的 [start.bat](start.bat) 打开工作台。
 
 ### 2. 更新
 
@@ -79,7 +69,7 @@ node tools/setup.mjs
 
 ## 架构与设计
 
-[查看当前 Archify 系统框架](docs/diagrams/system-architecture.html)
+[![Archify 系统架构图，展示 Vue 工作台、Node.js 后端、JavaScript 智能体与 MySQL](assets/readme/archify-system.png)](docs/diagrams/system-architecture.html)
 
 - **工作台。** Vue 和 Bootstrap 构建文本库、标注编辑器与统计界面。选中标注可回到原文位置。
 - **服务与存储。** Node.js 提供 API、管理导入和标注任务，MySQL 保存原文修订、候选和快照。
