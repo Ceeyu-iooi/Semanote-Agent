@@ -210,7 +210,7 @@
       "id": "node-service-agent",
       "from": "node-service",
       "to": "agent",
-      "label": "stdin / stdout",
+      "label": "模块调用",
       "variant": "default"
     },
     {
